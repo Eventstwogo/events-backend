@@ -1,63 +1,144 @@
-# FastAPI project .gitignore file
-gateway_keys.txt
-
-# Python bytecode files
+# Python bytecode and cache
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
 *.pyo
-*.pyd
+*.pyc
 
-# Virtual environment
+# C extensions
+*.so
+
+# Virtual environments
+# .env/
+# .env.*
+.venv/
 venv/
 env/
-.venv/
 
-# FastAPI specific
-*.db
-*.sqlite3
-
-# IDE/editor specific files
-.idea/
-.vscode/
-*.sublime-project
-*.sublime-workspace
-
-# Log files
-*.log
-
-# # Environment variables
-# .env
-# *.env
-
-# # Docker files
-# docker-compose.override.yml
-# docker-compose.yml
-
-# Static files and media
-# static/
-*.bak
-notes
-
-# Test coverage
-.coverage
-nosetests.xml
-coverage.xml
-*.cover
-
-# Distribution / packaging
+# Build, distribution, and packaging
+.Python
 build/
 dist/
 *.egg-info/
 .eggs/
+.eggs/
+*.egg
+MANIFEST
+sdist/
+parts/
+lib/
+lib64/
+var/
+.installed.cfg
 
-# Mypy and other linters
-.mypy_cache/
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
 
-# Pytest cache
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
 .pytest_cache/
+
+# Translations
+*.mo
+*.pot
+
+# Django/Flask/Scrapy/Sphinx
+*.log
+local_settings.py
+instance/
+.webassets-cache
+.scrapy
+docs/_build/
+
+# PyBuilder
+.target/
+
+# Jupyter/IPython
+.ipynb_checkpoints
+profile_default/
+ipython_config.py
 
 # pyenv
 .python-version
 
-# Jupyter Notebook checkpoints
-.ipynb_checkpoints/
+# pipenv
+Pipfile.lock
+
+# poetry
+poetry.lock
+
+# PEP 582 (pyflow)
+__pypackages__/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath
+*.sage.py
+
+# Cython debug symbols
+cython_debug/
+
+# VS Code
+.vscode/
+
+# PyCharm
+.idea/
+*.iml
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Media and temp folders
+/media/
+/media/temp/
+/media/avatars/
+/media/banners/
+# /keys/
+
+# Alembic
+alembic/versions/*.pyc
+
+# Test artifacts
+/tests/__pycache__/
+/tests/*.pyc
+/tests/*.pyo
+/tests/*.log
+/tests/.pytest_cache/
+/tests/htmlcov/
+/tests/.coverage
+/tests/.mypy_cache/
+/tests/.tox/
+/tests/.nox/
+/tests/.hypothesis/
+/tests/.ipynb_checkpoints/
+
+# # Secrets and keys
+*.pem
+*.key
+*.crt
+# *.env
+
+# SQLite (local dev)
+*.sqlite3
+
+# Docker
+*.log
+docker-compose.override.yml
+
+# Misc
+*.swp
+*.swo
+*~
