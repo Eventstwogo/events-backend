@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Account Activated - Welcome to Events2Go!</title>
+    <style>
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #2d3748;
+            background-color: #f7fafc;
+            margin: 0;
+            padding: 0;
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+
+        table {
+            border-collapse: collapse;
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
+        }
+
+        img {
+            border: 0;
+            height: auto;
+            line-height: 100%;
+            outline: none;
+            text-decoration: none;
+            -ms-interpolation-mode: bicubic;
+        }
+
+        /* Container */
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .logo {
+            max-width: 180px;
+            height: auto;
+            margin-bottom: 20px;
+        }
+
+        .header-title {
+            color: #ffffff;
+            font-size: 28px;
+            font-weight: 700;
+            margin: 0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* Success Section */
+        .success-section {
+            background-color: #ffffff;
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .success-badge {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            border-radius: 50%;
+            margin: 0 auto 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            color: white;
+            box-shadow: 0 8px 25px rgba(72, 187, 120, 0.4);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 8px 25px rgba(72, 187, 120, 0.4);
+            }
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 12px 35px rgba(72, 187, 120, 0.6);
+            }
+            100% {
+                transform: scale(1);
+                box-shadow: 0 8px 25px rgba(72, 187, 120, 0.4);
+            }
+        }
+
+        .success-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 15px;
+        }
+
+        .success-subtitle {
+            font-size: 18px;
+            color: #718096;
+            margin-bottom: 30px;
+        }
+
+        /* Content */
+        .content {
+            padding: 20px 30px 40px;
+            background-color: #ffffff;
+        }
+
+        .greeting {
+            font-size: 18px;
+            color: #2d3748;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .message {
+            font-size: 16px;
+            color: #4a5568;
+            line-height: 1.7;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        /* Account Info */
+        .account-info {
+            background: linear-gradient(135deg, #f0fff4 0%, #f7fafc 100%);
+            border: 2px solid #48bb78;
+            border-radius: 16px;
+            padding: 30px;
+            margin: 30px 0;
+            text-align: center;
+        }
+
+        .account-info-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 20px;
+        }
+
+        .account-detail {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .account-detail:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .account-label {
+            font-size: 14px;
+            color: #718096;
+            font-weight: 500;
+        }
+
+        .account-value {
+            font-size: 14px;
+            color: #2d3748;
+            font-weight: 600;
+        }
+
+        /* CTA Buttons */
+        .cta-container {
+            text-align: center;
+            margin: 40px 0;
+        }
+
+        .cta-primary {
+            display: inline-block;
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: #ffffff !important;
+            text-decoration: none;
+            padding: 18px 40px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 16px;
+            margin: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(72, 187, 120, 0.4);
+        }
+
+        .cta-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(72, 187, 120, 0.6);
+        }
+
+        .cta-secondary {
+            display: inline-block;
+            background-color: transparent;
+            color: #48bb78 !important;
+            text-decoration: none;
+            padding: 18px 40px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 16px;
+            margin: 10px;
+            border: 2px solid #48bb78;
+            transition: all 0.3s ease;
+        }
+
+        .cta-secondary:hover {
+            background-color: #48bb78;
+            color: #ffffff !important;
+            transform: translateY(-2px);
+        }
+
+        /* Features Section */
+        .features-section {
+            background-color: #f8fafc;
+            padding: 40px 30px;
+        }
+
+        .features-title {
+            text-align: center;
+            font-size: 24px;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 30px;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        .feature-card {
+            background-color: #ffffff;
+            border-radius: 16px;
+            padding: 30px 25px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+
+        .feature-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .feature-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 15px;
+        }
+
+        .feature-desc {
+            font-size: 14px;
+            color: #718096;
+            line-height: 1.6;
+        }
+
+        /* Next Steps */
+        .next-steps {
+            background-color: #ffffff;
+            padding: 40px 30px;
+        }
+
+        .next-steps-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .steps-list {
+            list-style: none;
+            padding: 0;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .step-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 25px;
+            padding: 20px;
+            background-color: #f8fafc;
+            border-radius: 12px;
+            border-left: 4px solid #48bb78;
+        }
+
+        .step-number {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+
+        .step-content {
+            flex: 1;
+        }
+
+        .step-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 5px;
+        }
+
+        .step-desc {
+            font-size: 14px;
+            color: #4a5568;
+            line-height: 1.5;
+        }
+
+        /* Footer */
+        .footer {
+            background-color: #2d3748;
+            color: #a0aec0;
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .footer-content {
+            margin-bottom: 20px;
+        }
+
+        .footer-title {
+            color: #ffffff;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .footer-text {
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .footer-links {
+            margin: 20px 0;
+        }
+
+        .footer-link {
+            color: #48bb78;
+            text-decoration: none;
+            margin: 0 15px;
+            font-size: 14px;
+        }
+
+        .footer-link:hover {
+            color: #ffffff;
+        }
+
+        .footer-bottom {
+            border-top: 1px solid #4a5568;
+            padding-top: 20px;
+            font-size: 12px;
+            color: #718096;
+        }
+
+        /* Responsive */
+        @media only screen and (max-width: 600px) {
+            .email-container {
+                width: 100% !important;
+            }
+
+            .header, .content, .success-section, .features-section, .next-steps, .footer {
+                padding-left: 20px !important;
+                padding-right: 20px !important;
+            }
+
+            .success-title {
+                font-size: 28px !important;
+            }
+
+            .header-title {
+                font-size: 24px !important;
+            }
+
+            .cta-primary, .cta-secondary {
+                display: block !important;
+                margin: 10px 0 !important;
+                padding: 16px 30px !important;
+            }
+
+            .account-detail {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr !important;
+            }
+        }
+
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            .email-container {
+                background-color: #1a202c !important;
+            }
+
+            .content, .success-section, .next-steps, .feature-card, .account-info, .step-item {
+                background-color: #2d3748 !important;
+            }
+
+            .success-title, .greeting, .account-info-title, .features-title, .next-steps-title, .feature-title, .step-title {
+                color: #ffffff !important;
+            }
+
+            .message, .success-subtitle, .account-label, .feature-desc, .step-desc {
+                color: #a0aec0 !important;
+            }
+
+            .account-value {
+                color: #ffffff !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            {% if logo_url %}
+            <img src="{{ logo_url }}" alt="Events2Go Logo" class="logo">
+            {% else %}
+            <h1 class="header-title">Events2Go</h1>
+            {% endif %}
+        </div>
+
+        <!-- Success Section -->
+        <div class="success-section">
+            <div class="success-badge">✅</div>
+            <h1 class="success-title">Account Activated!</h1>
+            <p class="success-subtitle">Welcome to the Events2Go community</p>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <p class="greeting">Congratulations <strong>{{ username }}</strong>!</p>
+
+            <p class="message">
+                Your Events2Go account has been successfully activated. You're now ready to discover,
+                book, and enjoy amazing events in your area and beyond. Let's get started on your event journey!
+            </p>
+
+            <!-- Account Info -->
+            <div class="account-info">
+                <h3 class="account-info-title">Your Account Details</h3>
+                <div class="account-detail">
+                    <span class="account-label">Email Address:</span>
+                    <span class="account-value">{{ email }}</span>
+                </div>
+                <div class="account-detail">
+                    <span class="account-label">Username:</span>
+                    <span class="account-value">{{ username }}</span>
+                </div>
+                <div class="account-detail">
+                    <span class="account-label">Account Type:</span>
+                    <span class="account-value">{{ account_type | default('Standard') }}</span>
+                </div>
+                <div class="account-detail">
+                    <span class="account-label">Activated On:</span>
+                    <span class="account-value">{{ activation_date }}</span>
+                </div>
+            </div>
+
+            <!-- CTA Buttons -->
+            <div class="cta-container">
+                <a href="{{ dashboard_url }}" class="cta-primary">
+                    🚀 Explore Events Now
+                </a>
+                <a href="{{ profile_url }}" class="cta-secondary">
+                    👤 Complete Profile
+                </a>
+            </div>
+        </div>
+
+        <!-- Features Section -->
+        <div class="features-section">
+            <h2 class="features-title">What You Can Do Now</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <span class="feature-icon">🔍</span>
+                    <h3 class="feature-title">Discover Events</h3>
+                    <p class="feature-desc">Browse thousands of events by category, location, and date to find your perfect match.</p>
+                </div>
+                <div class="feature-card">
+                    <span class="feature-icon">🎫</span>
+                    <h3 class="feature-title">Book Instantly</h3>
+                    <p class="feature-desc">Secure your spot at events with our fast and secure booking system.</p>
+                </div>
+                <div class="feature-card">
+                    <span class="feature-icon">❤️</span>
+                    <h3 class="feature-title">Save Favorites</h3>
+                    <p class="feature-desc">Create your wishlist and get notified about similar events and special offers.</p>
+                </div>
+                <div class="feature-card">
+                    <span class="feature-icon">👥</span>
+                    <h3 class="feature-title">Connect & Share</h3>
+                    <p class="feature-desc">Meet like-minded people and share your event experiences with the community.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Next Steps -->
+        <div class="next-steps">
+            <h2 class="next-steps-title">Get Started in 3 Easy Steps</h2>
+            <ul class="steps-list">
+                <li class="step-item">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h4 class="step-title">Complete Your Profile</h4>
+                        <p class="step-desc">Add your interests and preferences to get personalized event recommendations.</p>
+                    </div>
+                </li>
+                <li class="step-item">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h4 class="step-title">Explore Events</h4>
+                        <p class="step-desc">Browse our curated selection of events and find something that excites you.</p>
+                    </div>
+                </li>
+                <li class="step-item">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h4 class="step-title">Book Your First Event</h4>
+                        <p class="step-desc">Reserve your spot and get ready for an amazing experience!</p>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <div class="footer-content">
+                <h3 class="footer-title">Welcome to Events2Go!</h3>
+                <p class="footer-text">Your gateway to unforgettable experiences</p>
+
+                <div class="footer-links">
+                    <a href="#" class="footer-link">Getting Started Guide</a>
+                    <a href="#" class="footer-link">Help Center</a>
+                    <a href="#" class="footer-link">Contact Support</a>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p>&copy; {{ year }} Events2Go. All rights reserved.</p>
+                <p>Thank you for joining our community!</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,18 @@
+[tool.black]
+line-length = 100
+# Match with flake8
+target-version = ['py310']
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.mypy]
+strict = true
+ignore_missing_imports = true
+exclude = ["venv/"]
+
+
+[[tool.mypy.overrides]]
+module = ["fastapi.*", "pydantic.*"]
+ignore_missing_imports = true

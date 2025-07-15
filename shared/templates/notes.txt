@@ -1,0 +1,47 @@
+✅ 1. User Onboarding & Authentication
+Template Name	Purpose
+welcome_email	Sent immediately after user registration.
+email_verification	Verification email for activating an account.
+password_reset_request	Sent when the user initiates a "forgot password".
+password_reset_confirmation	Confirmation email after password has been successfully reset.
+login_alert	Alert user on login from a new device or location.
+account_deactivated	Notify user if their account is disabled.
+
+✅ 2. Event Notifications
+Template Name	Purpose
+event_created	Sent to organizer when a new event is created.
+event_approved	Sent to organizer once the event is approved by admin (if moderated).
+event_rejected	Notify organizer if their event was not approved.
+event_updated	Sent to attendees when an event is updated (date, venue, etc).
+event_canceled	Inform all registered users and organizer if an event is canceled.
+event_reminder	Reminder 24-48 hours before event starts (for attendees).
+
+✅ 3. Ticketing & Booking
+Template Name	Purpose
+booking_confirmation	Sent after user successfully books a ticket.
+ticket_issued	Includes e-ticket (PDF/QR) and event details.
+booking_canceled	Confirmation that booking was canceled.
+waitlist_confirmation	Sent if user is added to a waitlist for a sold-out event.
+waitlist_promotion	Sent when a waitlisted user is promoted to confirmed.
+ticket_transfer	Sent when a ticket is transferred to another user.
+
+✅ 4. Payments & Invoicing
+Template Name	Purpose
+payment_successful	Receipt for successful payment.
+payment_failed	Notify user of failed transaction.
+refund_processed	Notify user that a refund has been issued.
+invoice	PDF invoice sent to user or organizer.
+
+✅ 5. User Engagement & Marketing
+Template Name	Purpose
+newsletter_subscription_confirmation	Confirm subscription to newsletter.
+event_recommendations	Suggested events based on interests or past bookings.
+discount_offer	Promotional or early bird offers.
+feedback_request	Ask for feedback post-event.
+
+✅ 6. Admin & System Notifications
+Template Name	Purpose
+new_event_submission	Notify admin that an organizer created a new event.
+new_booking_alert	Alert organizer when someone books a ticket.
+user_reported_event	Alert admin when a user reports an event.
+system_alert	Any critical system failure or alert for dev/ops team.

@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Admin Access Granted - Events2Go</title>
+    <style>
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #2d3748;
+            background-color: #f7fafc;
+            margin: 0;
+            padding: 0;
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+
+        table {
+            border-collapse: collapse;
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
+        }
+
+        img {
+            border: 0;
+            height: auto;
+            line-height: 100%;
+            outline: none;
+            text-decoration: none;
+            -ms-interpolation-mode: bicubic;
+        }
+
+        /* Container */
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #1a365d 0%, #2d3748 100%);
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .logo {
+            max-width: 180px;
+            height: auto;
+            margin-bottom: 20px;
+        }
+
+        .header-title {
+            color: #ffffff;
+            font-size: 28px;
+            font-weight: 700;
+            margin: 0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header-subtitle {
+            color: #a0aec0;
+            font-size: 14px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 8px;
+        }
+
+        /* Admin Badge Section */
+        .admin-section {
+            background-color: #ffffff;
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .admin-badge {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+            border-radius: 50%;
+            margin: 0 auto 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            color: white;
+            box-shadow: 0 8px 25px rgba(229, 62, 62, 0.4);
+        }
+
+        .admin-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 15px;
+        }
+
+        .admin-subtitle {
+            font-size: 18px;
+            color: #718096;
+            margin-bottom: 20px;
+        }
+
+        .role-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+            color: #ffffff;
+            padding: 10px 25px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+        }
+
+        /* Content */
+        .content {
+            padding: 20px 30px 40px;
+            background-color: #ffffff;
+        }
+
+        .greeting {
+            font-size: 18px;
+            color: #2d3748;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .message {
+            font-size: 16px;
+            color: #4a5568;
+            line-height: 1.7;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        /* Credentials Section */
+        .credentials-section {
+            background: linear-gradient(135deg, #fed7d7 0%, #feb2b2 100%);
+            border: 2px solid #e53e3e;
+            border-radius: 16px;
+            padding: 30px;
+            margin: 30px 0;
+        }
+
+        .credentials-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #742a2a;
+            margin-bottom: 20px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .credentials-icon {
+            margin-right: 10px;
+            font-size: 24px;
+        }
+
+        .credential-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 15px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            border-left: 4px solid #e53e3e;
+        }
+
+        .credential-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .credential-label {
+            font-size: 14px;
+            color: #742a2a;
+            font-weight: 500;
+        }
+
+        .credential-value {
+            font-size: 14px;
+            color: #742a2a;
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+            background-color: #f7fafc;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+        }
+
+        /* Security Notice */
+        .security-notice {
+            background: linear-gradient(135deg, #fef5e7 0%, #fdf2e9 100%);
+            border: 1px solid #f6ad55;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 25px 0;
+        }
+
+        .security-notice-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #744210;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+
+        .security-notice-icon {
+            margin-right: 10px;
+            font-size: 20px;
+        }
+
+        .security-notice-text {
+            font-size: 14px;
+            color: #744210;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .security-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .security-list li {
+            font-size: 14px;
+            color: #744210;
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .security-list li:before {
+            content: "⚠️";
+            position: absolute;
+            left: 0;
+        }
+
+        /* CTA Button */
+        .cta-container {
+            text-align: center;
+            margin: 40px 0;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+            color: #ffffff !important;
+            text-decoration: none;
+            padding: 18px 40px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(229, 62, 62, 0.4);
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(229, 62, 62, 0.6);
+        }
+
+        /* Admin Features */
+        .admin-features {
+            background-color: #f8fafc;
+            padding: 40px 30px;
+        }
+
+        .features-title {
+            text-align: center;
+            font-size: 24px;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 30px;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+        }
+
+        .feature-card {
+            background-color: #ffffff;
+            border-radius: 16px;
+            padding: 30px 25px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+            border-top: 4px solid #e53e3e;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+
+        .feature-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .feature-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 15px;
+        }
+
+        .feature-desc {
+            font-size: 14px;
+            color: #718096;
+            line-height: 1.6;
+        }
+
+        /* Footer */
+        .footer {
+            background-color: #1a202c;
+            color: #a0aec0;
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .footer-content {
+            margin-bottom: 20px;
+        }
+
+        .footer-title {
+            color: #ffffff;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .footer-text {
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .footer-links {
+            margin: 20px 0;
+        }
+
+        .footer-link {
+            color: #e53e3e;
+            text-decoration: none;
+            margin: 0 15px;
+            font-size: 14px;
+        }
+
+        .footer-link:hover {
+            color: #ffffff;
+        }
+
+        .footer-bottom {
+            border-top: 1px solid #4a5568;
+            padding-top: 20px;
+            font-size: 12px;
+            color: #718096;
+        }
+
+        /* Responsive */
+        @media only screen and (max-width: 600px) {
+            .email-container {
+                width: 100% !important;
+            }
+
+            .header, .content, .admin-section, .admin-features, .footer {
+                padding-left: 20px !important;
+                padding-right: 20px !important;
+            }
+
+            .admin-title {
+                font-size: 28px !important;
+            }
+
+            .header-title {
+                font-size: 24px !important;
+            }
+
+            .cta-button {
+                padding: 16px 30px !important;
+                font-size: 15px !important;
+            }
+
+            .credential-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            {% if logo_url %}
+            <img src="{{ logo_url }}" alt="Events2Go Logo" class="logo">
+            {% else %}
+            <h1 class="header-title">Events2Go</h1>
+            {% endif %}
+            <p class="header-subtitle">Admin Panel Access</p>
+        </div>
+
+        <!-- Admin Section -->
+        <div class="admin-section">
+            <div class="admin-badge">🛡️</div>
+            <div class="role-badge">{{ role | default('Administrator') }}</div>
+            <h1 class="admin-title">Access Granted</h1>
+            <p class="admin-subtitle">Welcome to the Events2Go Admin Panel</p>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <p class="greeting">Hello <strong>{{ username }}</strong>,</p>
+
+            <p class="message">
+                Your administrator account has been created and activated. You now have access to the Events2Go
+                Admin Panel with {{ role | default('full administrative') }} privileges. Please use the credentials
+                below to access your dashboard.
+            </p>
+
+            <!-- Credentials Section -->
+            <div class="credentials-section">
+                <h3 class="credentials-title">
+                    <span class="credentials-icon">🔐</span>
+                    Admin Login Credentials
+                </h3>
+
+                <div class="credential-item">
+                    <span class="credential-label">Admin Email:</span>
+                    <span class="credential-value">{{ email }}</span>
+                </div>
+
+                <div class="credential-item">
+                    <span class="credential-label">Temporary Password:</span>
+                    <span class="credential-value">{{ password }}</span>
+                </div>
+
+                <div class="credential-item">
+                    <span class="credential-label">Access Level:</span>
+                    <span class="credential-value">{{ role | default('Administrator') }}</span>
+                </div>
+            </div>
+
+            <!-- Security Notice -->
+            <div class="security-notice">
+                <h4 class="security-notice-title">
+                    <span class="security-notice-icon">🔒</span>
+                    Critical Security Requirements
+                </h4>
+                <p class="security-notice-text">
+                    As an administrator, you have elevated access to sensitive data and system controls.
+                    Please follow these mandatory security practices:
+                </p>
+                <ul class="security-list">
+                    <li>Change your temporary password immediately after first login</li>
+                    <li>Enable two-factor authentication (2FA) within 24 hours</li>
+                    <li>Never share your admin credentials with anyone</li>
+                    <li>Always log out when finished and never leave sessions unattended</li>
+                    <li>Report any suspicious activity immediately to IT Security</li>
+                </ul>
+            </div>
+
+            <!-- CTA Button -->
+            <div class="cta-container">
+                <a href="{{ admin_url }}" class="cta-button">
+                    🚀 Access Admin Panel
+                </a>
+            </div>
+        </div>
+
+        <!-- Admin Features -->
+        <div class="admin-features">
+            <h2 class="features-title">Your Administrative Capabilities</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <span class="feature-icon">👥</span>
+                    <h3 class="feature-title">User Management</h3>
+                    <p class="feature-desc">Manage user accounts, roles, permissions, and access controls.</p>
+                </div>
+                <div class="feature-card">
+                    <span class="feature-icon">🎪</span>
+                    <h3 class="feature-title">Event Administration</h3>
+                    <p class="feature-desc">Create, approve, modify, and manage all events on the platform.</p>
+                </div>
+                <div class="feature-card">
+                    <span class="feature-icon">📊</span>
+                    <h3 class="feature-title">Analytics & Reports</h3>
+                    <p class="feature-desc">Access comprehensive analytics, generate reports, and monitor KPIs.</p>
+                </div>
+                <div class="feature-card">
+                    <span class="feature-icon">⚙️</span>
+                    <h3 class="feature-title">System Configuration</h3>
+                    <p class="feature-desc">Configure platform settings, categories, and system parameters.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <div class="footer-content">
+                <h3 class="footer-title">Events2Go Admin Panel</h3>
+                <p class="footer-text">Internal Use Only - Authorized Personnel</p>
+
+                <div class="footer-links">
+                    <a href="#" class="footer-link">Admin Documentation</a>
+                    <a href="#" class="footer-link">IT Support</a>
+                    <a href="#" class="footer-link">Security Guidelines</a>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p>&copy; {{ year }} Events2Go. All rights reserved.</p>
+                <p><strong>CONFIDENTIAL:</strong> This email contains sensitive information for authorized personnel only.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

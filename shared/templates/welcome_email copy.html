@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welcome to Events2Go</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #f6f9fc;
+      font-family: 'Segoe UI', sans-serif;
+      color: #333;
+    }
+    .container {
+      max-width: 600px;
+      margin: 30px auto;
+      background-color: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+      overflow: hidden;
+    }
+    .header {
+      background-color: #2e64e3;
+      color: #ffffff;
+      padding: 30px;
+      text-align: center;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 28px;
+    }
+    .content {
+      padding: 30px;
+    }
+    .content h2 {
+      font-size: 22px;
+      margin-top: 0;
+    }
+    .content p {
+      font-size: 16px;
+      line-height: 1.6;
+    }
+    .cta-button {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 12px 24px;
+      background-color: #2e64e3;
+      color: #ffffff !important;
+      text-decoration: none;
+      border-radius: 5px;
+      font-weight: 600;
+    }
+    .footer {
+      background-color: #f1f3f7;
+      padding: 20px;
+      text-align: center;
+      font-size: 13px;
+      color: #888;
+    }
+    @media only screen and (max-width: 600px) {
+      .content, .header, .footer {
+        padding: 20px !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header">
+      <h1>Welcome to Events2Go 🎉</h1>
+    </div>
+
+    <div class="content">
+      <h2>Hello {{user_name}},</h2>
+      <p>We're thrilled to have you join <strong>Events2Go</strong> – your gateway to amazing concerts, movies, festivals, and more.</p>
+
+      <p>With Events2Go, you can:</p>
+      <ul>
+        <li>🎟️ Discover and book top events near you</li>
+        <li>🔔 Get event reminders and exclusive offers</li>
+        <li>📲 Manage your bookings and tickets from one place</li>
+      </ul>
+
+      <p>To get started, we recommend verifying your email and exploring your dashboard.</p>
+
+      <a href="{{verification_link}}" class="cta-button">Verify My Email</a>
+
+      <p style="margin-top: 30px;">Need help? Our support team is just an email away.</p>
+    </div>
+
+    <div class="footer">
+      &copy; {{year}} Events2Go. All rights reserved.<br />
+      123 Events2Go Blvd, Bengaluru, India<br />
+      <a href="{{unsubscribe_link}}" style="color:#888;">Unsubscribe</a>
+    </div>
+  </div>
+
+</body>
+</html>

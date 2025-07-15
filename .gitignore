@@ -1,0 +1,63 @@
+# FastAPI project .gitignore file
+gateway_keys.txt
+
+# Python bytecode files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# FastAPI specific
+*.db
+*.sqlite3
+
+# IDE/editor specific files
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Log files
+*.log
+
+# # Environment variables
+# .env
+# *.env
+
+# # Docker files
+# docker-compose.override.yml
+# docker-compose.yml
+
+# Static files and media
+# static/
+*.bak
+notes
+
+# Test coverage
+.coverage
+nosetests.xml
+coverage.xml
+*.cover
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Mypy and other linters
+.mypy_cache/
+
+# Pytest cache
+.pytest_cache/
+
+# pyenv
+.python-version
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/

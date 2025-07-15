@@ -1,0 +1,236 @@
+from datetime import datetime
+from typing import TYPE_CHECKING, Optional
+
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    func,
+    select,
+)
+from sqlalchemy.orm import (
+    Mapped,
+    mapped_column,
+    relationship,
+)
+
+from shared.core.security import generate_searchable_hash
+from shared.db.models.base import EventsBase
+from shared.db.types import EncryptedString
+
+if TYPE_CHECKING:
+    from shared.db.models.rbac import Role
+
+
+# AdminUser Table
+class AdminUser(EventsBase):
+    __tablename__ = "e2gadminusers"
+
+    user_id: Mapped[str] = mapped_column(
+        String(6), primary_key=True, unique=True, nullable=False
+    )
+    role_id: Mapped[str] = mapped_column(
+        ForeignKey("e2groles.role_id"), nullable=False
+    )
+
+    # Encrypted fields using custom type
+    username_encrypted: Mapped[str] = mapped_column(
+        EncryptedString(255), nullable=False
+    )
+    email_encrypted: Mapped[str] = mapped_column(
+        EncryptedString(255), nullable=False
+    )
+
+    # Hash fields for efficient querying
+    username_hash: Mapped[str] = mapped_column(
+        String(64), nullable=False, unique=True, index=True
+    )
+    email_hash: Mapped[str] = mapped_column(
+        String(64), nullable=False, unique=True, index=True
+    )
+
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    profile_picture: Mapped[Optional[str]] = mapped_column(
+        String(255), default=None
+    )
+
+    days_180_flag: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    days_180_timestamp: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), default=None
+    )
+
+    login_status: Mapped[int] = mapped_column(
+        Integer, default=-1, nullable=False
+    )
+    last_login: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), default=None
+    )
+    failure_login_attempts: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False
+    )
+    successful_login_count: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False
+    )
+
+    is_deleted: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), onupdate=func.now()
+    )
+
+    # Relationships
+    role: Mapped["Role"] = relationship(back_populates="users")
+    password_reset: Mapped[Optional["PasswordReset"]] = relationship(
+        back_populates="user", uselist=False, cascade="all, delete-orphan"
+    )
+    device_sessions: Mapped[list["AdminUserDeviceSession"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+
+    # Properties for username and email
+    @property
+    def username(self) -> str:
+        """Get the decrypted username."""
+        return self.username_encrypted
+
+    @username.setter
+    def username(self, value: str) -> None:
+        """Set the username and update its hash."""
+        self.username_encrypted = value
+        self.username_hash = generate_searchable_hash(value)
+
+    @property
+    def email(self) -> str:
+        """Get the decrypted email."""
+        return self.email_encrypted
+
+    @email.setter
+    def email(self, value: str) -> None:
+        """Set the email and update its hash."""
+        self.email_encrypted = value
+        self.email_hash = generate_searchable_hash(value)
+
+    @staticmethod
+    def by_username_query(username: str):
+        """
+        Create a query to find a user by username using the hash for efficient querying.
+
+        Args:
+            username: The username to search for
+
+        Returns:
+            A SQLAlchemy select statement that can be executed with a database session
+        """
+        username_hash = generate_searchable_hash(username)
+        return select(AdminUser).where(AdminUser.username_hash == username_hash)
+
+    @staticmethod
+    def by_email_query(email: str):
+        """
+        Create a query to find a user by email using the hash for efficient querying.
+
+        Args:
+            email: The email to search for
+
+        Returns:
+            A SQLAlchemy select statement that can be executed with a database session
+        """
+
+        email_hash = generate_searchable_hash(email)
+        return select(AdminUser).where(AdminUser.email_hash == email_hash)
+
+
+# PasswordReset Table
+class PasswordReset(EventsBase):
+    __tablename__ = "e2gpasswordresets"
+
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("e2gadminusers.user_id"), primary_key=True
+    )
+
+    reset_password_token: Mapped[Optional[str]] = mapped_column(
+        String(255), default=None
+    )
+    reset_token_expires_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), default=None
+    )
+    last_reset_done_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), default=None
+    )
+
+    user: Mapped["AdminUser"] = relationship(back_populates="password_reset")
+
+
+# AdminUserDeviceSession Table
+class AdminUserDeviceSession(EventsBase):
+    __tablename__ = "e2gadminuserdevicesessions"
+
+    session_id: Mapped[int] = mapped_column(
+        Integer, primary_key=True, autoincrement=True
+    )
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("e2gadminusers.user_id"), nullable=False
+    )
+
+    # Basic device information
+    ip_address: Mapped[Optional[str]] = mapped_column(
+        String(45)
+    )  # IPv4 or IPv6
+    device_name: Mapped[Optional[str]] = mapped_column(String(255))
+    user_agent: Mapped[Optional[str]] = mapped_column(String(1024))
+
+    # Enhanced device information
+    device_fingerprint: Mapped[Optional[str]] = mapped_column(String(64))
+    device_family: Mapped[Optional[str]] = mapped_column(String(100))
+    device_brand: Mapped[Optional[str]] = mapped_column(String(100))
+    device_model: Mapped[Optional[str]] = mapped_column(String(100))
+    device_type: Mapped[Optional[str]] = mapped_column(String(50))
+
+    # Browser information
+    browser_family: Mapped[Optional[str]] = mapped_column(String(100))
+    browser_version: Mapped[Optional[str]] = mapped_column(String(100))
+
+    # Operating system information
+    os_family: Mapped[Optional[str]] = mapped_column(String(100))
+    os_version: Mapped[Optional[str]] = mapped_column(String(100))
+
+    # Location information
+    location: Mapped[Optional[str]] = mapped_column(String(255))
+    country: Mapped[Optional[str]] = mapped_column(String(100))
+    country_code: Mapped[Optional[str]] = mapped_column(String(10))
+    city: Mapped[Optional[str]] = mapped_column(String(100))
+    latitude: Mapped[Optional[str]] = mapped_column(String(20))
+    longitude: Mapped[Optional[str]] = mapped_column(String(20))
+    timezone: Mapped[Optional[str]] = mapped_column(String(50))
+    isp: Mapped[Optional[str]] = mapped_column(String(255))
+
+    # Additional metadata
+    language: Mapped[Optional[str]] = mapped_column(String(20))
+    is_mobile: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_tablet: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_pc: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_bot: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # Session status
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False
+    )
+    logged_in_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now()
+    )
+    last_used_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), onupdate=func.now()
+    )
+    logged_out_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), default=None
+    )
+
+    user: Mapped["AdminUser"] = relationship(back_populates="device_sessions")
