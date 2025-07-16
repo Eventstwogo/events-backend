@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>Welcome to Events2Go - Admin Access</title>
+    <!--[if mso]>
+    <noscript>
+        <xml>
+            <o:OfficeDocumentSettings>
+                <o:PixelsPerInch>96</o:PixelsPerInch>
+            </o:OfficeDocumentSettings>
+        </xml>
+    </noscript>
+    <![endif]-->
     <style>
         /* Reset and base styles */
         * {
@@ -264,6 +273,20 @@
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 25px;
         }
+        
+        /* Fallback for email clients that don't support CSS Grid */
+        @supports not (display: grid) {
+            .features-grid {
+                display: flex;
+                flex-wrap: wrap;
+                margin: 0 -12px;
+            }
+            
+            .feature-card {
+                flex: 1 1 250px;
+                margin: 0 12px 25px;
+            }
+        }
 
         .feature-card {
             background-color: #ffffff;
@@ -469,9 +492,9 @@
         <!-- Header -->
         <div class="header">
             {% if logo_url %}
-            <img src="media/favicon.ico" alt="Events2Go Logo" class="logo">
+            <img src="{{ logo_url }}" alt="Events2Go Logo" class="logo">
             {% else %}
-            <h1 class="header-title">Events2Go</h1>
+            <img src="/static/media/events2go-gradient-logo-removebg-preview.png" alt="Events2Go Logo" class="logo">
             {% endif %}
         </div>
 

@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>Booking Confirmed - Events2Go</title>
+    <!--[if mso]>
+    <noscript>
+        <xml>
+            <o:OfficeDocumentSettings>
+                <o:PixelsPerInch>96</o:PixelsPerInch>
+            </o:OfficeDocumentSettings>
+        </xml>
+    </noscript>
+    <![endif]-->
     <style>
         /* Reset and base styles */
         * {
@@ -174,6 +183,20 @@
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
             margin-top: 20px;
+        }
+        
+        /* Fallback for email clients that don't support CSS Grid */
+        @supports not (display: grid) {
+            .event-info-grid {
+                display: flex;
+                flex-wrap: wrap;
+                margin: 20px -10px 0;
+            }
+            
+            .event-info-item {
+                flex: 1 1 200px;
+                margin: 0 10px 20px;
+            }
         }
 
         .event-info-item {
@@ -495,7 +518,7 @@
             {% if logo_url %}
             <img src="{{ logo_url }}" alt="Events2Go Logo" class="logo">
             {% else %}
-            <h1 class="header-title">Events2Go</h1>
+            <img src="/static/media/events2go-gradient-logo-removebg-preview.png" alt="Events2Go Logo" class="logo">
             {% endif %}
         </div>
 

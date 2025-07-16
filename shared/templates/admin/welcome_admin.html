@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>Admin Access Granted - Events2Go</title>
+    <!--[if mso]>
+    <noscript>
+        <xml>
+            <o:OfficeDocumentSettings>
+                <o:PixelsPerInch>96</o:PixelsPerInch>
+            </o:OfficeDocumentSettings>
+        </xml>
+    </noscript>
+    <![endif]-->
     <style>
         /* Reset and base styles */
         * {
@@ -409,6 +418,29 @@
                 grid-template-columns: 1fr !important;
             }
         }
+
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            .email-container {
+                background-color: #1a202c !important;
+            }
+
+            .content, .admin-section, .credentials-section, .security-section {
+                background-color: #2d3748 !important;
+            }
+
+            .admin-title, .greeting, .security-title {
+                color: #ffffff !important;
+            }
+
+            .message, .admin-subtitle, .security-text {
+                color: #a0aec0 !important;
+            }
+
+            .credential-value {
+                color: #ffffff !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -418,7 +450,7 @@
             {% if logo_url %}
             <img src="{{ logo_url }}" alt="Events2Go Logo" class="logo">
             {% else %}
-            <h1 class="header-title">Events2Go</h1>
+            <img src="/static/media/events2go-gradient-logo-removebg-preview.png" alt="Events2Go Logo" class="logo">
             {% endif %}
             <p class="header-subtitle">Admin Panel Access</p>
         </div>

@@ -231,6 +231,19 @@
             gap: 20px;
             justify-content: center;
         }
+        
+        /* Fallback for older email clients */
+        @supports not (display: flex) {
+            .features-grid {
+                text-align: center;
+            }
+            
+            .feature-item {
+                display: inline-block;
+                vertical-align: top;
+                margin: 10px;
+            }
+        }
 
         .feature-item {
             flex: 1;
@@ -367,7 +380,7 @@
             {% if logo_url %}
             <img src="{{ logo_url }}" alt="Events2Go Logo" class="logo">
             {% else %}
-            <h1 class="header-title">Events2Go</h1>
+            <img src="/media/events2go-gradient-logo-removebg-preview.png" alt="Events2Go Logo" class="logo">
             {% endif %}
         </div>
 
