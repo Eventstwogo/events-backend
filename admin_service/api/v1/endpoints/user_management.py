@@ -67,7 +67,7 @@ async def get_admin_users(
             email=user.email,
             role_id=user.role_id,
             role_name=role_name,
-            profile_picture=user.profile_picture,
+            profile_picture=get_media_url(user.profile_picture),
             is_deleted=user.is_deleted,
             last_login=user.last_login,
             created_at=user.created_at,

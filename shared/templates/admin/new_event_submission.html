@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>New Event Submission - Admin Notification - Events2Go</title>
+    <!--[if mso]>
+    <noscript>
+        <xml>
+            <o:OfficeDocumentSettings>
+                <o:PixelsPerInch>96</o:PixelsPerInch>
+            </o:OfficeDocumentSettings>
+        </xml>
+    </noscript>
+    <![endif]-->
+    <style>
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #2d3748;
+            background-color: #f7fafc;
+            margin: 0;
+            padding: 0;
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+
+        table {
+            border-collapse: collapse;
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
+        }
+
+        img {
+            border: 0;
+            height: auto;
+            line-height: 100%;
+            outline: none;
+            text-decoration: none;
+            -ms-interpolation-mode: bicubic;
+        }
+
+        /* Container */
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #1a365d 0%, #2d3748 100%);
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .logo {
+            max-width: 180px;
+            height: auto;
+            margin-bottom: 20px;
+        }
+
+        .header-title {
+            color: #ffffff;
+            font-size: 28px;
+            font-weight: 700;
+            margin: 0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header-subtitle {
+            color: #a0aec0;
+            font-size: 14px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 8px;
+        }
+
+        /* Alert Section */
+        .alert-section {
+            background-color: #ffffff;
+            padding: 30px;
+            text-align: center;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .alert-badge {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%);
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            color: white;
+            box-shadow: 0 4px 15px rgba(246, 173, 85, 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .alert-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+
+        .alert-subtitle {
+            font-size: 16px;
+            color: #718096;
+        }
+
+        /* Content */
+        .content {
+            padding: 40px 30px;
+            background-color: #ffffff;
+        }
+
+        .greeting {
+            font-size: 18px;
+            color: #2d3748;
+            margin-bottom: 25px;
+        }
+
+        .message {
+            font-size: 16px;
+            color: #4a5568;
+            line-height: 1.7;
+            margin-bottom: 30px;
+        }
+
+        /* Event Details */
+        .event-details {
+            background-color: #f8fafc;
+            border-left: 4px solid #f6ad55;
+            border-radius: 0 12px 12px 0;
+            padding: 25px;
+            margin: 30px 0;
+        }
+
+        .event-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 20px;
+        }
+
+        .event-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+
+        .event-label {
+            color: #718096;
+            font-weight: 500;
+            min-width: 120px;
+        }
+
+        .event-value {
+            color: #2d3748;
+            font-weight: 600;
+            flex: 1;
+            text-align: right;
+        }
+
+        /* Organizer Information */
+        .organizer-info {
+            background: linear-gradient(135deg, #e6fffa 0%, #b2f5ea 100%);
+            border: 1px solid #4fd1c7;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 30px 0;
+        }
+
+        .organizer-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #234e52;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+
+        .organizer-icon {
+            margin-right: 10px;
+            font-size: 18px;
+        }
+
+        .organizer-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .organizer-label {
+            color: #234e52;
+            font-weight: 500;
+            min-width: 100px;
+        }
+
+        .organizer-value {
+            color: #234e52;
+            font-weight: 600;
+            flex: 1;
+            text-align: right;
+        }
+
+        /* Priority Indicator */
+        .priority-section {
+            background: linear-gradient(135deg, #fed7d7 0%, #feb2b2 100%);
+            border: 1px solid #fc8181;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 30px 0;
+            text-align: center;
+        }
+
+        .priority-high {
+            background: linear-gradient(135deg, #fed7d7 0%, #feb2b2 100%);
+            border-color: #fc8181;
+        }
+
+        .priority-medium {
+            background: linear-gradient(135deg, #fef5e7 0%, #fdf2e9 100%);
+            border-color: #f6ad55;
+        }
+
+        .priority-low {
+            background: linear-gradient(135deg, #e6fffa 0%, #b2f5ea 100%);
+            border-color: #4fd1c7;
+        }
+
+        .priority-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .priority-high .priority-title {
+            color: #742a2a;
+        }
+
+        .priority-medium .priority-title {
+            color: #744210;
+        }
+
+        .priority-low .priority-title {
+            color: #234e52;
+        }
+
+        .priority-icon {
+            margin-right: 10px;
+            font-size: 18px;
+        }
+
+        .priority-text {
+            font-size: 14px;
+        }
+
+        .priority-high .priority-text {
+            color: #742a2a;
+        }
+
+        .priority-medium .priority-text {
+            color: #744210;
+        }
+
+        .priority-low .priority-text {
+            color: #234e52;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            text-align: center;
+            margin: 40px 0;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 16px 32px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 16px;
+            margin: 0 10px 10px 0;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: #ffffff !important;
+            box-shadow: 0 4px 15px rgba(72, 187, 120, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(72, 187, 120, 0.6);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+            color: #ffffff !important;
+            box-shadow: 0 4px 15px rgba(229, 62, 62, 0.4);
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(229, 62, 62, 0.6);
+        }
+
+        .btn-tertiary {
+            background: #ffffff;
+            color: #1a365d !important;
+            border: 2px solid #1a365d;
+        }
+
+        .btn-tertiary:hover {
+            background: #1a365d;
+            color: #ffffff !important;
+        }
+
+        /* Quick Stats */
+        .quick-stats {
+            background-color: #f8fafc;
+            border-left: 4px solid #667eea;
+            border-radius: 0 12px 12px 0;
+            padding: 25px;
+            margin: 30px 0;
+        }
+
+        .stats-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+
+        .stats-icon {
+            margin-right: 10px;
+            font-size: 18px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: 700;
+            color: #667eea;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #718096;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Footer */
+        .footer {
+            background-color: #2d3748;
+            color: #a0aec0;
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .footer-content {
+            margin-bottom: 20px;
+        }
+
+        .footer-title {
+            color: #ffffff;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .footer-text {
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .footer-links {
+            margin: 20px 0;
+        }
+
+        .footer-link {
+            color: #f6ad55;
+            text-decoration: none;
+            margin: 0 15px;
+            font-size: 14px;
+        }
+
+        .footer-link:hover {
+            color: #ffffff;
+        }
+
+        .footer-bottom {
+            border-top: 1px solid #4a5568;
+            padding-top: 20px;
+            font-size: 12px;
+            color: #718096;
+        }
+
+        /* Responsive */
+        @media only screen and (max-width: 600px) {
+            .email-container {
+                width: 100% !important;
+            }
+
+            .header, .alert-section, .content, .footer {
+                padding-left: 20px !important;
+                padding-right: 20px !important;
+            }
+
+            .event-info, .organizer-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+            }
+
+            .event-value, .organizer-value {
+                text-align: left !important;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr !important;
+            }
+
+            .btn {
+                display: block !important;
+                margin: 10px 0 !important;
+            }
+        }
+
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            .email-container {
+                background-color: #1a202c !important;
+            }
+
+            .content, .alert-section, .event-details, .quick-stats {
+                background-color: #2d3748 !important;
+            }
+
+            .alert-title, .greeting, .event-title, .stats-title {
+                color: #ffffff !important;
+            }
+
+            .message, .alert-subtitle, .event-label {
+                color: #a0aec0 !important;
+            }
+
+            .event-value {
+                color: #ffffff !important;
+            }
+
+            .stat-item {
+                background-color: #4a5568 !important;
+                border-color: #718096 !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            {% if logo_url %}
+            <img src="{{ logo_url }}" alt="Events2Go Logo" class="logo">
+            {% else %}
+            <img src="/media/events2go-gradient-logo.png" alt="Events2Go Logo" class="logo">
+            {% endif %}
+            <h1 class="header-title">Admin Notification</h1>
+            <p class="header-subtitle">Event Management System</p>
+        </div>
+
+        <!-- Alert Section -->
+        <div class="alert-section">
+            <div class="alert-badge">📝</div>
+            <h2 class="alert-title">New Event Submission</h2>
+            <p class="alert-subtitle">Requires admin review and approval</p>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <p class="greeting">Hello <strong>{{ admin_name | default('Admin') }}</strong>,</p>
+
+            <p class="message">
+                A new event has been submitted to the Events2Go platform and is awaiting your review. Please review the
+                event details below and take appropriate action to approve or reject the submission.
+            </p>
+
+            <!-- Event Details -->
+            <div class="event-details">
+                <h3 class="event-title">{{ event_title }}</h3>
+                <div class="event-info">
+                    <span class="event-label">Event ID:</span>
+                    <span class="event-value">{{ event_id }}</span>
+                </div>
+                <div class="event-info">
+                    <span class="event-label">Category:</span>
+                    <span class="event-value">{{ event_category | default('Not specified') }}</span>
+                </div>
+                <div class="event-info">
+                    <span class="event-label">Date:</span>
+                    <span class="event-value">{{ event_date }}</span>
+                </div>
+                <div class="event-info">
+                    <span class="event-label">Time:</span>
+                    <span class="event-value">{{ event_time }}</span>
+                </div>
+                <div class="event-info">
+                    <span class="event-label">Venue:</span>
+                    <span class="event-value">{{ venue_name }}</span>
+                </div>
+                <div class="event-info">
+                    <span class="event-label">Capacity:</span>
+                    <span class="event-value">{{ event_capacity | default('Not specified') }}</span>
+                </div>
+                <div class="event-info">
+                    <span class="event-label">Ticket Price:</span>
+                    <span class="event-value">{{ ticket_price | default('Free') }}</span>
+                </div>
+                <div class="event-info">
+                    <span class="event-label">Submitted:</span>
+                    <span class="event-value">{{ submission_date }}</span>
+                </div>
+            </div>
+
+            <!-- Organizer Information -->
+            <div class="organizer-info">
+                <h3 class="organizer-title">
+                    <span class="organizer-icon">👤</span>
+                    Event Organizer
+                </h3>
+                <div class="organizer-row">
+                    <span class="organizer-label">Name:</span>
+                    <span class="organizer-value">{{ organizer_name }}</span>
+                </div>
+                <div class="organizer-row">
+                    <span class="organizer-label">Email:</span>
+                    <span class="organizer-value">{{ organizer_email }}</span>
+                </div>
+                {% if organizer_phone %}
+                <div class="organizer-row">
+                    <span class="organizer-label">Phone:</span>
+                    <span class="organizer-value">{{ organizer_phone }}</span>
+                </div>
+                {% endif %}
+                <div class="organizer-row">
+                    <span class="organizer-label">User ID:</span>
+                    <span class="organizer-value">{{ organizer_id }}</span>
+                </div>
+                {% if organizer_events_count %}
+                <div class="organizer-row">
+                    <span class="organizer-label">Previous Events:</span>
+                    <span class="organizer-value">{{ organizer_events_count }}</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Priority Indicator -->
+            <div class="priority-section {{ priority_class | default('priority-medium') }}">
+                <h3 class="priority-title">
+                    <span class="priority-icon">
+                        {% if priority == 'high' %}🔴
+                        {% elif priority == 'low' %}🟢
+                        {% else %}🟡{% endif %}
+                    </span>
+                    Priority: {{ priority | default('Medium') | title }}
+                </h3>
+                <p class="priority-text">
+                    {% if priority == 'high' %}
+                    This event requires immediate attention due to its date or special requirements.
+                    {% elif priority == 'low' %}
+                    This is a standard event submission with no urgent requirements.
+                    {% else %}
+                    This event should be reviewed within the standard timeframe.
+                    {% endif %}
+                </p>
+            </div>
+
+            <!-- Quick Stats -->
+            {% if pending_events_count or total_events_today %}
+            <div class="quick-stats">
+                <h3 class="stats-title">
+                    <span class="stats-icon">📊</span>
+                    Quick Stats
+                </h3>
+                <div class="stats-grid">
+                    {% if pending_events_count %}
+                    <div class="stat-item">
+                        <span class="stat-number">{{ pending_events_count }}</span>
+                        <span class="stat-label">Pending Events</span>
+                    </div>
+                    {% endif %}
+                    {% if total_events_today %}
+                    <div class="stat-item">
+                        <span class="stat-number">{{ total_events_today }}</span>
+                        <span class="stat-label">Submitted Today</span>
+                    </div>
+                    {% endif %}
+                    {% if approved_events_count %}
+                    <div class="stat-item">
+                        <span class="stat-number">{{ approved_events_count }}</span>
+                        <span class="stat-label">Approved This Week</span>
+                    </div>
+                    {% endif %}
+                    {% if rejected_events_count %}
+                    <div class="stat-item">
+                        <span class="stat-number">{{ rejected_events_count }}</span>
+                        <span class="stat-label">Rejected This Week</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <a href="{{ approve_url }}" class="btn btn-primary">✅ Approve Event</a>
+                <a href="{{ reject_url }}" class="btn btn-secondary">❌ Reject Event</a>
+                <a href="{{ review_url }}" class="btn btn-tertiary">👁️ Review Details</a>
+            </div>
+
+            <p class="message">
+                Please review this event submission promptly to ensure a smooth experience for both organizers and attendees.
+                If you have any questions about this submission, you can contact the organizer directly or reach out to the
+                development team.
+            </p>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <div class="footer-content">
+                <h3 class="footer-title">Events2Go Admin Panel</h3>
+                <p class="footer-text">Efficient event management for better user experiences</p>
+
+                <div class="footer-links">
+                    <a href="#" class="footer-link">Admin Dashboard</a>
+                    <a href="#" class="footer-link">Event Management</a>
+                    <a href="#" class="footer-link">User Management</a>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p>&copy; {{ year }} Events2Go. All rights reserved.</p>
+                <p>This is an automated admin notification. Please do not reply to this email.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

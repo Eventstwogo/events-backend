@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>How was your event experience? - Events2Go</title>
+    <!--[if mso]>
+    <noscript>
+        <xml>
+            <o:OfficeDocumentSettings>
+                <o:PixelsPerInch>96</o:PixelsPerInch>
+            </o:OfficeDocumentSettings>
+        </xml>
+    </noscript>
+    <![endif]-->
+    <style>
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #2d3748;
+            background-color: #f7fafc;
+            margin: 0;
+            padding: 0;
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+
+        table {
+            border-collapse: collapse;
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
+        }
+
+        img {
+            border: 0;
+            height: auto;
+            line-height: 100%;
+            outline: none;
+            text-decoration: none;
+            -ms-interpolation-mode: bicubic;
+        }
+
+        /* Container */
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .logo {
+            max-width: 180px;
+            height: auto;
+            margin-bottom: 20px;
+        }
+
+        .header-title {
+            color: #ffffff;
+            font-size: 28px;
+            font-weight: 700;
+            margin: 0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* Feedback Section */
+        .feedback-section {
+            background-color: #ffffff;
+            padding: 30px;
+            text-align: center;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .feedback-badge {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%);
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            color: white;
+            box-shadow: 0 4px 15px rgba(246, 173, 85, 0.3);
+        }
+
+        .feedback-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+
+        .feedback-subtitle {
+            font-size: 16px;
+            color: #718096;
+        }
+
+        /* Content */
+        .content {
+            padding: 40px 30px;
+            background-color: #ffffff;
+        }
+
+        .greeting {
+            font-size: 18px;
+            color: #2d3748;
+            margin-bottom: 25px;
+        }
+
+        .message {
+            font-size: 16px;
+            color: #4a5568;
+            line-height: 1.7;
+            margin-bottom: 30px;
+        }
+
+        /* Event Summary */
+        .event-summary {
+            background-color: #f8fafc;
+            border-left: 4px solid #667eea;
+            border-radius: 0 12px 12px 0;
+            padding: 25px;
+            margin: 30px 0;
+        }
+
+        .event-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 15px;
+        }
+
+        .event-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .event-label {
+            color: #718096;
+            font-weight: 500;
+        }
+
+        .event-value {
+            color: #2d3748;
+            font-weight: 600;
+        }
+
+        /* Rating Section */
+        .rating-section {
+            background: linear-gradient(135deg, #fef5e7 0%, #fdf2e9 100%);
+            border: 1px solid #f6ad55;
+            border-radius: 12px;
+            padding: 30px;
+            margin: 30px 0;
+            text-align: center;
+        }
+
+        .rating-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #744210;
+            margin-bottom: 20px;
+        }
+
+        .rating-stars {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .star-rating {
+            display: inline-block;
+            padding: 12px 16px;
+            background: #ffffff;
+            border: 2px solid #f6ad55;
+            border-radius: 50px;
+            text-decoration: none;
+            font-size: 24px;
+            transition: all 0.3s ease;
+            color: #f6ad55;
+        }
+
+        .star-rating:hover {
+            background: #f6ad55;
+            color: #ffffff;
+            transform: scale(1.1);
+        }
+
+        .rating-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #744210;
+            margin-top: 10px;
+        }
+
+        /* Quick Feedback Buttons */
+        .quick-feedback {
+            background-color: #f8fafc;
+            border-left: 4px solid #48bb78;
+            border-radius: 0 12px 12px 0;
+            padding: 25px;
+            margin: 30px 0;
+        }
+
+        .quick-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .feedback-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .feedback-btn {
+            display: block;
+            padding: 15px 20px;
+            background: #ffffff;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            text-decoration: none;
+            color: #4a5568;
+            font-weight: 500;
+            text-align: center;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .feedback-btn:hover {
+            border-color: #48bb78;
+            color: #48bb78;
+            transform: translateY(-2px);
+        }
+
+        .feedback-btn-positive {
+            border-color: #48bb78;
+            color: #48bb78;
+        }
+
+        .feedback-btn-negative {
+            border-color: #e53e3e;
+            color: #e53e3e;
+        }
+
+        /* Detailed Feedback */
+        .detailed-feedback {
+            background: linear-gradient(135deg, #e6fffa 0%, #b2f5ea 100%);
+            border: 1px solid #4fd1c7;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 30px 0;
+            text-align: center;
+        }
+
+        .detailed-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #234e52;
+            margin-bottom: 15px;
+        }
+
+        .detailed-text {
+            font-size: 14px;
+            color: #234e52;
+            margin-bottom: 20px;
+        }
+
+        .detailed-btn {
+            background: linear-gradient(135deg, #4fd1c7 0%, #38b2ac 100%);
+            color: #ffffff !important;
+            padding: 16px 32px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 16px;
+            display: inline-block;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(79, 209, 199, 0.4);
+        }
+
+        .detailed-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(79, 209, 199, 0.6);
+        }
+
+        /* Incentive Section */
+        .incentive-section {
+            background: linear-gradient(135deg, #fed7d7 0%, #feb2b2 100%);
+            border: 1px solid #fc8181;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 30px 0;
+            text-align: center;
+        }
+
+        .incentive-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #742a2a;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .incentive-icon {
+            margin-right: 10px;
+            font-size: 18px;
+        }
+
+        .incentive-text {
+            font-size: 14px;
+            color: #742a2a;
+            margin-bottom: 15px;
+        }
+
+        .incentive-offer {
+            font-size: 18px;
+            font-weight: 700;
+            color: #742a2a;
+        }
+
+        /* Social Sharing */
+        .social-section {
+            background-color: #f8fafc;
+            border-left: 4px solid #9f7aea;
+            border-radius: 0 12px 12px 0;
+            padding: 25px;
+            margin: 30px 0;
+        }
+
+        .social-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .social-text {
+            font-size: 14px;
+            color: #4a5568;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .social-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .social-btn {
+            display: inline-block;
+            padding: 12px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .social-facebook {
+            background: #1877f2;
+            color: #ffffff !important;
+        }
+
+        .social-twitter {
+            background: #1da1f2;
+            color: #ffffff !important;
+        }
+
+        .social-linkedin {
+            background: #0077b5;
+            color: #ffffff !important;
+        }
+
+        .social-btn:hover {
+            transform: translateY(-2px);
+            opacity: 0.9;
+        }
+
+        /* Footer */
+        .footer {
+            background-color: #2d3748;
+            color: #a0aec0;
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .footer-content {
+            margin-bottom: 20px;
+        }
+
+        .footer-title {
+            color: #ffffff;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .footer-text {
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .footer-links {
+            margin: 20px 0;
+        }
+
+        .footer-link {
+            color: #f6ad55;
+            text-decoration: none;
+            margin: 0 15px;
+            font-size: 14px;
+        }
+
+        .footer-link:hover {
+            color: #ffffff;
+        }
+
+        .footer-bottom {
+            border-top: 1px solid #4a5568;
+            padding-top: 20px;
+            font-size: 12px;
+            color: #718096;
+        }
+
+        /* Responsive */
+        @media only screen and (max-width: 600px) {
+            .email-container {
+                width: 100% !important;
+            }
+
+            .header, .feedback-section, .content, .footer {
+                padding-left: 20px !important;
+                padding-right: 20px !important;
+            }
+
+            .rating-stars {
+                flex-wrap: wrap !important;
+                gap: 8px !important;
+            }
+
+            .star-rating {
+                font-size: 20px !important;
+                padding: 10px 12px !important;
+            }
+
+            .feedback-buttons {
+                grid-template-columns: 1fr !important;
+                gap: 10px !important;
+            }
+
+            .social-buttons {
+                flex-direction: column !important;
+                align-items: center !important;
+            }
+
+            .event-info {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+            }
+        }
+
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            .email-container {
+                background-color: #1a202c !important;
+            }
+
+            .content, .feedback-section, .event-summary, .quick-feedback, .social-section {
+                background-color: #2d3748 !important;
+            }
+
+            .feedback-title, .greeting, .event-title, .quick-title, .social-title {
+                color: #ffffff !important;
+            }
+
+            .message, .feedback-subtitle, .event-label, .social-text {
+                color: #a0aec0 !important;
+            }
+
+            .event-value {
+                color: #ffffff !important;
+            }
+
+            .feedback-btn {
+                background-color: #4a5568 !important;
+                border-color: #718096 !important;
+                color: #a0aec0 !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            {% if logo_url %}
+            <img src="{{ logo_url }}" alt="Events2Go Logo" class="logo">
+            {% else %}
+            <img src="/media/events2go-gradient-logo.png" alt="Events2Go Logo" class="logo">
+            {% endif %}
+            <h1 class="header-title">Your Feedback Matters</h1>
+        </div>
+
+        <!-- Feedback Section -->
+        <div class="feedback-section">
+            <div class="feedback-badge">💭</div>
+            <h2 class="feedback-title">How was your experience?</h2>
+            <p class="feedback-subtitle">Help us improve for future events</p>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <p class="greeting">Hello <strong>{{ username }}</strong>,</p>
+
+            <p class="message">
+                We hope you had an amazing time at your recent event! Your experience matters to us, and we'd love to hear
+                about it. Your feedback helps us improve our platform and ensures better experiences for all event-goers.
+            </p>
+
+            <!-- Event Summary -->
+            <div class="event-summary">
+                <h3 class="event-title">{{ event_title }}</h3>
+                <div class="event-info">
+                    <span class="event-label">Date:</span>
+                    <span class="event-value">{{ event_date }}</span>
+                </div>
+                <div class="event-info">
+                    <span class="event-label">Venue:</span>
+                    <span class="event-value">{{ venue_name }}</span>
+                </div>
+                {% if booking_id %}
+                <div class="event-info">
+                    <span class="event-label">Booking ID:</span>
+                    <span class="event-value">{{ booking_id }}</span>
+                </div>
+                {% endif %}
+                <div class="event-info">
+                    <span class="event-label">Attended:</span>
+                    <span class="event-value">{{ attendance_date | default('Recently') }}</span>
+                </div>
+            </div>
+
+            <!-- Rating Section -->
+            <div class="rating-section">
+                <h3 class="rating-title">Rate Your Overall Experience</h3>
+                <div class="rating-stars">
+                    <a href="{{ feedback_url }}?rating=1" class="star-rating">⭐</a>
+                    <a href="{{ feedback_url }}?rating=2" class="star-rating">⭐</a>
+                    <a href="{{ feedback_url }}?rating=3" class="star-rating">⭐</a>
+                    <a href="{{ feedback_url }}?rating=4" class="star-rating">⭐</a>
+                    <a href="{{ feedback_url }}?rating=5" class="star-rating">⭐</a>
+                </div>
+                <div class="rating-labels">
+                    <span>Poor</span>
+                    <span>Excellent</span>
+                </div>
+            </div>
+
+            <!-- Quick Feedback -->
+            <div class="quick-feedback">
+                <h3 class="quick-title">Quick Feedback</h3>
+                <div class="feedback-buttons">
+                    <a href="{{ feedback_url }}?type=positive&aspect=organization" class="feedback-btn feedback-btn-positive">
+                        👍 Well Organized
+                    </a>
+                    <a href="{{ feedback_url }}?type=positive&aspect=venue" class="feedback-btn feedback-btn-positive">
+                        🏢 Great Venue
+                    </a>
+                    <a href="{{ feedback_url }}?type=positive&aspect=content" class="feedback-btn feedback-btn-positive">
+                        🎯 Excellent Content
+                    </a>
+                    <a href="{{ feedback_url }}?type=positive&aspect=value" class="feedback-btn feedback-btn-positive">
+                        💰 Good Value
+                    </a>
+                    <a href="{{ feedback_url }}?type=negative&aspect=timing" class="feedback-btn feedback-btn-negative">
+                        ⏰ Timing Issues
+                    </a>
+                    <a href="{{ feedback_url }}?type=negative&aspect=technical" class="feedback-btn feedback-btn-negative">
+                        🔧 Technical Problems
+                    </a>
+                </div>
+            </div>
+
+            <!-- Detailed Feedback -->
+            <div class="detailed-feedback">
+                <h3 class="detailed-title">Share More Details</h3>
+                <p class="detailed-text">
+                    Want to share more specific feedback? We'd love to hear your detailed thoughts, suggestions, and ideas
+                    for improvement.
+                </p>
+                <a href="{{ detailed_feedback_url | default(feedback_url) }}" class="detailed-btn">
+                    📝 Write Detailed Feedback
+                </a>
+            </div>
+
+            <!-- Incentive Section -->
+            {% if incentive_offer %}
+            <div class="incentive-section">
+                <h3 class="incentive-title">
+                    <span class="incentive-icon">🎁</span>
+                    Thank You Reward
+                </h3>
+                <p class="incentive-text">
+                    Complete your feedback and receive:
+                </p>
+                <div class="incentive-offer">{{ incentive_offer }}</div>
+            </div>
+            {% endif %}
+
+            <!-- Social Sharing -->
+            <div class="social-section">
+                <h3 class="social-title">Loved the Event? Share It!</h3>
+                <p class="social-text">
+                    Help others discover great events by sharing your experience on social media.
+                </p>
+                <div class="social-buttons">
+                    <a href="{{ facebook_share_url | default('#') }}" class="social-btn social-facebook">
+                        Share on Facebook
+                    </a>
+                    <a href="{{ twitter_share_url | default('#') }}" class="social-btn social-twitter">
+                        Tweet About It
+                    </a>
+                    <a href="{{ linkedin_share_url | default('#') }}" class="social-btn social-linkedin">
+                        Share on LinkedIn
+                    </a>
+                </div>
+            </div>
+
+            <p class="message">
+                Thank you for taking the time to share your feedback. Your input is invaluable in helping us create better
+                event experiences for everyone. We look forward to seeing you at future events!
+            </p>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <div class="footer-content">
+                <h3 class="footer-title">Events2Go</h3>
+                <p class="footer-text">Creating memorable experiences, one event at a time</p>
+
+                <div class="footer-links">
+                    <a href="#" class="footer-link">Browse Events</a>
+                    <a href="#" class="footer-link">My Account</a>
+                    <a href="#" class="footer-link">Help Center</a>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p>&copy; {{ year }} Events2Go. All rights reserved.</p>
+                <p>This feedback request was sent because you attended one of our events.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

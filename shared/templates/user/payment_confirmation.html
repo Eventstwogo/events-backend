@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Payment Successful - Events2Go</title>
+    <!--[if mso]>
+    <noscript>
+        <xml>
+            <o:OfficeDocumentSettings>
+                <o:PixelsPerInch>96</o:PixelsPerInch>
+            </o:OfficeDocumentSettings>
+        </xml>
+    </noscript>
+    <![endif]-->
+    <style>
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #2d3748;
+            background-color: #f7fafc;
+            margin: 0;
+            padding: 0;
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+
+        table {
+            border-collapse: collapse;
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
+        }
+
+        img {
+            border: 0;
+            height: auto;
+            line-height: 100%;
+            outline: none;
+            text-decoration: none;
+            -ms-interpolation-mode: bicubic;
+        }
+
+        /* Container */
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .logo {
+            max-width: 180px;
+            height: auto;
+            margin-bottom: 20px;
+        }
+
+        .header-title {
+            color: #ffffff;
+            font-size: 28px;
+            font-weight: 700;
+            margin: 0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* Success Section */
+        .success-section {
+            background-color: #ffffff;
+            padding: 30px;
+            text-align: center;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .success-badge {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            color: white;
+            box-shadow: 0 4px 15px rgba(72, 187, 120, 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .success-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+
+        .success-subtitle {
+            font-size: 16px;
+            color: #718096;
+        }
+
+        /* Content */
+        .content {
+            padding: 40px 30px;
+            background-color: #ffffff;
+        }
+
+        .greeting {
+            font-size: 18px;
+            color: #2d3748;
+            margin-bottom: 25px;
+        }
+
+        .message {
+            font-size: 16px;
+            color: #4a5568;
+            line-height: 1.7;
+            margin-bottom: 30px;
+        }
+
+        /* Payment Summary */
+        .payment-summary {
+            background-color: #f8fafc;
+            border-left: 4px solid #48bb78;
+            border-radius: 0 12px 12px 0;
+            padding: 25px;
+            margin: 30px 0;
+        }
+
+        .summary-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 20px;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+
+        .summary-label {
+            color: #718096;
+            font-weight: 500;
+        }
+
+        .summary-value {
+            color: #2d3748;
+            font-weight: 600;
+        }
+
+        .summary-total {
+            border-top: 2px solid #e2e8f0;
+            padding-top: 15px;
+            margin-top: 15px;
+        }
+
+        .summary-total .summary-label,
+        .summary-total .summary-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #2d3748;
+        }
+
+        /* Transaction Details */
+        .transaction-details {
+            background: linear-gradient(135deg, #e6fffa 0%, #b2f5ea 100%);
+            border: 1px solid #4fd1c7;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 30px 0;
+        }
+
+        .transaction-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #234e52;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+
+        .transaction-icon {
+            margin-right: 10px;
+            font-size: 18px;
+        }
+
+        .transaction-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .transaction-label {
+            color: #234e52;
+            font-weight: 500;
+        }
+
+        .transaction-value {
+            color: #234e52;
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* Event Information */
+        .event-info {
+            background-color: #f8fafc;
+            border-left: 4px solid #667eea;
+            border-radius: 0 12px 12px 0;
+            padding: 25px;
+            margin: 30px 0;
+        }
+
+        .event-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 20px;
+        }
+
+        .event-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .event-label {
+            color: #718096;
+            font-weight: 500;
+        }
+
+        .event-value {
+            color: #2d3748;
+            font-weight: 600;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            text-align: center;
+            margin: 40px 0;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 16px 32px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 16px;
+            margin: 0 10px 10px 0;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff !important;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .btn-secondary {
+            background: #ffffff;
+            color: #667eea !important;
+            border: 2px solid #667eea;
+        }
+
+        .btn-secondary:hover {
+            background: #667eea;
+            color: #ffffff !important;
+        }
+
+        /* Receipt Download */
+        .receipt-section {
+            background: linear-gradient(135deg, #fef5e7 0%, #fdf2e9 100%);
+            border: 1px solid #f6ad55;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 30px 0;
+            text-align: center;
+        }
+
+        .receipt-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #744210;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .receipt-icon {
+            margin-right: 10px;
+            font-size: 18px;
+        }
+
+        .receipt-text {
+            font-size: 14px;
+            color: #744210;
+            margin-bottom: 20px;
+        }
+
+        .receipt-btn {
+            background: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%);
+            color: #ffffff !important;
+            padding: 12px 24px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+
+        .receipt-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(246, 173, 85, 0.4);
+        }
+
+        /* Next Steps */
+        .next-steps {
+            background-color: #f8fafc;
+            border-left: 4px solid #9f7aea;
+            border-radius: 0 12px 12px 0;
+            padding: 25px;
+            margin: 30px 0;
+        }
+
+        .steps-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+
+        .steps-icon {
+            margin-right: 10px;
+            font-size: 18px;
+        }
+
+        .steps-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .steps-list li {
+            font-size: 14px;
+            color: #4a5568;
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .steps-list li:before {
+            content: "✓";
+            color: #48bb78;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+
+        /* Footer */
+        .footer {
+            background-color: #2d3748;
+            color: #a0aec0;
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .footer-content {
+            margin-bottom: 20px;
+        }
+
+        .footer-title {
+            color: #ffffff;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .footer-text {
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .footer-links {
+            margin: 20px 0;
+        }
+
+        .footer-link {
+            color: #48bb78;
+            text-decoration: none;
+            margin: 0 15px;
+            font-size: 14px;
+        }
+
+        .footer-link:hover {
+            color: #ffffff;
+        }
+
+        .footer-bottom {
+            border-top: 1px solid #4a5568;
+            padding-top: 20px;
+            font-size: 12px;
+            color: #718096;
+        }
+
+        /* Responsive */
+        @media only screen and (max-width: 600px) {
+            .email-container {
+                width: 100% !important;
+            }
+
+            .header, .success-section, .content, .footer {
+                padding-left: 20px !important;
+                padding-right: 20px !important;
+            }
+
+            .summary-row, .transaction-row, .event-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+            }
+
+            .btn {
+                display: block !important;
+                margin: 10px 0 !important;
+            }
+        }
+
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            .email-container {
+                background-color: #1a202c !important;
+            }
+
+            .content, .success-section, .payment-summary, .event-info, .next-steps {
+                background-color: #2d3748 !important;
+            }
+
+            .success-title, .greeting, .summary-title, .event-title, .steps-title {
+                color: #ffffff !important;
+            }
+
+            .message, .success-subtitle, .summary-label, .event-label {
+                color: #a0aec0 !important;
+            }
+
+            .summary-value, .event-value {
+                color: #ffffff !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            {% if logo_url %}
+            <img src="{{ logo_url }}" alt="Events2Go Logo" class="logo">
+            {% else %}
+            <img src="/media/events2go-gradient-logo.png" alt="Events2Go Logo" class="logo">
+            {% endif %}
+            <h1 class="header-title">Payment Successful</h1>
+        </div>
+
+        <!-- Success Section -->
+        <div class="success-section">
+            <div class="success-badge">✅</div>
+            <h2 class="success-title">Payment Confirmed!</h2>
+            <p class="success-subtitle">Your transaction has been processed successfully</p>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <p class="greeting">Hello <strong>{{ username }}</strong>,</p>
+
+            <p class="message">
+                Thank you for your payment! We've successfully processed your transaction and your booking is now confirmed.
+                Below you'll find the details of your purchase and next steps.
+            </p>
+
+            <!-- Payment Summary -->
+            <div class="payment-summary">
+                <h3 class="summary-title">Payment Summary</h3>
+                {% if event_title %}
+                <div class="summary-row">
+                    <span class="summary-label">Event:</span>
+                    <span class="summary-value">{{ event_title }}</span>
+                </div>
+                {% endif %}
+                {% if ticket_quantity %}
+                <div class="summary-row">
+                    <span class="summary-label">Tickets ({{ ticket_quantity }}x {{ ticket_type | default('General') }}):</span>
+                    <span class="summary-value">{{ ticket_subtotal | default(ticket_price) }}</span>
+                </div>
+                {% endif %}
+                {% if service_fee %}
+                <div class="summary-row">
+                    <span class="summary-label">Service Fee:</span>
+                    <span class="summary-value">{{ service_fee }}</span>
+                </div>
+                {% endif %}
+                {% if taxes %}
+                <div class="summary-row">
+                    <span class="summary-label">Taxes:</span>
+                    <span class="summary-value">{{ taxes }}</span>
+                </div>
+                {% endif %}
+                {% if discount_amount %}
+                <div class="summary-row">
+                    <span class="summary-label">Discount:</span>
+                    <span class="summary-value">-{{ discount_amount }}</span>
+                </div>
+                {% endif %}
+                <div class="summary-row summary-total">
+                    <span class="summary-label">Total Paid:</span>
+                    <span class="summary-value">{{ total_amount }}</span>
+                </div>
+            </div>
+
+            <!-- Transaction Details -->
+            <div class="transaction-details">
+                <h3 class="transaction-title">
+                    <span class="transaction-icon">🧾</span>
+                    Transaction Details
+                </h3>
+                <div class="transaction-row">
+                    <span class="transaction-label">Transaction ID:</span>
+                    <span class="transaction-value">{{ transaction_id }}</span>
+                </div>
+                <div class="transaction-row">
+                    <span class="transaction-label">Payment Method:</span>
+                    <span class="transaction-value">{{ payment_method | default('Credit Card') }}</span>
+                </div>
+                <div class="transaction-row">
+                    <span class="transaction-label">Payment Date:</span>
+                    <span class="transaction-value">{{ payment_date | default('Now') }}</span>
+                </div>
+                {% if booking_id %}
+                <div class="transaction-row">
+                    <span class="transaction-label">Booking Reference:</span>
+                    <span class="transaction-value">{{ booking_id }}</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Event Information -->
+            {% if event_title %}
+            <div class="event-info">
+                <h3 class="event-title">Event Information</h3>
+                <div class="event-row">
+                    <span class="event-label">Event Name:</span>
+                    <span class="event-value">{{ event_title }}</span>
+                </div>
+                {% if event_date %}
+                <div class="event-row">
+                    <span class="event-label">Date:</span>
+                    <span class="event-value">{{ event_date }}</span>
+                </div>
+                {% endif %}
+                {% if event_time %}
+                <div class="event-row">
+                    <span class="event-label">Time:</span>
+                    <span class="event-value">{{ event_time }}</span>
+                </div>
+                {% endif %}
+                {% if venue_name %}
+                <div class="event-row">
+                    <span class="event-label">Venue:</span>
+                    <span class="event-value">{{ venue_name }}</span>
+                </div>
+                {% endif %}
+                {% if venue_address %}
+                <div class="event-row">
+                    <span class="event-label">Address:</span>
+                    <span class="event-value">{{ venue_address }}</span>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                {% if ticket_url %}
+                <a href="{{ ticket_url }}" class="btn btn-primary">View My Tickets</a>
+                {% endif %}
+                <a href="{{ dashboard_url | default('#') }}" class="btn btn-secondary">My Dashboard</a>
+            </div>
+
+            <!-- Receipt Download -->
+            <div class="receipt-section">
+                <h3 class="receipt-title">
+                    <span class="receipt-icon">📄</span>
+                    Download Receipt
+                </h3>
+                <p class="receipt-text">
+                    Need a receipt for your records? Download your payment receipt below.
+                </p>
+                {% if receipt_url %}
+                <a href="{{ receipt_url }}" class="receipt-btn">Download Receipt</a>
+                {% endif %}
+            </div>
+
+            <!-- Next Steps -->
+            <div class="next-steps">
+                <h3 class="steps-title">
+                    <span class="steps-icon">📋</span>
+                    What's Next?
+                </h3>
+                <ul class="steps-list">
+                    <li>Check your email for ticket confirmation (if applicable)</li>
+                    <li>Add the event to your calendar</li>
+                    <li>Review event details and any special instructions</li>
+                    <li>Arrive at the venue with your ticket and valid ID</li>
+                    {% if additional_instructions %}
+                    <li>{{ additional_instructions }}</li>
+                    {% endif %}
+                </ul>
+            </div>
+
+            <p class="message">
+                If you have any questions about your payment or booking, please don't hesitate to contact our support team.
+                We're here to help make your event experience amazing!
+            </p>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <div class="footer-content">
+                <h3 class="footer-title">Events2Go</h3>
+                <p class="footer-text">Thank you for choosing Events2Go for your event needs</p>
+
+                <div class="footer-links">
+                    <a href="#" class="footer-link">My Account</a>
+                    <a href="#" class="footer-link">Help Center</a>
+                    <a href="#" class="footer-link">Contact Support</a>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p>&copy; {{ year }} Events2Go. All rights reserved.</p>
+                <p>This is a payment confirmation email. Please keep it for your records.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

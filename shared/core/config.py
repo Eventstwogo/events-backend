@@ -102,7 +102,7 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = "your-smtp-password"
     EMAIL_FROM: str = "your-email@gmail.com"
     EMAIL_FROM_NAME: str = "Events2Go API"
-    EMAIL_TEMPLATES_DIR: str = "templates"
+    EMAIL_TEMPLATES_DIR: str = "shared/templates"
 
     # === JWT ===
     JWT_ALGORITHM: str = "RS256"
