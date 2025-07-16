@@ -74,6 +74,14 @@ async def register_user(
     if unique_user_result is not None:
         return unique_user_result
 
+    # Validate first name and last name are not the same
+    if user_data.first_name.strip().lower() == user_data.last_name.strip().lower():
+        return api_response(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message="First name and last name cannot be the same.",
+            log_error=True,
+        )
+
     # Create new user
     user_id = generate_lower_uppercase(length=6)
 

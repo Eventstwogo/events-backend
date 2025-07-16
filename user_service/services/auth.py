@@ -64,7 +64,6 @@ def generate_token(user: User) -> str:
 async def check_password_expiry(user: User, now: datetime) -> bool:
     if user.days_180_flag and user.days_180_timestamp:
         if (now - user.days_180_timestamp).days >= 180:
-            user.login_status = 2
             return True
     elif user.days_180_flag:
         user.days_180_timestamp = now

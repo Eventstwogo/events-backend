@@ -2,7 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from shared.core.logging_config import get_logger
-from shared.db.models import Config, User, Role
+from shared.db.models import Config, Role, User
 from user_service.utils.user_validators import is_account_locked
 
 

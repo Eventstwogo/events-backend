@@ -147,36 +147,37 @@ async def reset_password_with_token(
         )
 
 
-@router.patch("/reset-password")
-@exception_handler
-async def reset_password(
-    data: UserPasswordReset,
-    db: AsyncSession = Depends(get_db),
-) -> JSONResponse:
-    """Reset password for authenticated user (user function)"""
-    # Find user using the common utility function
-    user = await get_user_by_email(db, data.email)
-    if not user:
-        return user_not_found_response()
+# @router.patch("/reset-password")
+# @exception_handler
+# async def reset_password(
+#     data: UserPasswordReset,
+#     db: AsyncSession = Depends(get_db),
+# ) -> JSONResponse:
+#     """Reset password for authenticated user (user function)"""
+#     # Find user using the common utility function
+#     user = await get_user_by_email(db, data.email)
+#     if not user:
+#         return user_not_found_response()
 
-    # Prevent using the same password
-    if verify_password(data.new_password, user.password_hash):
-        return api_response(
-            status_code=status.HTTP_409_CONFLICT,
-            message="New password cannot be the same as old password.",
-            log_error=False,
-        )
+#     # Prevent using the same password
+#     if verify_password(data.new_password, user.password_hash):
+#         return api_response(
+#             status_code=status.HTTP_409_CONFLICT,
+#             message="New password cannot be the same as old password.",
+#             log_error=False,
 
-    # Hash and update password
-    user.password_hash = hash_password(data.new_password)
-    # Set status 0 but require password reset
-    user.login_status = 0
-    await db.commit()
-    await db.refresh(user)
-    return api_response(
-        status_code=status.HTTP_200_OK,
-        message="Password reset successfully.",
-    )
+#         )
+
+#     # Hash and update password
+#     user.password_hash = hash_password(data.new_password)
+#     # Set status 0 but require password reset
+#     user.login_status = 0
+#     await db.commit()
+#     await db.refresh(user)
+#     return api_response(
+#         status_code=status.HTTP_200_OK,
+#         message="Password reset successfully.",
+#     )
 
 
 @router.post("/change-password", status_code=status.HTTP_200_OK)

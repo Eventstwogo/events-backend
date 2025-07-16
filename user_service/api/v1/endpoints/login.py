@@ -12,12 +12,13 @@ from fastapi import (
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from starlette.responses import JSONResponse, Response
 
 from shared.core.api_response import api_response
 from shared.core.config import PRIVATE_KEY, PUBLIC_KEY, settings
 from shared.core.logging_config import get_logger
-from shared.db.models import User, UserDeviceSession
+from shared.db.models import User, UserDeviceSession, UserVerification
 from shared.db.sessions.database import get_db
 from shared.dependencies.user import extract_token_from_request, get_current_active_user
 from user_service.schemas.session import (
@@ -28,6 +29,7 @@ from user_service.schemas.user import UserMeOut
 from user_service.services.auth import check_account_lock, check_password, check_password_expiry
 from user_service.services.response_builders import (
     account_deactivated,
+    email_not_verified_response,
     login_success_response,
     password_expired_response,
     user_not_found_response,
@@ -43,7 +45,7 @@ router = APIRouter()
 
 
 async def fetch_user_by_email(db: AsyncSession, email: str) -> User | None:
-    query = User.by_email_query(email.lower())
+    query = User.by_email_query(email.lower()).options(selectinload(User.verification))
     result = await db.execute(query)
     return result.scalar_one_or_none()
 
@@ -86,6 +88,10 @@ async def validate_login_attempt(
     if user.is_deleted:
         return account_deactivated()
 
+    # Step 1.2: Check email verification status
+    if not user.verification or not user.verification.email_verified:
+        return email_not_verified_response()
+
     # Step 2: Check lock status
     locked_response = await check_account_lock(user, db)
     if locked_response:
@@ -111,6 +117,12 @@ async def process_successful_login(
     user.last_login = now
     user.failure_login_attempts = 0
     user.successful_login_count += 1
+    
+    # Set login status based on password expiry
+    if password_expired:
+        user.login_status = 2  # Password expired
+    else:
+        user.login_status = 0  # Default/normal status
 
     await db.commit()
     await db.refresh(user)

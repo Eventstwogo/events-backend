@@ -41,24 +41,24 @@ async def get_profile(
     Returns:
         JSONResponse: User profile data
     """
-    # Query user with role information
+    # Query user information
     stmt = select(User).where(User.user_id == current_user.user_id)
     result = await db.execute(stmt)
-    row = result.first()
+    user = result.scalar_one_or_none()
 
-    if not row:
+    if not user:
         return api_response(
             status_code=status.HTTP_404_NOT_FOUND,
             message="User profile not found.",
             log_error=True,
         )
 
-    user, role_name = row
-
     # Create response object
     profile_data = {
         "user_id": user.user_id,
         "username": user.username,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
         "email": user.email,
         "profile_picture": (get_media_url(user.profile_picture) if user.profile_picture else None),
     }
@@ -94,6 +94,62 @@ async def update_profile(
         return api_response(
             status_code=status.HTTP_404_NOT_FOUND,
             message="User not found.",
+            log_error=True,
+        )
+
+    # Validate first name and last name
+    new_first_name = normalize_whitespace(profile_data.first_name)
+    new_last_name = normalize_whitespace(profile_data.last_name)
+    
+    # Check if first name and last name are the same
+    if new_first_name.lower() == new_last_name.lower():
+        return api_response(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message="First name and last name cannot be the same.",
+            log_error=True,
+        )
+    
+    # Validate first name
+    if not validate_length_range(new_first_name, 1, 255):
+        return api_response(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message="First name must be 1–255 characters long.",
+            log_error=True,
+        )
+    
+    if contains_xss(new_first_name):
+        return api_response(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message="First name contains potentially malicious content.",
+            log_error=True,
+        )
+    
+    if has_excessive_repetition(new_first_name, max_repeats=3):
+        return api_response(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message="First name contains excessive repeated characters.",
+            log_error=True,
+        )
+    
+    # Validate last name
+    if not validate_length_range(new_last_name, 1, 255):
+        return api_response(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message="Last name must be 1–255 characters long.",
+            log_error=True,
+        )
+    
+    if contains_xss(new_last_name):
+        return api_response(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message="Last name contains potentially malicious content.",
+            log_error=True,
+        )
+    
+    if has_excessive_repetition(new_last_name, max_repeats=3):
+        return api_response(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message="Last name contains excessive repeated characters.",
             log_error=True,
         )
 
@@ -164,6 +220,10 @@ async def update_profile(
 
         user.email = profile_data.email
 
+    # Update first name and last name
+    user.first_name = new_first_name
+    user.last_name = new_last_name
+
     await db.commit()
     await db.refresh(user)
 
@@ -173,6 +233,8 @@ async def update_profile(
         data={
             "user_id": user.user_id,
             "username": user.username,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
             "email": user.email,
             "profile_picture": (
                 get_media_url(user.profile_picture) if user.profile_picture else None

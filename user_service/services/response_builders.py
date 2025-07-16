@@ -38,6 +38,14 @@ def account_deactivated() -> JSONResponse:
     )
 
 
+def email_not_verified_response() -> JSONResponse:
+    return api_response(
+        status_code=status.HTTP_403_FORBIDDEN,
+        message="Email not verified. Please verify your email address before logging in.",
+        log_error=False,
+    )
+
+
 def password_expired_response(
     user: User, access_token: str, refresh_token: Optional[str] = None
 ) -> JSONResponse:
