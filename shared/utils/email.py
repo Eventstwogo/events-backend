@@ -1,6 +1,5 @@
 import smtplib
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Any, Dict, Optional, Union

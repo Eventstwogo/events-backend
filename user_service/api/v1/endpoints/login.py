@@ -1,16 +1,14 @@
 from datetime import datetime, timezone
-from typing import Annotated, Optional, Union
+from typing import Annotated, Union
 
 import jwt
 from fastapi import (
     APIRouter,
     Depends,
-    HTTPException,
     Request,
     Response,
 )
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from starlette.responses import JSONResponse, Response
@@ -18,19 +16,13 @@ from starlette.responses import JSONResponse, Response
 from shared.core.api_response import api_response
 from shared.core.config import PRIVATE_KEY, PUBLIC_KEY, settings
 from shared.core.logging_config import get_logger
-from shared.db.models import User, UserDeviceSession, UserVerification
+from shared.db.models import User
 from shared.db.sessions.database import get_db
 from shared.dependencies.user import (
     extract_token_from_request,
     get_current_active_user,
 )
 from shared.utils.exception_handlers import exception_handler
-from shared.utils.file_uploads import get_media_url
-from user_service.schemas.session import (
-    SessionInfo,
-    SessionListResponse,
-)
-from user_service.schemas.user import UserMeOut
 from user_service.services.auth import (
     check_account_lock,
     check_password,
@@ -45,12 +37,10 @@ from user_service.services.response_builders import (
 )
 from user_service.services.session_management import (
     SessionManager,
-    TokenSessionManager,
 )
 from user_service.utils.auth import (
     create_jwt_token,
     revoke_token,
-    verify_jwt_token,
 )
 
 logger = get_logger(__name__)

@@ -1,24 +1,17 @@
 from typing import Annotated, List, Optional
 
-from fastapi import APIRouter, Depends, Form, Query, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
 
 from shared.core.api_response import api_response
 from shared.core.logging_config import get_logger
-from shared.db.models import Role, User
+from shared.db.models import User
 from shared.db.sessions.database import get_db
 from shared.dependencies.user import get_current_active_user
 from shared.utils.exception_handlers import exception_handler
 from shared.utils.file_uploads import get_media_url
-from shared.utils.security_validators import contains_xss
-from shared.utils.validators import (
-    has_excessive_repetition,
-    is_valid_username,
-    normalize_whitespace,
-    validate_length_range,
-)
 from user_service.schemas.user import UserMeOut
 from user_service.services.response_builders import user_not_found_response
 from user_service.services.user_service import get_user_by_id
@@ -334,9 +327,6 @@ async def hard_delete_user(
     user = await get_user_by_id(db, user_id)
     if not user:
         return user_not_found_response()
-
-    # Store user info for logging before deletion
-    deleted_username = user.username
 
     await db.delete(user)
     await db.commit()

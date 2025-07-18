@@ -1,17 +1,14 @@
 from datetime import datetime
 from typing import Optional
 
-from fastapi import Form, HTTPException
 from pydantic import (
     BaseModel,
     EmailStr,
     Field,
     field_validator,
 )
-from starlette import status
 
 from shared.utils.email_validators import EmailValidator
-from shared.utils.password_validator import PasswordValidator
 from shared.utils.security_validators import contains_xss
 from shared.utils.validators import (
     normalize_whitespace,

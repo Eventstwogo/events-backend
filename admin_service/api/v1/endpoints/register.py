@@ -43,7 +43,8 @@ async def register_user(
 
     Args:
         background_tasks: FastAPI background tasks handler
-        user_data: User registration data including first_name, last_name, username, email, and role_id
+        user_data: User registration data including first_name, last_name,
+            username, email, and role_id
         db: Database session
 
     Returns:

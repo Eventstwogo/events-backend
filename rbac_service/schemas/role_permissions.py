@@ -1,13 +1,4 @@
-from typing import Any, Optional
-
-from pydantic import BaseModel, Field, field_validator
-
-from shared.utils.security_validators import validate_strict_input
-from shared.utils.validators import (
-    is_valid_name,
-    normalize_whitespace,
-    validate_length_range,
-)
+from pydantic import BaseModel, Field
 
 
 class CreateRolePermission(BaseModel):

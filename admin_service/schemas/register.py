@@ -1,6 +1,3 @@
-from datetime import datetime
-from typing import List
-
 from pydantic import (
     BaseModel,
     EmailStr,
@@ -25,7 +22,10 @@ class AdminRegisterRequest(BaseModel):
         min_length=3,
         max_length=255,
         title="Username",
-        description="Unique username for the admin. Must be 4-32 characters, and start with 3 letters. Letters, numbers, spaces, and hyphens are allowed.",
+        description=(
+            "Unique username for the admin. Must be 4-32 characters, "
+            "and start with 3 letters. Letters, numbers, spaces, and hyphens are allowed."
+        ),
     )
     email: EmailStr = Field(
         ...,

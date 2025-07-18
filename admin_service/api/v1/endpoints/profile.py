@@ -1,11 +1,11 @@
-from typing import Annotated, Dict
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
 
-from admin_service.schemas.profile import UpdateProfileRequest, UserProfile
+from admin_service.schemas.profile import UserProfile
 from shared.core.api_response import api_response
 from shared.core.config import settings
 from shared.db.models import AdminUser, Role
@@ -18,13 +18,6 @@ from shared.utils.file_uploads import (
     save_uploaded_file,
 )
 from shared.utils.secure_filename import secure_filename
-from shared.utils.security_validators import contains_xss
-from shared.utils.validators import (
-    has_excessive_repetition,
-    is_valid_username,
-    normalize_whitespace,
-    validate_length_range,
-)
 
 router = APIRouter()
 

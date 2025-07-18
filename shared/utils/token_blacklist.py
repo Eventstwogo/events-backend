@@ -3,8 +3,8 @@ Token blacklist implementation for JWT token revocation.
 """
 
 import time
-from datetime import datetime, timezone
-from typing import Dict, Optional, Set
+from datetime import datetime
+from typing import Dict
 
 from shared.core.logging_config import get_logger
 

@@ -401,7 +401,10 @@ class SessionManager:
                     alerts.append(
                         {
                             "type": "concurrent_locations",
-                            "message": f"Concurrent sessions from multiple countries: {', '.join(countries)}",
+                            "message": (
+                                "Concurrent sessions from multiple "
+                                f"countries: {', '.join(countries)}"
+                            ),
                             "severity": "high",
                         }
                     )

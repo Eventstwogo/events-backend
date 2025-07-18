@@ -59,21 +59,31 @@ class UserRegisterRequest(BaseModel):
         min_length=1,
         max_length=100,
         title="First Name",
-        description="The first name of the user. Only letters, spaces, hyphens, and apostrophes are allowed.",
+        description=(
+            "The first name of the user. Only letters, "
+            "spaces, hyphens, and apostrophes are allowed."
+        ),
     )
     last_name: str = Field(
         ...,
         min_length=1,
         max_length=100,
         title="Last Name",
-        description="The last name of the user. Only letters, spaces, hyphens, and apostrophes are allowed.",
+        description=(
+            "The last name of the user. Only letters, spaces, "
+            "hyphens, and apostrophes are allowed."
+        ),
     )
     username: str = Field(
         ...,
         min_length=4,
         max_length=32,
         title="Username",
-        description="Unique username for the user. Must be 4-32 characters, and start with 3 letters. Letters, numbers, spaces, and hyphens are allowed.",
+        description=(
+            "Unique username for the user. Must be 4-32 characters,"
+            " and start with 3 letters. Letters, numbers, spaces, "
+            "and hyphens are allowed."
+        ),
     )
     email: EmailStr = Field(
         ...,
@@ -85,7 +95,11 @@ class UserRegisterRequest(BaseModel):
         min_length=8,
         max_length=14,
         title="Password",
-        description="Strong password for the user. Must be 8-14 characters with at least one uppercase letter, one lowercase letter, one number, and one special character.",
+        description=(
+            "Strong password for the user. Must be 8-14 characters with "
+            "at least one uppercase letter, one lowercase letter, "
+            "one number, and one special character."
+        ),
     )
 
     @model_validator(mode="before")

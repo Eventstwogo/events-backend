@@ -23,7 +23,6 @@ from admin_service.services.response_builders import (
 )
 from admin_service.services.user_service import (
     get_user_by_email,
-    get_user_by_id,
 )
 from admin_service.utils.auth import (
     hash_password,
@@ -35,7 +34,6 @@ from shared.core.logging_config import get_logger
 from shared.db.models.admin_users import AdminUser
 from shared.db.sessions.database import get_db
 from shared.dependencies.admin import get_current_active_user
-from shared.utils.email import send_password_reset_email
 from shared.utils.email_utils.admin_emails import (
     send_admin_password_reset_email,
 )
