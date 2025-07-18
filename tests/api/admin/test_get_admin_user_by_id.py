@@ -1,7 +1,8 @@
 import pytest
 from httpx import AsyncClient
 
-from db.models import AdminUser
+from shared.db.models import AdminUser
+from shared.core.security import generate_searchable_hash
 
 
 @pytest.mark.asyncio
@@ -12,13 +13,18 @@ async def test_get_admin_user_by_id_success(
     role = await seed_roles("HR")
     config = seed_config
 
+    username = "admin1"
+    email = "admin1@example.com"
+    
     user = AdminUser(
         user_id="usr123",
-        username="admin1",
-        email="admin1@example.com",
+        username_encrypted=username,
+        email_encrypted=email,
+        username_hash=generate_searchable_hash(username),
+        email_hash=generate_searchable_hash(email),
         role_id=role.role_id,
         password_hash=config.default_password_hash,
-        is_active=False,
+        is_deleted=False,
         profile_picture=None,
         days_180_flag=False,
     )
@@ -26,7 +32,7 @@ async def test_get_admin_user_by_id_success(
     await test_db_session.commit()
 
     response = await test_client.get(
-        f"/api/v1/admin-users/admin-users/{user.user_id}"
+        f"/api/v1/admin/users/{user.user_id}"
     )
     body = response.json()
 
@@ -45,7 +51,7 @@ async def test_get_admin_user_invalid_user_id_format(
     test_client: AsyncClient, clean_db
 ):
     """Should return 400 for invalid user_id length"""
-    response = await test_client.get("/api/v1/admin-users/admin-users/short")
+    response = await test_client.get("/api/v1/admin/users/short")
     body = response.json()
 
     assert response.status_code == 400
@@ -55,11 +61,11 @@ async def test_get_admin_user_invalid_user_id_format(
 @pytest.mark.asyncio
 async def test_get_admin_user_not_found(test_client: AsyncClient, clean_db):
     """Should return 404 for non-existent user"""
-    response = await test_client.get("/api/v1/admin-users/admin-users/abc999")
+    response = await test_client.get("/api/v1/admin/users/abc999")
     body = response.json()
 
     assert response.status_code == 404
-    assert "User not found" in body["detail"]["message"]
+    assert "User Account not found" in body["detail"]["message"]
 
 
 @pytest.mark.asyncio
@@ -70,13 +76,18 @@ async def test_get_admin_user_null_profile_picture(
     role = await seed_roles("MANAGER")
     config = seed_config
 
+    username = "picless"
+    email = "picless@admin.com"
+    
     user = AdminUser(
         user_id="usr789",
-        username="picless",
-        email="picless@admin.com",
+        username_encrypted=username,
+        email_encrypted=email,
+        username_hash=generate_searchable_hash(username),
+        email_hash=generate_searchable_hash(email),
         role_id=role.role_id,
         password_hash=config.default_password_hash,
-        is_active=False,
+        is_deleted=False,
         profile_picture=None,  # NULL case
         days_180_flag=False,
     )
@@ -84,7 +95,7 @@ async def test_get_admin_user_null_profile_picture(
     await test_db_session.commit()
 
     res = await test_client.get(
-        f"/api/v1/admin-users/admin-users/{user.user_id}"
+        f"/api/v1/admin/users/{user.user_id}"
     )
     body = res.json()
 

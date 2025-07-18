@@ -2,7 +2,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 
-from db.models import Role  # adjust import path based on your structure
+from shared.db.models import Role  # adjust import path based on your structure
 
 
 @pytest.mark.asyncio

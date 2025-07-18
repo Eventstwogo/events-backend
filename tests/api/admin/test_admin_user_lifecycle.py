@@ -2,7 +2,8 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 
-from db.models import AdminUser
+from shared.db.models import AdminUser
+from shared.core.security import generate_searchable_hash
 
 
 @pytest.mark.asyncio
@@ -12,20 +13,25 @@ async def test_soft_delete_success(
     role = await seed_roles("HR")
     config = seed_config
 
+    username = "softuser"
+    email = "softuser@example.com"
+    
     user = AdminUser(
         user_id="usr001",
-        username="softuser",
-        email="softuser@example.com",
+        username_encrypted=username,
+        email_encrypted=email,
+        username_hash=generate_searchable_hash(username),
+        email_hash=generate_searchable_hash(email),
         role_id=role.role_id,
         password_hash=config.default_password_hash,
         days_180_flag=False,
-        is_active=False,
+        is_deleted=False,  # User is active
     )
     test_db_session.add(user)
     await test_db_session.commit()
 
     res = await test_client.patch(
-        f"/api/v1/admin-users/soft-delete/{user.user_id}"
+        f"/api/v1/admin/users/{user.user_id}/deactivate"
     )
     body = res.json()
 
@@ -33,16 +39,16 @@ async def test_soft_delete_success(
     assert "soft-deleted successfully" in body["message"]
 
     await test_db_session.refresh(user)
-    assert user.is_active is True  # User should be inactive after soft delete
+    assert user.is_deleted is True  # User should be inactive (deleted) after soft delete
 
 
 @pytest.mark.asyncio
 async def test_soft_delete_user_not_found(test_client: AsyncClient, clean_db):
-    res = await test_client.patch("/api/v1/admin-users/soft-delete/doesnt")
+    res = await test_client.patch("/api/v1/admin/users/doesnt/deactivate")
     body = res.json()
 
     assert res.status_code == 404
-    assert "User not found" in body["detail"]["message"]
+    assert "User Account not found" in body["detail"]["message"]
 
 
 @pytest.mark.asyncio
@@ -52,20 +58,25 @@ async def test_soft_delete_already_inactive(
     role = await seed_roles("HR")
     config = seed_config
 
+    username = "inactiveuser"
+    email = "inactive@example.com"
+    
     user = AdminUser(
         user_id="usr002",
-        username="inactiveuser",
-        email="inactive@example.com",
+        username_encrypted=username,
+        email_encrypted=email,
+        username_hash=generate_searchable_hash(username),
+        email_hash=generate_searchable_hash(email),
         role_id=role.role_id,
         password_hash=config.default_password_hash,
         days_180_flag=False,
-        is_active=True,
+        is_deleted=True,  # User is already inactive (deleted)
     )
     test_db_session.add(user)
     await test_db_session.commit()
 
     res = await test_client.patch(
-        f"/api/v1/admin-users/soft-delete/{user.user_id}"
+        f"/api/v1/admin/users/{user.user_id}/deactivate"
     )
     body = res.json()
 
@@ -83,35 +94,40 @@ async def test_restore_success(
     role = await seed_roles("HR")
     config = seed_config
 
+    username = "restoreuser"
+    email = "restore@example.com"
+    
     user = AdminUser(
         user_id="usr003",
-        username="restoreuser",
-        email="restore@example.com",
+        username_encrypted=username,
+        email_encrypted=email,
+        username_hash=generate_searchable_hash(username),
+        email_hash=generate_searchable_hash(email),
         role_id=role.role_id,
         password_hash=config.default_password_hash,
         days_180_flag=False,
-        is_active=True,
+        is_deleted=True,  # User is inactive (deleted) - ready to be restored
     )
     test_db_session.add(user)
     await test_db_session.commit()
 
-    res = await test_client.patch(f"/api/v1/admin-users/restore/{user.user_id}")
+    res = await test_client.patch(f"/api/v1/admin/users/{user.user_id}/reactivate")
     body = res.json()
 
     assert res.status_code == 200
     assert "restored successfully" in body["message"]
 
     await test_db_session.refresh(user)
-    assert user.is_active is False  # User should be active after restore
+    assert user.is_deleted is False  # User should be active (not deleted) after restore
 
 
 @pytest.mark.asyncio
 async def test_restore_user_not_found(test_client: AsyncClient, clean_db):
-    res = await test_client.patch("/api/v1/admin-users/restore/unknown123")
+    res = await test_client.patch("/api/v1/admin/users/unknown123/reactivate")
     body = res.json()
 
     assert res.status_code == 404
-    assert "User not found" in body["detail"]["message"]
+    assert "User Account not found" in body["detail"]["message"]
 
 
 @pytest.mark.asyncio
@@ -121,19 +137,24 @@ async def test_restore_user_already_active(
     role = await seed_roles("HR")
     config = seed_config
 
+    username = "alreadyactive"
+    email = "active@example.com"
+    
     user = AdminUser(
         user_id="usr004",
-        username="alreadyactive",
-        email="active@example.com",
+        username_encrypted=username,
+        email_encrypted=email,
+        username_hash=generate_searchable_hash(username),
+        email_hash=generate_searchable_hash(email),
         role_id=role.role_id,
         password_hash=config.default_password_hash,
         days_180_flag=False,
-        is_active=False,
+        is_deleted=False,  # User is already active
     )
     test_db_session.add(user)
     await test_db_session.commit()
 
-    res = await test_client.patch(f"/api/v1/admin-users/restore/{user.user_id}")
+    res = await test_client.patch(f"/api/v1/admin/users/{user.user_id}/reactivate")
     body = res.json()
 
     assert res.status_code == 400
@@ -150,20 +171,25 @@ async def test_hard_delete_success(
     role = await seed_roles("HR")
     config = seed_config
 
+    username = "deleteuser"
+    email = "delete@example.com"
+    
     user = AdminUser(
         user_id="usr005",
-        username="deleteuser",
-        email="delete@example.com",
+        username_encrypted=username,
+        email_encrypted=email,
+        username_hash=generate_searchable_hash(username),
+        email_hash=generate_searchable_hash(email),
         role_id=role.role_id,
         password_hash=config.default_password_hash,
         days_180_flag=False,
-        is_active=True,
+        is_deleted=False,  # User is active
     )
     test_db_session.add(user)
     await test_db_session.commit()
 
     res = await test_client.delete(
-        f"/api/v1/admin-users/hard-delete/{user.user_id}"
+        f"/api/v1/admin/users/{user.user_id}"
     )
     body = res.json()
 
@@ -179,8 +205,8 @@ async def test_hard_delete_success(
 
 @pytest.mark.asyncio
 async def test_hard_delete_user_not_found(test_client: AsyncClient, clean_db):
-    res = await test_client.delete("/api/v1/admin-users/hard-delete/nouserid")
+    res = await test_client.delete("/api/v1/admin/users/nouserid")
     body = res.json()
 
     assert res.status_code == 404
-    assert "User not found" in body["detail"]["message"]
+    assert "User Account not found" in body["detail"]["message"]

@@ -1,10 +1,10 @@
 """
-Test cases for categories_or_subcategories_by_id endpoints (Subcategory perspective).
+Test cases for category-items endpoints (Subcategory perspective).
 Tests for endpoints that can handle both categories and subcategories by ID:
-- GET /details/{item_id} - Get category or subcategory details by ID
-- PUT /update/{item_id} - Update category or subcategory by ID
-- DELETE /soft-delete/{item_id} - Soft delete category or subcategory by ID
-- PUT /restore/{item_id} - Restore category or subcategory by ID
+- GET /{item_id} - Get category or subcategory details by ID
+- PUT /{item_id} - Update category or subcategory by ID
+- DELETE /{item_id}/soft - Soft delete category or subcategory by ID
+- PUT /{item_id}/restore - Restore category or subcategory by ID
 
 This file focuses on subcategory-specific test scenarios.
 """
@@ -16,7 +16,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import insert, select
 
-from db.models import Category, SubCategory
+from shared.db.models import Category, SubCategory
 
 
 def uuid_str():
@@ -62,7 +62,7 @@ class TestSubcategoryFocusedScenarios:
         await test_db_session.commit()
 
         res = await test_client.get(
-            "/api/v1/categories_or_subcategories_by_id/details/SUB_DETAILED"
+            "/api/v1/category-items/SUB_DETAILED"
         )
         body = res.json()
 
@@ -105,7 +105,7 @@ class TestSubcategoryFocusedScenarios:
         }
 
         res = await test_client.put(
-            "/api/v1/categories_or_subcategories_by_id/update/SUB_UPDATE",
+            "/api/v1/category-items/SUB_UPDATE",
             data=data,
         )
         body = res.json()
@@ -154,7 +154,7 @@ class TestSubcategoryFocusedScenarios:
 
         # Test getting subcategory details (should work)
         res = await test_client.get(
-            "/api/v1/categories_or_subcategories_by_id/details/SUB_INACTIVE_PARENT"
+            "/api/v1/category-items/SUB_INACTIVE_PARENT"
         )
         body = res.json()
 
@@ -165,14 +165,14 @@ class TestSubcategoryFocusedScenarios:
         # Test updating subcategory (should work)
         data = {"name": "Updated Sub Name"}
         res = await test_client.put(
-            "/api/v1/categories_or_subcategories_by_id/update/SUB_INACTIVE_PARENT",
+            "/api/v1/category-items/SUB_INACTIVE_PARENT",
             data=data,
         )
         assert res.status_code == 200
 
         # Test soft deleting subcategory (should work)
         res = await test_client.delete(
-            "/api/v1/categories_or_subcategories_by_id/soft-delete/SUB_INACTIVE_PARENT"
+            "/api/v1/category-items/SUB_INACTIVE_PARENT/soft"
         )
         assert res.status_code == 200
 
@@ -220,7 +220,7 @@ class TestSubcategoryFocusedScenarios:
         data = {"name": "Existing Name"}  # Conflicts with SUB_CONFLICT_1
 
         res = await test_client.put(
-            "/api/v1/categories_or_subcategories_by_id/update/SUB_CONFLICT_2",
+            "/api/v1/category-items/SUB_CONFLICT_2",
             data=data,
         )
         body = res.json()
@@ -272,7 +272,7 @@ class TestSubcategoryFocusedScenarios:
         data = {"slug": "existing-slug"}  # Conflicts with SUB_SLUG_1
 
         res = await test_client.put(
-            "/api/v1/categories_or_subcategories_by_id/update/SUB_SLUG_2",
+            "/api/v1/category-items/SUB_SLUG_2",
             data=data,
         )
         body = res.json()
@@ -322,7 +322,7 @@ class TestSubcategoryFocusedScenarios:
         data = {"name": "Existing Category Name"}
 
         res = await test_client.put(
-            "/api/v1/categories_or_subcategories_by_id/update/SUB_NAME_CONFLICT",
+            "/api/v1/category-items/SUB_NAME_CONFLICT",
             data=data,
         )
         body = res.json()
@@ -365,7 +365,7 @@ class TestSubcategoryFocusedScenarios:
         files = {"file": ("subcategory_image.jpg", fake_image, "image/jpeg")}
 
         res = await test_client.put(
-            "/api/v1/categories_or_subcategories_by_id/update/SUB_FILE_TEST",
+            "/api/v1/category-items/SUB_FILE_TEST",
             data=data,
             files=files,
         )
@@ -421,7 +421,7 @@ class TestSubcategoryFocusedScenarios:
         }
 
         res = await test_client.put(
-            "/api/v1/categories_or_subcategories_by_id/update/SUB_META_TEST",
+            "/api/v1/category-items/SUB_META_TEST",
             data=data,
         )
         body = res.json()
@@ -471,7 +471,7 @@ class TestSubcategoryFocusedScenarios:
 
         # Test 1: Soft delete (active -> inactive)
         res = await test_client.delete(
-            "/api/v1/categories_or_subcategories_by_id/soft-delete/SUB_STATUS_TEST"
+            "/api/v1/category-items/SUB_STATUS_TEST/soft"
         )
         assert res.status_code == 200
 
@@ -485,7 +485,7 @@ class TestSubcategoryFocusedScenarios:
 
         # Test 2: Restore (inactive -> active)
         res = await test_client.put(
-            "/api/v1/categories_or_subcategories_by_id/restore/SUB_STATUS_TEST"
+            "/api/v1/category-items/SUB_STATUS_TEST/restore"
         )
         assert res.status_code == 200
 
@@ -531,7 +531,7 @@ class TestSubcategoryFocusedScenarios:
         }
 
         res = await test_client.put(
-            "/api/v1/categories_or_subcategories_by_id/update/SUB_FLAGS_TEST",
+            "/api/v1/category-items/SUB_FLAGS_TEST",
             data=data,
         )
         body = res.json()
@@ -555,7 +555,7 @@ class TestSubcategoryFocusedScenarios:
         }
 
         res = await test_client.put(
-            "/api/v1/categories_or_subcategories_by_id/update/SUB_FLAGS_TEST",
+            "/api/v1/category-items/SUB_FLAGS_TEST",
             data=data,
         )
         assert res.status_code == 200

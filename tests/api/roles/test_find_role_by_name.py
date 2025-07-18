@@ -2,7 +2,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import insert
 
-from db.models import Role  # Adjust path if needed
+from shared.db.models import Role  # Adjust path if needed
 
 
 @pytest.mark.asyncio
@@ -15,7 +15,7 @@ async def test_find_role_by_exact_name(
     await test_db_session.commit()
 
     res = await test_client.get(
-        "/api/v1/roles/find", params={"role_name": "Team Lead"}
+        "/api/v1/roles/search", params={"role_name": "Team Lead"}
     )
     body = res.json()
 
@@ -39,7 +39,7 @@ async def test_find_role_case_insensitive(
 
     # Try with lowercase input
     res = await test_client.get(
-        "/api/v1/roles/find", params={"role_name": "administrator"}
+        "/api/v1/roles/search", params={"role_name": "administrator"}
     )
     body = res.json()
 
@@ -51,7 +51,7 @@ async def test_find_role_case_insensitive(
 async def test_find_role_not_found(test_client: AsyncClient, clean_db):
     """Test 404 response when role name does not exist."""
     res = await test_client.get(
-        "/api/v1/roles/find", params={"role_name": "Ghost Role"}
+        "/api/v1/roles/search", params={"role_name": "Ghost Role"}
     )
     body = res.json()
 
@@ -62,7 +62,7 @@ async def test_find_role_not_found(test_client: AsyncClient, clean_db):
 @pytest.mark.asyncio
 async def test_find_role_missing_param(test_client: AsyncClient):
     """Test validation error if role_name is not provided."""
-    res = await test_client.get("/api/v1/roles/find")  # No query param
+    res = await test_client.get("/api/v1/roles/search")  # No query param
     body = res.json()
 
     assert res.status_code == 422

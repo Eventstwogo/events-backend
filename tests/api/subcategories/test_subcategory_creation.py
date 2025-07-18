@@ -1,6 +1,6 @@
 """
 Test cases for subcategory creation through categories endpoint.
-Tests for creating subcategories via POST /api/v1/categories/create
+Tests for creating subcategories via POST /api/v1/categories/
 """
 
 import uuid
@@ -10,7 +10,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import insert, select
 
-from db.models import Category, SubCategory
+from shared.db.models import Category, SubCategory
 
 
 def uuid_str():
@@ -47,7 +47,7 @@ class TestCreateSubcategory:
             "show_in_menu": "true",
         }
 
-        res = await test_client.post("/api/v1/categories/create", data=data)
+        res = await test_client.post("/api/v1/categories/", data=data)
         body = res.json()
 
         assert res.status_code == 201
@@ -89,7 +89,7 @@ class TestCreateSubcategory:
             "name": "Fiction",
         }
 
-        res = await test_client.post("/api/v1/categories/create", data=data)
+        res = await test_client.post("/api/v1/categories/", data=data)
         body = res.json()
 
         assert res.status_code == 201
@@ -133,7 +133,7 @@ class TestCreateSubcategory:
         files = {"file": ("gaming_thumbnail.jpg", fake_image, "image/jpeg")}
 
         res = await test_client.post(
-            "/api/v1/categories/create", data=data, files=files
+            "/api/v1/categories/", data=data, files=files
         )
         body = res.json()
 
@@ -160,7 +160,7 @@ class TestCreateSubcategory:
             "name": "Smartphones",
         }
 
-        res = await test_client.post("/api/v1/categories/create", data=data)
+        res = await test_client.post("/api/v1/categories/", data=data)
         body = res.json()
 
         assert res.status_code == 404
@@ -203,7 +203,7 @@ class TestCreateSubcategory:
             "name": "Football",  # Duplicate name
         }
 
-        res = await test_client.post("/api/v1/categories/create", data=data)
+        res = await test_client.post("/api/v1/categories/", data=data)
         body = res.json()
 
         assert res.status_code == 500  # Currently returns 500 instead of 400
@@ -245,7 +245,7 @@ class TestCreateSubcategory:
             "slug": "rock-music",  # Duplicate slug
         }
 
-        res = await test_client.post("/api/v1/categories/create", data=data)
+        res = await test_client.post("/api/v1/categories/", data=data)
         body = res.json()
 
         assert res.status_code == 500  # Currently returns 500 instead of 400
@@ -275,7 +275,7 @@ class TestCreateSubcategory:
             "name": "",  # Empty name
         }
 
-        res = await test_client.post("/api/v1/categories/create", data=data)
+        res = await test_client.post("/api/v1/categories/", data=data)
 
         assert res.status_code in [400, 422]  # Validation error
 
@@ -304,7 +304,7 @@ class TestCreateSubcategory:
         files = {"file": (fake_image.name, fake_image, "image/jpeg")}
 
         res = await test_client.post(
-            "/api/v1/categories/create", data=data, files=files
+            "/api/v1/categories/", data=data, files=files
         )
         body = res.json()
 
@@ -344,7 +344,7 @@ class TestCreateSubcategory:
             "name": "Movies",  # Conflicts with existing category
         }
 
-        res = await test_client.post("/api/v1/categories/create", data=data)
+        res = await test_client.post("/api/v1/categories/", data=data)
         body = res.json()
 
         assert res.status_code == 400
@@ -376,7 +376,7 @@ class TestCreateSubcategory:
             "slug": "cpp-programming",
         }
 
-        res = await test_client.post("/api/v1/categories/create", data=data)
+        res = await test_client.post("/api/v1/categories/", data=data)
         body = res.json()
 
         # The validation might reject special characters like ++
@@ -423,7 +423,7 @@ class TestCreateSubcategory:
             "name": "Test Subcategory",
         }
 
-        res = await test_client.post("/api/v1/categories/create", data=data)
+        res = await test_client.post("/api/v1/categories/", data=data)
         body = res.json()
 
         # Should still allow creation even if parent is inactive
@@ -456,7 +456,7 @@ class TestCreateSubcategory:
             "description": long_description,
         }
 
-        res = await test_client.post("/api/v1/categories/create", data=data)
+        res = await test_client.post("/api/v1/categories/", data=data)
         body = res.json()
 
         assert res.status_code == 400
@@ -487,7 +487,7 @@ class TestCreateSubcategory:
             "name": "Cars",
         }
 
-        res1 = await test_client.post("/api/v1/categories/create", data=data1)
+        res1 = await test_client.post("/api/v1/categories/", data=data1)
         assert res1.status_code == 201
 
         # Create second subcategory
@@ -496,7 +496,7 @@ class TestCreateSubcategory:
             "name": "Motorcycles",
         }
 
-        res2 = await test_client.post("/api/v1/categories/create", data=data2)
+        res2 = await test_client.post("/api/v1/categories/", data=data2)
         assert res2.status_code == 201
 
         # Verify both exist in database

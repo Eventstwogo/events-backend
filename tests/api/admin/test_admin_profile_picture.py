@@ -4,7 +4,7 @@ from datetime import datetime
 import pytest
 from httpx import AsyncClient
 
-from db.models import AdminUser
+from shared.db.models import AdminUser
 
 
 @pytest.mark.asyncio
@@ -28,7 +28,7 @@ async def test_update_profile_picture_success(
         password_hash=config.default_password_hash,
         days_180_flag=config.global_180_day_flag,
         created_at=datetime.utcnow(),
-        is_active=False,
+        is_deleted=False,
     )
     test_db_session.add(user)
     await test_db_session.commit()
@@ -39,7 +39,7 @@ async def test_update_profile_picture_success(
     }
 
     response = await test_client.patch(
-        "/api/v1/admin-users/profile-picture", files=files
+        "/api/v1/admin/users/profile-picture", files=files
     )
     body = response.json()
 
@@ -71,7 +71,7 @@ async def test_update_picture_invalid_file_type(
         password_hash=config.default_password_hash,
         days_180_flag=config.global_180_day_flag,
         created_at=datetime.utcnow(),
-        is_active=False,
+        is_deleted=False,
     )
     test_db_session.add(user)
     await test_db_session.commit()
@@ -86,7 +86,7 @@ async def test_update_picture_invalid_file_type(
     }
 
     res = await test_client.patch(
-        "/api/v1/admin-users/profile-picture", files=files
+        "/api/v1/admin/users/profile-picture", files=files
     )
     body = res.json()
 
@@ -102,7 +102,7 @@ async def test_update_picture_invalid_user_id_format(test_client: AsyncClient):
     }
 
     res = await test_client.patch(
-        "/api/v1/admin-users/profile-picture", files=files
+        "/api/v1/admin/users/profile-picture", files=files
     )
     body = res.json()
 
@@ -118,7 +118,7 @@ async def test_update_picture_user_not_found(test_client: AsyncClient):
     }
 
     res = await test_client.patch(
-        "/api/v1/admin-users/profile-picture", files=files
+        "/api/v1/admin/users/profile-picture", files=files
     )
     body = res.json()
 
@@ -133,7 +133,7 @@ async def test_update_picture_missing_file(test_client: AsyncClient):
     }
 
     res = await test_client.patch(
-        "/api/v1/admin-users/profile-picture", files=files
+        "/api/v1/admin/users/profile-picture", files=files
     )
     body = res.json()
 

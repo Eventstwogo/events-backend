@@ -28,6 +28,14 @@ from category_service.services.category_service import (
 from shared.utils.exception_handlers import exception_handler
 from shared.utils.file_uploads import get_media_url, save_uploaded_file
 from shared.utils.format_validators import is_valid_filename
+from category_service.services.category_service import _validate_name
+from category_service.services.category_service import (
+     _validate_subcategory_optional_field,
+     )
+from category_service.services.category_service import _validate_subcategory_slug
+from category_service.services.category_service import _validate_subcategory_name
+from category_service.services.category_service import _validate_text_field
+from category_service.services.category_service import _validate_slug
 
 router = APIRouter()
 
@@ -233,16 +241,10 @@ def _validate_individual_field(
     """Validate individual field based on type."""
     if metadata.model_type == "category":
         if field_type == "name":
-            from services.category_service import _validate_name
-
             return _validate_name(field_value, False)
         elif field_type == "slug":
-            from services.category_service import _validate_slug
-
             return _validate_slug(field_value)
         elif field_type in ["description", "meta_title", "meta_description"]:
-            from services.category_service import _validate_text_field
-
             max_lengths = {
                 "description": 500,
                 "meta_title": 70,
@@ -255,19 +257,13 @@ def _validate_individual_field(
             )
     else:  # subcategory
         if field_type == "name":
-            from services.category_service import _validate_subcategory_name
 
             _validate_subcategory_name(field_value)
             return field_value.upper()
         elif field_type == "slug":
-            from services.category_service import _validate_subcategory_slug
-
             _validate_subcategory_slug(field_value)
             return field_value.lower()
         elif field_type in ["description", "meta_title", "meta_description"]:
-            from services.category_service import (
-                _validate_subcategory_optional_field,
-            )
 
             max_lengths = {
                 "description": 500,

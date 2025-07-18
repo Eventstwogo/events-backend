@@ -3,8 +3,8 @@ import os
 import pytest
 from httpx import AsyncClient
 
-from db.models import AdminUser
-from utils.auth import hash_password
+from shared.db.models import AdminUser
+from user_service.utils.auth import hash_password
 
 TEST_OLD_PASSWORD = os.getenv("TEST_OLD_PASSWORD", "OldPass@123")
 TEST_NEW_PASSWORD = os.getenv("TEST_NEW_PASSWORD", "NewPass@456")
@@ -57,7 +57,7 @@ async def test_reset_password_user_not_found(
     body = res.json()
 
     assert res.status_code == 404
-    assert "User not found" in body["detail"]["message"]
+    assert "User Account not found" in body["detail"]["message"]
 
 
 @pytest.mark.asyncio

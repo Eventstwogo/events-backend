@@ -4,7 +4,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 
-from db.models import Permission
+from shared.db.models import Permission
 
 
 @pytest.mark.asyncio

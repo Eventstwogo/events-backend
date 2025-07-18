@@ -2,7 +2,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 
-from db.models import AdminUser
+from shared.db.models import AdminUser
 
 
 @pytest.mark.asyncio
@@ -18,7 +18,7 @@ async def test_register_admin_success(
         "role_id": role.role_id,
     }
 
-    res = await test_client.post("/api/v1/admin-users/register", data=payload)
+    res = await test_client.post("/api/v1/admin/register", json=payload)
     body = res.json()
 
     print("Response JSON:", body)
@@ -62,7 +62,7 @@ async def test_register_admin_duplicate_user(
         "role_id": role.role_id,
     }
 
-    res = await test_client.post("/api/v1/admin-users/register", data=payload)
+    res = await test_client.post("/api/v1/admin/register", json=payload)
     body = res.json()
 
     assert res.status_code == 409
@@ -81,7 +81,7 @@ async def test_register_admin_invalid_role(
         "role_id": "xyz123",
     }
 
-    res = await test_client.post("/api/v1/admin-users/register", data=payload)
+    res = await test_client.post("/api/v1/admin/register", json=payload)
     body = res.json()
 
     assert res.status_code == 404
@@ -115,7 +115,7 @@ async def test_register_admin_superadmin_duplicate(
         "role_id": role.role_id,
     }
 
-    res = await test_client.post("/api/v1/admin-users/register", data=payload)
+    res = await test_client.post("/api/v1/admin/register", json=payload)
     body = res.json()
 
     assert res.status_code == 409
@@ -127,9 +127,13 @@ async def test_register_admin_missing_fields(
     test_client: AsyncClient, clean_db
 ):
     """Test request fails when required fields are missing."""
-    res = await test_client.post("/api/v1/admin-users/register", data={})
+    res = await test_client.post("/api/v1/admin/register", json={})
+    body = res.json()
+    
     assert res.status_code == 422
-    detail = res.json()["detail"]
-    assert any("username" in str(err["loc"]) for err in detail)
-    assert any("email" in str(err["loc"]) for err in detail)
-    assert any("role_id" in str(err["loc"]) for err in detail)
+    detail = body["detail"]
+    
+    # The model validator will return the first missing field error
+    assert len(detail) == 1
+    assert detail[0]["type"] == "value_error"
+    assert "Username is required" in detail[0]["msg"]
