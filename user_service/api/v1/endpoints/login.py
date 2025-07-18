@@ -157,7 +157,7 @@ async def process_successful_login(
             "token_type": "refresh",
         },
         private_key=PRIVATE_KEY.get_secret_value(),
-        expires_in=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,  # Convert days to seconds
+        expires_in=settings.REFRESH_TOKEN_EXPIRE_DAYS_IN_SECONDS
     )
 
     # Set access token cookie

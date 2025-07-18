@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
 
@@ -30,6 +30,7 @@ from admin_service.utils.auth import (
     verify_password,
 )
 from shared.utils.email import send_password_reset_email
+from shared.utils.email_utils.admin_emails import send_admin_password_reset_email
 from shared.utils.email_validators import EmailValidator
 from shared.utils.exception_handlers import exception_handler
 
@@ -41,10 +42,24 @@ router = APIRouter()
 @router.post("/forgot-password", status_code=status.HTTP_200_OK)
 @exception_handler
 async def forgot_password(
+    request: Request,
     data: ForgotPassword = Depends(ForgotPassword.as_form),
     db: AsyncSession = Depends(get_db),
 ) -> JSONResponse:
     """Send a password reset link to the user's email if the account exists and is active."""
+    # Get the client's IP address
+    client_host = request.client.host if request.client else "unknown"
+
+    # Or check headers (especially if behind a reverse proxy/load balancer)
+    x_forwarded_for = request.headers.get("x-forwarded-for")
+    if x_forwarded_for:
+        ip_address = x_forwarded_for.split(",")[0].strip()
+    else:
+        ip_address = client_host
+
+    # Log or use the IP address
+    print(f"Password reset requested by user with IP: {ip_address}")
+
     # Step 1: Validate email format and normalize
     email = data.email.strip().lower()
     EmailValidator.validate(email)
@@ -73,10 +88,13 @@ async def forgot_password(
     reset_link = f"{settings.FRONTEND_URL}/reset-password?email={email}&token={reset_token}"
 
     # Step 7: Send the password reset email
-    send_password_reset_email(
+    send_admin_password_reset_email(
         email=user.email,
         username=user.username,
         reset_link=reset_link,
+        expiry_minutes=60,  # 1 hour expiry
+        ip_address=ip_address,
+        request_time=datetime.now(timezone.utc).isoformat(),
     )
 
     # Return success message (don't include token in response for security)

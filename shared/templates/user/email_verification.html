@@ -407,6 +407,12 @@
                 </a>
             </div>
 
+            <!-- Expiry Timer -->
+            <div class="expiry-section">
+                <p class="expiry-text">This email verification link will expire in:</p>
+                <div class="expiry-time">{{ expires_in_minutes | default('60') }} minutes</div>
+            </div>
+
             <!-- Alternative Link -->
             <div class="alt-link-section">
                 <p class="alt-link-title">Button not working? Copy and paste this link:</p>

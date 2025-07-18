@@ -105,7 +105,7 @@ async def register_user(
     )
 
     # Create verification record with expiration time
-    verification_token, expiration_time = generate_verification_tokens(expires_in_minutes=30)
+    verification_token, expiration_time = generate_verification_tokens(expires_in_minutes=60)
     verification = UserVerification(
         user_id=user_id,
         email_verification_token=verification_token,
@@ -127,6 +127,7 @@ async def register_user(
         username=user_data.username,
         verification_token=verification_token,
         user_id=user_id,
+        expires_in_minutes=60,  # Set expiration to 60 minutes
     )
 
     # Return success response

@@ -9,11 +9,8 @@ __pycache__/
 *.so
 
 # Virtual environments
-# .env/
-# .env.*
 .venv/
 venv/
-env/
 
 # Build, distribution, and packaging
 .Python
@@ -92,6 +89,7 @@ cython_debug/
 
 # VS Code
 .vscode/
+.Zencoder
 
 # PyCharm
 .idea/
@@ -103,9 +101,6 @@ Thumbs.db
 
 # Media and temp folders
 /media/
-/media/temp/
-/media/avatars/
-/media/banners/
 # /keys/
 
 # Alembic
@@ -130,6 +125,9 @@ alembic/versions/*.pyc
 *.key
 *.crt
 # *.env
+env/
+# .env/
+# .env.*
 
 # SQLite (local dev)
 *.sqlite3

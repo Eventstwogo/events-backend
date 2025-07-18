@@ -107,7 +107,7 @@ class Settings(BaseSettings):
     # === JWT ===
     JWT_ALGORITHM: str = "RS256"
     JWT_ACCESS_TOKEN_EXPIRE_SECONDS: int = 3600
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    REFRESH_TOKEN_EXPIRE_DAYS_IN_SECONDS: int = 604800
     JWT_KEYS_DIR: str = "shared/keys"
     JWT_ISSUER: str = "events2go-api"
     JWT_AUDIENCE: str = "events2go-clients"
@@ -152,7 +152,7 @@ settings: Settings = get_settings()
 # === KeyManager initialization for JWT ===
 key_manager = KeyManager(
     key_dir=settings.JWT_KEYS_DIR,
-    key_refresh_days=settings.REFRESH_TOKEN_EXPIRE_DAYS,
+    key_refresh_days=settings.REFRESH_TOKEN_EXPIRE_DAYS_IN_SECONDS,
 )
 
 PRIVATE_KEY = SecretBytes(key_manager.get_private_key())

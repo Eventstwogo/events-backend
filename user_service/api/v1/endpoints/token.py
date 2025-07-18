@@ -169,7 +169,7 @@ async def refresh_token(
                     "token_type": "refresh",
                 },
                 private_key=PRIVATE_KEY.get_secret_value(),
-                expires_in=settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+                expires_in=settings.REFRESH_TOKEN_EXPIRE_DAYS_IN_SECONDS,
             )
 
         # Update user's last activity
