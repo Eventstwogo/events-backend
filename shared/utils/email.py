@@ -58,7 +58,9 @@ class EmailSender:
             autoescape=select_autoescape(["html", "xml"]),
         )
 
-    def _render_template(self, template_file: str, context: Dict[str, Any]) -> str:
+    def _render_template(
+        self, template_file: str, context: Dict[str, Any]
+    ) -> str:
         try:
             template = self.env.get_template(template_file)
             return template.render(**context)
@@ -69,11 +71,15 @@ class EmailSender:
     def _connect_smtp(self) -> Optional[Union[smtplib.SMTP, smtplib.SMTP_SSL]]:
         try:
             if self.config.use_ssl:
-                server: Union[smtplib.SMTP, smtplib.SMTP_SSL] = smtplib.SMTP_SSL(
-                    self.config.smtp_server, self.config.smtp_port
+                server: Union[smtplib.SMTP, smtplib.SMTP_SSL] = (
+                    smtplib.SMTP_SSL(
+                        self.config.smtp_server, self.config.smtp_port
+                    )
                 )
             else:
-                server = smtplib.SMTP(self.config.smtp_server, self.config.smtp_port)
+                server = smtplib.SMTP(
+                    self.config.smtp_server, self.config.smtp_port
+                )
                 if self.config.use_tls:
                     server.starttls()
             server.login(

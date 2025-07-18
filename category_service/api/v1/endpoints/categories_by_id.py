@@ -15,16 +15,16 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 from starlette.responses import JSONResponse
 
-from shared.core.api_response import api_response
-from shared.core.config import settings
-from shared.db.models import Category
-from shared.db.sessions.database import get_db
 from category_service.services.category_service import (
     CategoryData,
     ConflictCheckData,
     validate_category_conflicts,
     validate_category_data,
 )
+from shared.core.api_response import api_response
+from shared.core.config import settings
+from shared.db.models import Category
+from shared.db.sessions.database import get_db
 from shared.utils.exception_handlers import exception_handler
 from shared.utils.file_uploads import get_media_url, save_uploaded_file
 

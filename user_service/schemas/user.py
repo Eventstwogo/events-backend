@@ -24,7 +24,9 @@ class UserLogin(BaseModel):
         title="Email Address",
         description="Registered email address of the user.",
     )
-    password: str = Field(..., title="Password", description="Account password.")
+    password: str = Field(
+        ..., title="Password", description="Account password."
+    )
 
     @field_validator("email")
     @classmethod
@@ -53,7 +55,9 @@ class UserOut(BaseModel):
         description="Unique identifier for the user.",
     )
     username: str = Field(..., title="Username", description="User's username.")
-    email: EmailStr = Field(..., title="Email Address", description="User's email address.")
+    email: EmailStr = Field(
+        ..., title="Email Address", description="User's email address."
+    )
     profile_picture: Optional[str] = Field(
         None,
         title="Profile Picture",
@@ -98,15 +102,25 @@ class UserMeOut(BaseModel):
         description="Unique identifier for the user.",
     )
     username: str = Field(..., title="Username", description="User's username.")
-    first_name: Optional[str] = Field(None, title="First Name", description="User's first name.")
-    last_name: Optional[str] = Field(None, title="Last Name", description="User's last name.")
-    email: EmailStr = Field(..., title="Email Address", description="User's email address.")
+    first_name: Optional[str] = Field(
+        None, title="First Name", description="User's first name."
+    )
+    last_name: Optional[str] = Field(
+        None, title="Last Name", description="User's last name."
+    )
+    email: EmailStr = Field(
+        ..., title="Email Address", description="User's email address."
+    )
     profile_picture: Optional[str] = Field(
         None,
         title="Profile Picture",
         description="URL or filename of the user's profile picture.",
     )
-    is_deleted: Optional[bool] = Field(False, title="Is Deleted", description="Indicates if the account is deleted.")
+    is_deleted: Optional[bool] = Field(
+        False,
+        title="Is Deleted",
+        description="Indicates if the account is deleted.",
+    )
     days_180_flag: Optional[bool] = Field(
         False,
         title="Days 180 Flag",
@@ -117,7 +131,9 @@ class UserMeOut(BaseModel):
         title="Last Login",
         description="Timestamp of the user's last login.",
     )
-    created_at: datetime = Field(..., title="Created At", description="Timestamp of the user's creation.")
+    created_at: datetime = Field(
+        ..., title="Created At", description="Timestamp of the user's creation."
+    )
 
     class Config:
         from_attributes = True

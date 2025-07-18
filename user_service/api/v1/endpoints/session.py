@@ -10,10 +10,10 @@ from shared.core.api_response import api_response
 from shared.core.config import PUBLIC_KEY
 from shared.db.models import User, UserDeviceSession
 from shared.db.sessions.database import get_db
+from shared.utils.exception_handlers import exception_handler
 from user_service.schemas.session import DeviceSessionResponse
 from user_service.services.auth import update_session_activity
 from user_service.utils.auth import verify_jwt_token
-from shared.utils.exception_handlers import exception_handler
 
 router = APIRouter()
 

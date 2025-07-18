@@ -17,10 +17,10 @@ from shared.core.config import PRIVATE_KEY, PUBLIC_KEY, settings
 from shared.core.logging_config import get_logger
 from shared.db.models import User, UserDeviceSession
 from shared.db.sessions.database import get_db
+from shared.utils.exception_handlers import exception_handler
 from user_service.schemas.token import TokenRefreshRequest, TokenResponse
 from user_service.services.session_management import TokenSessionManager
 from user_service.utils.auth import create_jwt_token, verify_jwt_token
-from shared.utils.exception_handlers import exception_handler
 
 logger = get_logger(__name__)
 

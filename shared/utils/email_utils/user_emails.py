@@ -12,7 +12,9 @@ from shared.utils.email import email_sender
 logger = get_logger(__name__)
 
 
-def send_welcome_email(email: EmailStr, username: str, password: str, logo_url: str) -> None:
+def send_welcome_email(
+    email: EmailStr, username: str, password: str, logo_url: str
+) -> None:
     """Send a welcome email to a new user."""
     context = {
         "username": username,
@@ -34,7 +36,9 @@ def send_welcome_email(email: EmailStr, username: str, password: str, logo_url: 
         logger.warning("Failed to send welcome email to %s", email)
 
 
-def send_user_welcome_email(email: EmailStr, username: str, verification_token: str) -> bool:
+def send_user_welcome_email(
+    email: EmailStr, username: str, verification_token: str
+) -> bool:
     """
     Send a welcome email to a new user with email verification link.
 
@@ -46,7 +50,9 @@ def send_user_welcome_email(email: EmailStr, username: str, verification_token: 
     Returns:
         bool: True if email was sent successfully, False otherwise
     """
-    verification_link = f"{settings.FRONTEND_URL}/verify-email?token={verification_token}"
+    verification_link = (
+        f"{settings.FRONTEND_URL}/verify-email?token={verification_token}"
+    )
 
     context = {
         "username": username,
@@ -121,8 +127,10 @@ def send_security_alert_email(
         "ip_address": ip_address,
         "location": location,
         "device_info": device_info,
-        "secure_account_url": secure_account_url or f"{settings.FRONTEND_URL}/security",
-        "review_activity_url": review_activity_url or f"{settings.FRONTEND_URL}/activity",
+        "secure_account_url": secure_account_url
+        or f"{settings.FRONTEND_URL}/security",
+        "review_activity_url": review_activity_url
+        or f"{settings.FRONTEND_URL}/activity",
         "year": str(datetime.now(tz=timezone.utc).year),
     }
 
@@ -140,7 +148,11 @@ def send_security_alert_email(
 
 
 def send_user_verification_email(
-    email: EmailStr, username: str, verification_token: str, user_id: str, expires_in_minutes: int = 60
+    email: EmailStr,
+    username: str,
+    verification_token: str,
+    user_id: str,
+    expires_in_minutes: int = 60,
 ) -> bool:
     """
     Send a welcome email to a new user with email verification link.
@@ -154,9 +166,7 @@ def send_user_verification_email(
     Returns:
         bool: True if email was sent successfully, False otherwise
     """
-    verification_link = (
-        f"{settings.FRONTEND_URL}/VerifyEmail?email={email}&token={verification_token}"
-    )
+    verification_link = f"{settings.FRONTEND_URL}/VerifyEmail?email={email}&token={verification_token}"
 
     context = {
         "username": username,
@@ -164,7 +174,7 @@ def send_user_verification_email(
         "verification_link": verification_link,
         "welcome_url": f"{settings.FRONTEND_URL}",
         "year": str(datetime.now(tz=timezone.utc).year),
-        "expires_in_minutes":expires_in_minutes,
+        "expires_in_minutes": expires_in_minutes,
     }
 
     success = email_sender.send_email(
@@ -220,7 +230,8 @@ def send_account_activated_email(
         "username": username,
         "email": email,
         "account_type": account_type,
-        "activation_date": activation_date or datetime.now(tz=timezone.utc).strftime("%B %d, %Y at %I:%M %p UTC"),
+        "activation_date": activation_date
+        or datetime.now(tz=timezone.utc).strftime("%B %d, %Y at %I:%M %p UTC"),
         "dashboard_url": f"{settings.FRONTEND_URL}/dashboard",
         "profile_url": f"{settings.FRONTEND_URL}/profile",
         "year": str(datetime.now(tz=timezone.utc).year),
@@ -275,7 +286,7 @@ def send_account_unlock_email(
 ) -> bool:
     """Send account unlock email with token."""
     unlock_link = f"{settings.FRONTEND_URL}/unlock-account?token={unlock_token}"
-    
+
     context = {
         "username": username,
         "unlock_link": unlock_link,
@@ -332,7 +343,8 @@ def send_booking_confirmation_email(
         "taxes": taxes,
         "event_image": event_image,
         "qr_code_url": qr_code_url,
-        "ticket_url": ticket_url or f"{settings.FRONTEND_URL}/tickets/{booking_id}",
+        "ticket_url": ticket_url
+        or f"{settings.FRONTEND_URL}/tickets/{booking_id}",
         "calendar_url": calendar_url,
         "year": str(datetime.now(tz=timezone.utc).year),
     }
@@ -481,7 +493,8 @@ def send_payment_confirmation_email(
         "transaction_id": transaction_id,
         "total_amount": total_amount,
         "payment_method": payment_method,
-        "payment_date": payment_date or datetime.now(tz=timezone.utc).strftime("%B %d, %Y at %I:%M %p UTC"),
+        "payment_date": payment_date
+        or datetime.now(tz=timezone.utc).strftime("%B %d, %Y at %I:%M %p UTC"),
         "event_title": event_title,
         "event_date": event_date,
         "event_time": event_time,
@@ -530,12 +543,16 @@ def send_newsletter_subscription_email(
     context = {
         "username": username,
         "email": email,
-        "subscription_date": subscription_date or datetime.now(tz=timezone.utc).strftime("%B %d, %Y"),
+        "subscription_date": subscription_date
+        or datetime.now(tz=timezone.utc).strftime("%B %d, %Y"),
         "frequency": frequency,
         "interests": interests,
-        "browse_events_url": browse_events_url or f"{settings.FRONTEND_URL}/events",
-        "preferences_url": preferences_url or f"{settings.FRONTEND_URL}/preferences",
-        "account_settings_url": account_settings_url or f"{settings.FRONTEND_URL}/settings",
+        "browse_events_url": browse_events_url
+        or f"{settings.FRONTEND_URL}/events",
+        "preferences_url": preferences_url
+        or f"{settings.FRONTEND_URL}/preferences",
+        "account_settings_url": account_settings_url
+        or f"{settings.FRONTEND_URL}/settings",
         "incentive_offer": incentive_offer,
         "year": str(datetime.now(tz=timezone.utc).year),
     }
@@ -548,7 +565,9 @@ def send_newsletter_subscription_email(
     )
 
     if not success:
-        logger.warning("Failed to send newsletter subscription email to %s", email)
+        logger.warning(
+            "Failed to send newsletter subscription email to %s", email
+        )
 
     return success
 
@@ -666,10 +685,10 @@ def send_event_update_email(
     """Send event update notification email."""
     update_type_class_map = {
         "information": "update-type-info",
-        "warning": "update-type-warning", 
-        "critical": "update-type-critical"
+        "warning": "update-type-warning",
+        "critical": "update-type-critical",
     }
-    
+
     context = {
         "username": username,
         "event_title": event_title,
@@ -677,7 +696,9 @@ def send_event_update_email(
         "event_time": event_time,
         "venue_name": venue_name,
         "update_type": update_type.title(),
-        "update_type_class": update_type_class_map.get(update_type.lower(), "update-type-info"),
+        "update_type_class": update_type_class_map.get(
+            update_type.lower(), "update-type-info"
+        ),
         "booking_id": booking_id,
         "changes": changes or [],
         "action_required": action_required,
@@ -731,7 +752,8 @@ def send_refund_confirmation_email(
         "refund_id": refund_id,
         "original_transaction_id": original_transaction_id,
         "booking_id": booking_id,
-        "refund_date": refund_date or datetime.now(tz=timezone.utc).strftime("%B %d, %Y"),
+        "refund_date": refund_date
+        or datetime.now(tz=timezone.utc).strftime("%B %d, %Y"),
         "original_amount": original_amount,
         "refund_fee": refund_fee,
         "refund_reason": refund_reason,

@@ -46,9 +46,7 @@ class TestGetCategoryOrSubcategoryDetails:
         )
         await test_db_session.commit()
 
-        res = await test_client.get(
-            "/api/v1/category-items/CAT001"
-        )
+        res = await test_client.get("/api/v1/category-items/CAT001")
         body = res.json()
 
         assert res.status_code == 200
@@ -94,9 +92,7 @@ class TestGetCategoryOrSubcategoryDetails:
         )
         await test_db_session.commit()
 
-        res = await test_client.get(
-            "/api/v1/category-items/SUB001"
-        )
+        res = await test_client.get("/api/v1/category-items/SUB001")
         body = res.json()
 
         assert res.status_code == 200
@@ -115,9 +111,7 @@ class TestGetCategoryOrSubcategoryDetails:
         self, test_client: AsyncClient, clean_db
     ):
         """Test fetching non-existent item returns 404."""
-        res = await test_client.get(
-            "/api/v1/category-items/INVALID_ID"
-        )
+        res = await test_client.get("/api/v1/category-items/INVALID_ID")
         body = res.json()
 
         assert res.status_code == 404
@@ -141,9 +135,7 @@ class TestGetCategoryOrSubcategoryDetails:
         )
         await test_db_session.commit()
 
-        res = await test_client.get(
-            "/api/v1/category-items/CAT003"
-        )
+        res = await test_client.get("/api/v1/category-items/CAT003")
         body = res.json()
 
         assert res.status_code == 200
@@ -182,9 +174,7 @@ class TestGetCategoryOrSubcategoryDetails:
         )
         await test_db_session.commit()
 
-        res = await test_client.get(
-            "/api/v1/category-items/SUB002"
-        )
+        res = await test_client.get("/api/v1/category-items/SUB002")
         body = res.json()
 
         assert res.status_code == 200
@@ -223,9 +213,7 @@ class TestUpdateCategoryOrSubcategory:
             "show_in_menu": True,
         }
 
-        res = await test_client.put(
-            "/api/v1/category-items/CAT100", data=data
-        )
+        res = await test_client.put("/api/v1/category-items/CAT100", data=data)
         body = res.json()
 
         assert res.status_code == 200
@@ -281,9 +269,7 @@ class TestUpdateCategoryOrSubcategory:
             "show_in_menu": True,
         }
 
-        res = await test_client.put(
-            "/api/v1/category-items/SUB100", data=data
-        )
+        res = await test_client.put("/api/v1/category-items/SUB100", data=data)
         body = res.json()
 
         assert res.status_code == 200
@@ -446,9 +432,7 @@ class TestUpdateCategoryOrSubcategory:
 
         data = {}  # No changes
 
-        res = await test_client.put(
-            "/api/v1/category-items/CAT105", data=data
-        )
+        res = await test_client.put("/api/v1/category-items/CAT105", data=data)
         body = res.json()
 
         assert res.status_code == 400
@@ -482,9 +466,7 @@ class TestUpdateCategoryOrSubcategory:
 
         data = {"name": "Existing Name"}  # Duplicate name
 
-        res = await test_client.put(
-            "/api/v1/category-items/CAT107", data=data
-        )
+        res = await test_client.put("/api/v1/category-items/CAT107", data=data)
         body = res.json()
 
         assert res.status_code == 400
@@ -510,9 +492,7 @@ class TestSoftDeleteCategoryOrSubcategory:
         )
         await test_db_session.commit()
 
-        res = await test_client.delete(
-            "/api/v1/category-items/CAT200/soft"
-        )
+        res = await test_client.delete("/api/v1/category-items/CAT200/soft")
         body = res.json()
 
         assert res.status_code == 200
@@ -553,9 +533,7 @@ class TestSoftDeleteCategoryOrSubcategory:
         )
         await test_db_session.commit()
 
-        res = await test_client.delete(
-            "/api/v1/category-items/SUB200/soft"
-        )
+        res = await test_client.delete("/api/v1/category-items/SUB200/soft")
         body = res.json()
 
         assert res.status_code == 200
@@ -573,9 +551,7 @@ class TestSoftDeleteCategoryOrSubcategory:
         self, test_client: AsyncClient, clean_db
     ):
         """Test soft deleting non-existent item returns 404."""
-        res = await test_client.delete(
-            "/api/v1/category-items/INVALID_ID/soft"
-        )
+        res = await test_client.delete("/api/v1/category-items/INVALID_ID/soft")
         body = res.json()
 
         assert res.status_code == 404
@@ -597,9 +573,7 @@ class TestSoftDeleteCategoryOrSubcategory:
         )
         await test_db_session.commit()
 
-        res = await test_client.delete(
-            "/api/v1/category-items/CAT202/soft"
-        )
+        res = await test_client.delete("/api/v1/category-items/CAT202/soft")
         body = res.json()
 
         assert res.status_code == 400
@@ -633,9 +607,7 @@ class TestSoftDeleteCategoryOrSubcategory:
         )
         await test_db_session.commit()
 
-        res = await test_client.delete(
-            "/api/v1/category-items/SUB201/soft"
-        )
+        res = await test_client.delete("/api/v1/category-items/SUB201/soft")
         body = res.json()
 
         assert res.status_code == 400
@@ -661,9 +633,7 @@ class TestRestoreCategoryOrSubcategory:
         )
         await test_db_session.commit()
 
-        res = await test_client.put(
-            "/api/v1/category-items/CAT300/restore"
-        )
+        res = await test_client.put("/api/v1/category-items/CAT300/restore")
         body = res.json()
 
         assert res.status_code == 200
@@ -704,9 +674,7 @@ class TestRestoreCategoryOrSubcategory:
         )
         await test_db_session.commit()
 
-        res = await test_client.put(
-            "/api/v1/category-items/SUB300/restore"
-        )
+        res = await test_client.put("/api/v1/category-items/SUB300/restore")
         body = res.json()
 
         assert res.status_code == 200
@@ -724,9 +692,7 @@ class TestRestoreCategoryOrSubcategory:
         self, test_client: AsyncClient, clean_db
     ):
         """Test restoring non-existent item returns 404."""
-        res = await test_client.put(
-            "/api/v1/category-items/INVALID_ID/restore"
-        )
+        res = await test_client.put("/api/v1/category-items/INVALID_ID/restore")
         body = res.json()
 
         assert res.status_code == 404
@@ -748,9 +714,7 @@ class TestRestoreCategoryOrSubcategory:
         )
         await test_db_session.commit()
 
-        res = await test_client.put(
-            "/api/v1/category-items/CAT302/restore"
-        )
+        res = await test_client.put("/api/v1/category-items/CAT302/restore")
         body = res.json()
 
         assert res.status_code == 400
@@ -784,9 +748,7 @@ class TestRestoreCategoryOrSubcategory:
         )
         await test_db_session.commit()
 
-        res = await test_client.put(
-            "/api/v1/category-items/SUB301/restore"
-        )
+        res = await test_client.put("/api/v1/category-items/SUB301/restore")
         body = res.json()
 
         assert res.status_code == 400
@@ -837,9 +799,7 @@ class TestCategoryOrSubcategoryEdgeCases:
         )
         await test_db_session.commit()
 
-        res = await test_client.get(
-            "/api/v1/category-items/SAME_ID"
-        )
+        res = await test_client.get("/api/v1/category-items/SAME_ID")
         body = res.json()
 
         assert res.status_code == 200
@@ -868,9 +828,7 @@ class TestCategoryOrSubcategoryEdgeCases:
             "slug": "new-slug",
         }
 
-        res = await test_client.put(
-            "/api/v1/category-items/CAT400", data=data
-        )
+        res = await test_client.put("/api/v1/category-items/CAT400", data=data)
         body = res.json()
 
         assert res.status_code == 200
@@ -919,9 +877,7 @@ class TestCategoryOrSubcategoryEdgeCases:
             "show_in_menu": True,
         }
 
-        res = await test_client.put(
-            "/api/v1/category-items/SUB400", data=data
-        )
+        res = await test_client.put("/api/v1/category-items/SUB400", data=data)
         body = res.json()
 
         assert res.status_code == 200

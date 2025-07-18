@@ -15,27 +15,25 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
-from shared.core.api_response import api_response
-from shared.core.config import settings
-from shared.db.models import Category, SubCategory
-from shared.db.sessions.database import get_db
 from category_service.services.category_service import (
     ConflictCheckData,
+    _validate_name,
+    _validate_slug,
+    _validate_subcategory_name,
+    _validate_subcategory_optional_field,
+    _validate_subcategory_slug,
+    _validate_text_field,
     check_subcategory_conflicts,
     check_subcategory_vs_category_conflicts,
     validate_category_conflicts,
 )
+from shared.core.api_response import api_response
+from shared.core.config import settings
+from shared.db.models import Category, SubCategory
+from shared.db.sessions.database import get_db
 from shared.utils.exception_handlers import exception_handler
 from shared.utils.file_uploads import get_media_url, save_uploaded_file
 from shared.utils.format_validators import is_valid_filename
-from category_service.services.category_service import _validate_name
-from category_service.services.category_service import (
-     _validate_subcategory_optional_field,
-     )
-from category_service.services.category_service import _validate_subcategory_slug
-from category_service.services.category_service import _validate_subcategory_name
-from category_service.services.category_service import _validate_text_field
-from category_service.services.category_service import _validate_slug
 
 router = APIRouter()
 

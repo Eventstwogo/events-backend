@@ -7,14 +7,14 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
 
-from shared.core.api_response import api_response
-from shared.db.models import Permission
-from shared.db.sessions.database import get_db
 from rbac_service.schemas import (
     CreatePermission,
     PermissionDetails,
     PermissionUpdate,
 )
+from shared.core.api_response import api_response
+from shared.db.models import Permission
+from shared.db.sessions.database import get_db
 from shared.utils.exception_handlers import exception_handler
 from shared.utils.id_generators import generate_digits_lowercase
 from shared.utils.validators import is_single_reserved_word

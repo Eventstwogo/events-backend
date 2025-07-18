@@ -111,5 +111,10 @@ def get_user_status_label(user: AdminUser) -> str:
     if not user:
         return "Unknown"
 
-    status_map = {-1: "Initial Login", 0: "Active", 1: "Locked", 2: "Password Expired"}
+    status_map = {
+        -1: "Initial Login",
+        0: "Active",
+        1: "Locked",
+        2: "Password Expired",
+    }
     return status_map.get(user.login_status, "Unknown")

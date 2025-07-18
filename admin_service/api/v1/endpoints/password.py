@@ -5,13 +5,6 @@ from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
 
-from shared.dependencies.admin import get_current_active_user
-from admin_service.services.response_builders import account_deactivated, user_not_found_response
-from shared.core.api_response import api_response
-from shared.core.config import settings
-from shared.core.logging_config import get_logger
-from shared.db.models.admin_users import AdminUser
-from shared.db.sessions.database import get_db
 from admin_service.schemas.password import (
     ForgotPassword,
     ResetPasswordWithToken,
@@ -24,13 +17,28 @@ from admin_service.services.password_reset_service import (
     mark_password_reset_used,
     validate_reset_token,
 )
-from admin_service.services.user_service import get_user_by_email, get_user_by_id
+from admin_service.services.response_builders import (
+    account_deactivated,
+    user_not_found_response,
+)
+from admin_service.services.user_service import (
+    get_user_by_email,
+    get_user_by_id,
+)
 from admin_service.utils.auth import (
     hash_password,
     verify_password,
 )
+from shared.core.api_response import api_response
+from shared.core.config import settings
+from shared.core.logging_config import get_logger
+from shared.db.models.admin_users import AdminUser
+from shared.db.sessions.database import get_db
+from shared.dependencies.admin import get_current_active_user
 from shared.utils.email import send_password_reset_email
-from shared.utils.email_utils.admin_emails import send_admin_password_reset_email
+from shared.utils.email_utils.admin_emails import (
+    send_admin_password_reset_email,
+)
 from shared.utils.email_validators import EmailValidator
 from shared.utils.exception_handlers import exception_handler
 
@@ -74,7 +82,9 @@ async def forgot_password(
         return account_deactivated()
 
     # Step 4: Generate a secure 32-character reset token with 1 hour expiration
-    reset_token, expires_at = generate_password_reset_token(expires_in_minutes=60)
+    reset_token, expires_at = generate_password_reset_token(
+        expires_in_minutes=60
+    )
 
     # Step 5: Save the token to the database
     await create_password_reset_record(
@@ -193,12 +203,16 @@ async def change_password(
     """
     # Step 1: Check if user account is active
     if current_user.is_deleted:
-        logger.warning(f"Password change attempt for deactivated user: {current_user.user_id}")
+        logger.warning(
+            f"Password change attempt for deactivated user: {current_user.user_id}"
+        )
         return account_deactivated()
 
     # Step 2: Verify current password
     if not verify_password(data.current_password, current_user.password_hash):
-        logger.warning(f"Invalid current password attempt for user: {current_user.user_id}")
+        logger.warning(
+            f"Invalid current password attempt for user: {current_user.user_id}"
+        )
         return api_response(
             status_code=status.HTTP_400_BAD_REQUEST,
             message="Current password is incorrect.",
@@ -207,7 +221,9 @@ async def change_password(
 
     # Step 3: Prevent using the same password
     if verify_password(data.new_password, current_user.password_hash):
-        logger.info(f"User {current_user.user_id} attempted to use same password")
+        logger.info(
+            f"User {current_user.user_id} attempted to use same password"
+        )
         return api_response(
             status_code=status.HTTP_409_CONFLICT,
             message="New password cannot be the same as current password.",
@@ -224,7 +240,9 @@ async def change_password(
     await db.commit()
     await db.refresh(current_user)
 
-    logger.info(f"Password successfully changed for user: {current_user.user_id}")
+    logger.info(
+        f"Password successfully changed for user: {current_user.user_id}"
+    )
 
     return api_response(
         status_code=status.HTTP_200_OK,

@@ -72,14 +72,20 @@ async def fetch_secrets_from_vault(
                     }
 
                 # Raise a specific error if the response status is not 200
-                raise VaultError(f"Failed to fetch secrets. HTTP Status: {response.status}")
+                raise VaultError(
+                    f"Failed to fetch secrets. HTTP Status: {response.status}"
+                )
 
     except aiohttp.ClientError as e:
         # Handle HTTP client errors specifically
         raise VaultError(f"HTTP Client Error: {str(e)}") from e
     except KeyError as e:
         # Handle missing keys in the response data
-        raise VaultError(f"Missing expected key in Vault response: {str(e)}") from e
+        raise VaultError(
+            f"Missing expected key in Vault response: {str(e)}"
+        ) from e
     except Exception as e:
         # Raise a VaultError for any other unexpected exceptions
-        raise VaultError(f"Unexpected error fetching secrets from Vault: {str(e)}") from e
+        raise VaultError(
+            f"Unexpected error fetching secrets from Vault: {str(e)}"
+        ) from e

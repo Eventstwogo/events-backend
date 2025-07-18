@@ -39,7 +39,9 @@ def get_or_generate_key() -> bytes:
     print("\n" + "!" * 80)
     print("WARNING: Generated new Fernet key.")
     print("This key MUST be saved and reused for all future application runs.")
-    print("Otherwise, you will not be able to decrypt previously encrypted data!")
+    print(
+        "Otherwise, you will not be able to decrypt previously encrypted data!"
+    )
     print(f"Set this in your environment variables: FERNET_KEY={key.decode()}")
     print("!" * 80 + "\n")
 
@@ -85,7 +87,9 @@ def decrypt_data(encrypted_data: str) -> str:
         return fernet.decrypt(encrypted_data.encode()).decode()
     except InvalidToken:
         # Handle the case where token is invalid (tampered with or corrupted)
-        raise ValueError("Failed to decrypt data: token may be invalid or corrupted")
+        raise ValueError(
+            "Failed to decrypt data: token may be invalid or corrupted"
+        )
     except Exception as e:
         # Handle other potential errors
         raise ValueError(f"Decryption error: {str(e)}")
@@ -130,7 +134,9 @@ def encrypt_aes256(plaintext: str, key: str) -> str:
     try:
         # Convert inputs to bytes
         plaintext_bytes = plaintext.encode("utf-8")
-        key_bytes = base64.b64decode(key) if len(key) != 32 else key.encode("utf-8")
+        key_bytes = (
+            base64.b64decode(key) if len(key) != 32 else key.encode("utf-8")
+        )
 
         # Generate a random initialization vector
         iv = os.urandom(16)
@@ -140,7 +146,9 @@ def encrypt_aes256(plaintext: str, key: str) -> str:
         padded_data = padder.update(plaintext_bytes) + padder.finalize()
 
         # Create an encryptor
-        cipher = Cipher(algorithms.AES(key_bytes), modes.CBC(iv), backend=default_backend())
+        cipher = Cipher(
+            algorithms.AES(key_bytes), modes.CBC(iv), backend=default_backend()
+        )
         encryptor = cipher.encryptor()
 
         # Encrypt the data
@@ -174,14 +182,18 @@ def decrypt_aes256(ciphertext: str, key: str) -> str:
     try:
         # Convert inputs to bytes
         ciphertext_bytes = base64.b64decode(ciphertext)
-        key_bytes = base64.b64decode(key) if len(key) != 32 else key.encode("utf-8")
+        key_bytes = (
+            base64.b64decode(key) if len(key) != 32 else key.encode("utf-8")
+        )
 
         # Extract IV (first 16 bytes)
         iv = ciphertext_bytes[:16]
         actual_ciphertext = ciphertext_bytes[16:]
 
         # Create a decryptor
-        cipher = Cipher(algorithms.AES(key_bytes), modes.CBC(iv), backend=default_backend())
+        cipher = Cipher(
+            algorithms.AES(key_bytes), modes.CBC(iv), backend=default_backend()
+        )
         decryptor = cipher.decryptor()
 
         # Decrypt the data

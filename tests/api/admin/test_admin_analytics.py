@@ -18,16 +18,19 @@ async def test_user_analytics_success(test_client: AsyncClient, test_app):
         username="testadmin",
         email="admin@test.com",
         role_id="role123",
-        is_deleted=False
+        is_deleted=False,
     )
-    
+
     async def mock_get_current_active_user():
         return mock_admin_user
-    
+
     # Override the dependency
     from shared.dependencies.admin import get_current_active_user
-    test_app.dependency_overrides[get_current_active_user] = mock_get_current_active_user
-    
+
+    test_app.dependency_overrides[get_current_active_user] = (
+        mock_get_current_active_user
+    )
+
     try:
         response = await test_client.get("/api/v1/admin/analytics")
         body = response.json()
@@ -54,15 +57,18 @@ async def test_user_analytics_empty_db(test_client: AsyncClient, test_app):
         username="testadmin",
         email="admin@test.com",
         role_id="role123",
-        is_deleted=False
+        is_deleted=False,
     )
-    
+
     async def mock_get_current_active_user():
         return mock_admin_user
-    
+
     # Override the dependency
     from shared.dependencies.admin import get_current_active_user
-    test_app.dependency_overrides[get_current_active_user] = mock_get_current_active_user
+
+    test_app.dependency_overrides[get_current_active_user] = (
+        mock_get_current_active_user
+    )
 
     # Dictionary to simulate what your actual SQL function would return
     summary_data_dict = {
@@ -128,15 +134,18 @@ async def test_user_analytics_failure(test_client: AsyncClient, test_app):
         username="testadmin",
         email="admin@test.com",
         role_id="role123",
-        is_deleted=False
+        is_deleted=False,
     )
-    
+
     async def mock_get_current_active_user():
         return mock_admin_user
-    
+
     # Override the dependency
     from shared.dependencies.admin import get_current_active_user
-    test_app.dependency_overrides[get_current_active_user] = mock_get_current_active_user
+
+    test_app.dependency_overrides[get_current_active_user] = (
+        mock_get_current_active_user
+    )
 
     async def failing_summary(db=None):
         raise Exception("DB Failure")

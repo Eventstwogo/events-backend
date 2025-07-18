@@ -13,6 +13,7 @@ from shared.utils.validators import (
     normalize_whitespace,
 )
 
+
 class UserPasswordReset(BaseModel):
     email: EmailStr = Field(
         ...,

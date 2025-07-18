@@ -21,7 +21,9 @@ class UserLogin(BaseModel):
         title="Email Address",
         description="Registered email address of the user.",
     )
-    password: str = Field(..., title="Password", description="Account password.")
+    password: str = Field(
+        ..., title="Password", description="Account password."
+    )
 
     @field_validator("email")
     @classmethod
@@ -50,7 +52,9 @@ class UserOut(BaseModel):
         description="Unique identifier for the user.",
     )
     username: str = Field(..., title="Username", description="User's username.")
-    email: EmailStr = Field(..., title="Email Address", description="User's email address.")
+    email: EmailStr = Field(
+        ..., title="Email Address", description="User's email address."
+    )
     profile_picture: Optional[str] = Field(
         None,
         title="Profile Picture",
@@ -95,7 +99,9 @@ class UserMeOut(BaseModel):
         description="Unique identifier for the user.",
     )
     username: str = Field(..., title="Username", description="User's username.")
-    email: EmailStr = Field(..., title="Email Address", description="User's email address.")
+    email: EmailStr = Field(
+        ..., title="Email Address", description="User's email address."
+    )
     role_id: str = Field(
         ...,
         title="Role ID",

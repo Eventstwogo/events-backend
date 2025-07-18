@@ -12,7 +12,7 @@ import httpx
 from fastapi import Request
 from user_agents import parse
 
-    
+
 class DeviceInfoExtractor:
     """Extract comprehensive device information from HTTP requests"""
 

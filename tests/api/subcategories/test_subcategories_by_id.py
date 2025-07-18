@@ -199,9 +199,7 @@ class TestUpdateSubcategoryById:
             "featured": "true",
         }
 
-        res = await test_client.put(
-            "/api/v1/subcategories/SUB100", data=data
-        )
+        res = await test_client.put("/api/v1/subcategories/SUB100", data=data)
         body = res.json()
 
         assert res.status_code == 200
@@ -267,9 +265,7 @@ class TestUpdateSubcategoryById:
 
         data = {}  # No changes
 
-        res = await test_client.put(
-            "/api/v1/subcategories/SUB101", data=data
-        )
+        res = await test_client.put("/api/v1/subcategories/SUB101", data=data)
         body = res.json()
 
         assert res.status_code == 400
@@ -321,9 +317,7 @@ class TestUpdateSubcategoryById:
 
         data = {"name": "Rock"}  # Duplicate name
 
-        res = await test_client.put(
-            "/api/v1/subcategories/SUB103", data=data
-        )
+        res = await test_client.put("/api/v1/subcategories/SUB103", data=data)
         body = res.json()
 
         assert res.status_code == 400
@@ -453,9 +447,7 @@ class TestSoftDeleteSubcategoryById:
         )
         await test_db_session.commit()
 
-        res = await test_client.delete(
-            "/api/v1/subcategories/SUB200/soft"
-        )
+        res = await test_client.delete("/api/v1/subcategories/SUB200/soft")
         body = res.json()
 
         assert res.status_code == 200
@@ -473,9 +465,7 @@ class TestSoftDeleteSubcategoryById:
         self, test_client: AsyncClient, clean_db
     ):
         """Test soft deleting non-existent subcategory returns 404."""
-        res = await test_client.delete(
-            "/api/v1/subcategories/INVALID_ID/soft"
-        )
+        res = await test_client.delete("/api/v1/subcategories/INVALID_ID/soft")
         body = res.json()
 
         assert res.status_code == 404
@@ -513,9 +503,7 @@ class TestSoftDeleteSubcategoryById:
         )
         await test_db_session.commit()
 
-        res = await test_client.delete(
-            "/api/v1/subcategories/SUB201/soft"
-        )
+        res = await test_client.delete("/api/v1/subcategories/SUB201/soft")
         body = res.json()
 
         assert res.status_code == 400
@@ -655,9 +643,7 @@ class TestHardDeleteSubcategoryById:
         )
         await test_db_session.commit()
 
-        res = await test_client.delete(
-            "/api/v1/subcategories/SUB400/hard"
-        )
+        res = await test_client.delete("/api/v1/subcategories/SUB400/hard")
         body = res.json()
 
         assert res.status_code == 200
@@ -675,9 +661,7 @@ class TestHardDeleteSubcategoryById:
         self, test_client: AsyncClient, clean_db
     ):
         """Test hard deleting non-existent subcategory returns 404."""
-        res = await test_client.delete(
-            "/api/v1/subcategories/INVALID_ID/hard"
-        )
+        res = await test_client.delete("/api/v1/subcategories/INVALID_ID/hard")
         body = res.json()
 
         assert res.status_code == 404

@@ -1,24 +1,27 @@
 from typing import Annotated, List, Optional
 
+import jwt
 from fastapi import APIRouter, Depends, Path, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
 
-from shared.dependencies.admin import extract_token_from_request, get_current_active_user
-from shared.core.api_response import api_response
-from shared.core.config import PUBLIC_KEY, settings
-from shared.core.logging_config import get_logger
-from shared.db.models import AdminUser, AdminUserDeviceSession
-from shared.db.sessions.database import get_db
 from admin_service.schemas.session import (
     SessionInfo,
     SessionListResponse,
     SessionTerminateResponse,
 )
 from admin_service.services.session_management import SessionManager
+from shared.core.api_response import api_response
+from shared.core.config import PUBLIC_KEY, settings
+from shared.core.logging_config import get_logger
+from shared.db.models import AdminUser, AdminUserDeviceSession
+from shared.db.sessions.database import get_db
+from shared.dependencies.admin import (
+    extract_token_from_request,
+    get_current_active_user,
+)
 from shared.utils.exception_handlers import exception_handler
-import jwt
 
 logger = get_logger(__name__)
 
@@ -38,7 +41,7 @@ async def get_user_sessions(
     # Verify the user has permission to view these sessions
     # This would typically involve checking if the current user has admin privileges
     # or if they're viewing their own sessions
-    
+
     # Get sessions for the specified user
     sessions = await SessionManager.get_user_sessions(
         user_id, db, active_only=active_only, limit=limit
@@ -56,10 +59,20 @@ async def get_user_sessions(
                 location=session.location or "Unknown Location",
                 ip_address=session.ip_address or "Unknown",
                 is_active=session.is_active,
-                logged_in_at=(session.logged_in_at.isoformat() if session.logged_in_at else None),
-                last_used_at=(session.last_used_at.isoformat() if session.last_used_at else None),
+                logged_in_at=(
+                    session.logged_in_at.isoformat()
+                    if session.logged_in_at
+                    else None
+                ),
+                last_used_at=(
+                    session.last_used_at.isoformat()
+                    if session.last_used_at
+                    else None
+                ),
                 logged_out_at=(
-                    session.logged_out_at.isoformat() if session.logged_out_at else None
+                    session.logged_out_at.isoformat()
+                    if session.logged_out_at
+                    else None
                 ),
                 is_current=False,  # Will be updated below
             )
@@ -87,7 +100,9 @@ async def get_user_sessions(
                                 session.is_current = True
                                 break
             except Exception as e:
-                logger.warning(f"Failed to decode token for session identification: {e}")
+                logger.warning(
+                    f"Failed to decode token for session identification: {e}"
+                )
 
     return api_response(
         status_code=200,
@@ -101,7 +116,9 @@ async def get_user_sessions(
 async def terminate_user_session(
     user_id: str,
     current_user: Annotated[AdminUser, Depends(get_current_active_user)],
-    session_id: int = Path(..., title="Session ID", description="ID of the session to terminate"),
+    session_id: int = Path(
+        ..., title="Session ID", description="ID of the session to terminate"
+    ),
     db: AsyncSession = Depends(get_db),
 ) -> JSONResponse:
     """Terminate a specific session for a user"""
@@ -138,10 +155,14 @@ async def terminate_user_session(
                     if current_session_id and current_session_id == session_id:
                         is_current_session = True
             except Exception as e:
-                logger.warning(f"Failed to decode token for session identification: {e}")
+                logger.warning(
+                    f"Failed to decode token for session identification: {e}"
+                )
 
     # Terminate the session
-    terminated = await SessionManager.terminate_session(session_id, db, reason="admin_terminated")
+    terminated = await SessionManager.terminate_session(
+        session_id, db, reason="admin_terminated"
+    )
 
     if terminated:
         # If this was the current session, also clear cookies
@@ -162,7 +183,9 @@ async def terminate_user_session(
             data=response_data,
         )
     else:
-        return api_response(status_code=400, message="Failed to terminate session")
+        return api_response(
+            status_code=400, message="Failed to terminate session"
+        )
 
 
 @router.delete("/", response_model=SessionTerminateResponse)
@@ -192,7 +215,9 @@ async def terminate_all_user_sessions(
                         )
                         current_session_id = payload.get("sid")
                 except Exception as e:
-                    logger.warning(f"Failed to decode token for session identification: {e}")
+                    logger.warning(
+                        f"Failed to decode token for session identification: {e}"
+                    )
 
     # Terminate all sessions except current one
     terminated_count = await SessionManager.terminate_all_user_sessions(

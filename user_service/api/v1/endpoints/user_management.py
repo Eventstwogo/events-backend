@@ -7,7 +7,7 @@ from starlette.responses import JSONResponse
 
 from shared.core.api_response import api_response
 from shared.core.logging_config import get_logger
-from shared.db.models import User, Role
+from shared.db.models import Role, User
 from shared.db.sessions.database import get_db
 from shared.dependencies.user import get_current_active_user
 from shared.utils.exception_handlers import exception_handler
@@ -33,7 +33,9 @@ async def get_app_users(
     current_user: Annotated[User, Depends(get_current_active_user)],
     is_deleted: Optional[bool] = Query(
         None,
-        description=("Filter by account status: false=active, true=inactive, omit=all"),
+        description=(
+            "Filter by account status: false=active, true=inactive, omit=all"
+        ),
     ),
     db: AsyncSession = Depends(get_db),
 ) -> JSONResponse:
@@ -335,7 +337,7 @@ async def hard_delete_user(
 
     # Store user info for logging before deletion
     deleted_username = user.username
-    
+
     await db.delete(user)
     await db.commit()
 

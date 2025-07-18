@@ -11,7 +11,9 @@ from shared.utils.validators import (
 
 
 class CreateRole(BaseModel):
-    role_name: str = Field(..., title="Role Name", description="The name of the role.")
+    role_name: str = Field(
+        ..., title="Role Name", description="The name of the role."
+    )
 
     @field_validator("role_name", mode="before")
     @classmethod
@@ -25,10 +27,14 @@ class CreateRole(BaseModel):
             raise ValueError("Role name cannot be empty.")
 
         if not is_valid_name(value):
-            raise ValueError("Role name must contain only letters and spaces or hyphens.")
+            raise ValueError(
+                "Role name must contain only letters and spaces or hyphens."
+            )
 
         if not validate_length_range(value, 3, 50):
-            raise ValueError("Role name must be between 3 and 50 characters long.")
+            raise ValueError(
+                "Role name must be between 3 and 50 characters long."
+            )
 
         validate_strict_input("role_name", value)
 
@@ -36,8 +42,12 @@ class CreateRole(BaseModel):
 
 
 class RoleDetails(BaseModel):
-    role_id: str = Field(..., title="Role ID", description="Unique identifier of the role.")
-    role_name: str = Field(..., title="Role Name", description="Name of the role.")
+    role_id: str = Field(
+        ..., title="Role ID", description="Unique identifier of the role."
+    )
+    role_name: str = Field(
+        ..., title="Role Name", description="Name of the role."
+    )
     role_status: Optional[bool] = Field(
         None,
         title="Role Status",
@@ -60,10 +70,14 @@ class RoleUpdate(BaseModel):
                 raise ValueError("Role name cannot be empty.")
 
             if not is_valid_name(value):
-                raise ValueError("Role name must contain only letters, spaces, or hyphens.")
+                raise ValueError(
+                    "Role name must contain only letters, spaces, or hyphens."
+                )
 
             if not validate_length_range(value, 3, 50):
-                raise ValueError("Role name must be between 3 and 50 characters.")
+                raise ValueError(
+                    "Role name must be between 3 and 50 characters."
+                )
 
             validate_strict_input("role_name", value)
 

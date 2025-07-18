@@ -29,11 +29,12 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
+from main import create_app
+
 # Local application imports
 from shared.core import config
 from shared.db.models import Config, EventsBase, Role
 from shared.db.sessions.database import get_db
-from main import create_app
 from tests.test_config import AppTestSettings, get_test_settings
 from user_service.utils.auth import hash_password
 

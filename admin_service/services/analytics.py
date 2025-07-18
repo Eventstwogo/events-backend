@@ -17,12 +17,18 @@ async def get_admin_user_analytics(
     results = await db.execute(
         select(
             func.count().label("total_users"),
-            func.sum(case((AdminUser.is_deleted.is_(False), 1), else_=0)).label("active_users"),
-            func.sum(case((AdminUser.is_deleted.is_(True), 1), else_=0)).label("inactive_users"),
-            func.sum(case((AdminUser.login_status == 1, 1), else_=0)).label("locked_users"),
-            func.sum(case((AdminUser.days_180_flag.is_(True), 1), else_=0)).label(
-                "with_expiry_flag"
+            func.sum(case((AdminUser.is_deleted.is_(False), 1), else_=0)).label(
+                "active_users"
             ),
+            func.sum(case((AdminUser.is_deleted.is_(True), 1), else_=0)).label(
+                "inactive_users"
+            ),
+            func.sum(case((AdminUser.login_status == 1, 1), else_=0)).label(
+                "locked_users"
+            ),
+            func.sum(
+                case((AdminUser.days_180_flag.is_(True), 1), else_=0)
+            ).label("with_expiry_flag"),
             func.sum(
                 case(
                     (
@@ -35,9 +41,9 @@ async def get_admin_user_analytics(
                     else_=0,
                 )
             ).label("expired_passwords"),
-            func.sum(case((AdminUser.failure_login_attempts >= 3, 1), else_=0)).label(
-                "high_failed_attempts"
-            ),
+            func.sum(
+                case((AdminUser.failure_login_attempts >= 3, 1), else_=0)
+            ).label("high_failed_attempts"),
             func.min(AdminUser.created_at).label("earliest_user"),
             func.max(AdminUser.created_at).label("latest_user"),
         )

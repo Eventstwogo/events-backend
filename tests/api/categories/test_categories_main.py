@@ -404,9 +404,7 @@ class TestListCategories:
         )
         await test_db_session.commit()
 
-        res = await test_client.get(
-            "/api/v1/categories/list?status_value=true"
-        )
+        res = await test_client.get("/api/v1/categories/list?status_value=true")
         body = res.json()
 
         assert res.status_code == 200

@@ -1,5 +1,5 @@
-from datetime import datetime, timedelta, timezone
 import secrets
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, BackgroundTasks, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,6 +8,11 @@ from starlette.responses import JSONResponse
 from shared.core.api_response import api_response
 from shared.db.models import User, UserVerification
 from shared.db.sessions.database import get_db
+from shared.utils.email import send_user_verification_email
+from shared.utils.exception_handlers import exception_handler
+from shared.utils.id_generators import (
+    generate_lower_uppercase,
+)
 from user_service.schemas.register import (
     UserRegisterRequest,
     UserRegisterResponse,
@@ -16,11 +21,6 @@ from user_service.services.response_builders import config_not_found_response
 from user_service.services.user_service import get_config_or_404
 from user_service.services.user_validation import validate_unique_user
 from user_service.utils.auth import hash_password
-from shared.utils.email import send_user_verification_email
-from shared.utils.exception_handlers import exception_handler
-from shared.utils.id_generators import (
-    generate_lower_uppercase,
-)
 
 router = APIRouter()
 
@@ -40,7 +40,9 @@ def generate_verification_tokens(
         tuple[str, datetime]: A secure random token and its expiration time
     """
     token = secrets.token_urlsafe(length)
-    expiration_time = datetime.now(timezone.utc) + timedelta(minutes=expires_in_minutes)
+    expiration_time = datetime.now(timezone.utc) + timedelta(
+        minutes=expires_in_minutes
+    )
     return token, expiration_time
 
 
@@ -70,12 +72,17 @@ async def register_user(
         JSONResponse: Response with user details and success message
     """
     # Check if user already exists
-    unique_user_result = await validate_unique_user(db, user_data.username, user_data.email)
+    unique_user_result = await validate_unique_user(
+        db, user_data.username, user_data.email
+    )
     if unique_user_result is not None:
         return unique_user_result
 
     # Validate first name and last name are not the same
-    if user_data.first_name.strip().lower() == user_data.last_name.strip().lower():
+    if (
+        user_data.first_name.strip().lower()
+        == user_data.last_name.strip().lower()
+    ):
         return api_response(
             status_code=status.HTTP_400_BAD_REQUEST,
             message="First name and last name cannot be the same.",
@@ -105,7 +112,9 @@ async def register_user(
     )
 
     # Create verification record with expiration time
-    verification_token, expiration_time = generate_verification_tokens(expires_in_minutes=60)
+    verification_token, expiration_time = generate_verification_tokens(
+        expires_in_minutes=60
+    )
     verification = UserVerification(
         user_id=user_id,
         email_verification_token=verification_token,

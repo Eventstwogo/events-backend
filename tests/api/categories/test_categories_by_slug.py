@@ -276,9 +276,7 @@ class TestUpdateCategoryBySlug:
 
         data = {"name": "Electronics"}  # Duplicate name
 
-        res = await test_client.put(
-            "/api/v1/categories/slug/books", data=data
-        )
+        res = await test_client.put("/api/v1/categories/slug/books", data=data)
         body = res.json()
 
         assert res.status_code == 400
@@ -366,9 +364,7 @@ class TestSoftDeleteCategoryBySlug:
         )
         await test_db_session.commit()
 
-        res = await test_client.delete(
-            "/api/v1/categories/slug/to-delete/soft"
-        )
+        res = await test_client.delete("/api/v1/categories/slug/to-delete/soft")
         body = res.json()
 
         assert res.status_code == 200
@@ -407,9 +403,7 @@ class TestSoftDeleteCategoryBySlug:
         )
         await test_db_session.commit()
 
-        res = await test_client.delete(
-            "/api/v1/categories/slug/parent/soft"
-        )
+        res = await test_client.delete("/api/v1/categories/slug/parent/soft")
         body = res.json()
 
         assert res.status_code == 200
@@ -454,9 +448,7 @@ class TestSoftDeleteCategoryBySlug:
         )
         await test_db_session.commit()
 
-        res = await test_client.delete(
-            "/api/v1/categories/slug/inactive/soft"
-        )
+        res = await test_client.delete("/api/v1/categories/slug/inactive/soft")
         body = res.json()
 
         assert res.status_code == 200
@@ -592,9 +584,7 @@ class TestHardDeleteCategoryBySlug:
         )
         await test_db_session.commit()
 
-        res = await test_client.delete(
-            "/api/v1/categories/slug/to-delete/hard"
-        )
+        res = await test_client.delete("/api/v1/categories/slug/to-delete/hard")
         body = res.json()
 
         assert res.status_code == 200
@@ -635,9 +625,7 @@ class TestHardDeleteCategoryBySlug:
         )
         await test_db_session.commit()
 
-        res = await test_client.delete(
-            "/api/v1/categories/slug/active/hard"
-        )
+        res = await test_client.delete("/api/v1/categories/slug/active/hard")
         body = res.json()
 
         assert res.status_code == 200

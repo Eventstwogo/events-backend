@@ -1,8 +1,8 @@
 import pytest
 from httpx import AsyncClient
 
-from shared.db.models import AdminUser
 from shared.core.security import generate_searchable_hash
+from shared.db.models import AdminUser
 
 
 @pytest.mark.asyncio
@@ -42,7 +42,7 @@ async def test_get_admin_users_all(
 
     res = await test_client.get("/api/v1/admin/users/")
     body = res.json()
-    
+
     # Debug: print response details if not 200
     if res.status_code != 200:
         print(f"Status: {res.status_code}")
@@ -125,9 +125,7 @@ async def test_get_admin_users_inactive_only(
 @pytest.mark.asyncio
 async def test_get_admin_users_not_found(test_client: AsyncClient, clean_db):
     """Test case when no users exist and endpoint should return 404."""
-    res = await test_client.get(
-        "/api/v1/admin/users/?is_deleted=false"
-    )
+    res = await test_client.get("/api/v1/admin/users/?is_deleted=false")
     body = res.json()
 
     assert res.status_code == 404

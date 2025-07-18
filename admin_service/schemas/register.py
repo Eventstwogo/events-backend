@@ -58,7 +58,9 @@ class AdminRegisterRequest(BaseModel):
         if not v:
             raise ValueError("Username cannot be empty.")
         if not is_valid_username(v, allow_spaces=True, allow_hyphens=True):
-            raise ValueError("Username can only contain letters, numbers, spaces, and hyphens.")
+            raise ValueError(
+                "Username can only contain letters, numbers, spaces, and hyphens."
+            )
         if not validate_length_range(v, 4, 32):
             raise ValueError("Username must be 4-32 characters long.")
         if contains_xss(v):
@@ -66,7 +68,9 @@ class AdminRegisterRequest(BaseModel):
         if has_excessive_repetition(v, max_repeats=3):
             raise ValueError("Username contains excessive repeated characters.")
         if len(v) < 3 or not all(c.isalpha() for c in v[:3]):
-            raise ValueError("First three characters of username must be letters.")
+            raise ValueError(
+                "First three characters of username must be letters."
+            )
         return v
 
     @field_validator("email")

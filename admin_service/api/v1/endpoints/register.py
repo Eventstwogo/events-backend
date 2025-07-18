@@ -2,6 +2,10 @@ from fastapi import APIRouter, BackgroundTasks, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
 
+from admin_service.schemas.register import (
+    AdminRegisterRequest,
+    AdminRegisterResponse,
+)
 from admin_service.services.response_builders import config_not_found_response
 from admin_service.services.user_service import get_config_or_404
 from admin_service.services.user_validation import (
@@ -12,10 +16,6 @@ from admin_service.services.user_validation import (
 from shared.core.api_response import api_response
 from shared.db.models import AdminUser, Role
 from shared.db.sessions.database import get_db
-from admin_service.schemas.register import (
-    AdminRegisterRequest,
-    AdminRegisterResponse,
-)
 from shared.utils.email import send_welcome_email
 from shared.utils.exception_handlers import exception_handler
 from shared.utils.file_uploads import get_media_url
@@ -50,7 +50,9 @@ async def register_user(
         JSONResponse: Response with user details and success message
     """
     # Check if user already exists
-    unique_user_result = await validate_unique_user(db, user_data.username, user_data.email)
+    unique_user_result = await validate_unique_user(
+        db, user_data.username, user_data.email
+    )
     if unique_user_result is not None:
         return unique_user_result
 

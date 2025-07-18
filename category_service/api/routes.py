@@ -13,14 +13,20 @@ from category_service.api.v1.endpoints import (
 category_router = APIRouter(prefix="/api/v1")
 
 # Category Endpoints
-category_router.include_router(categories.router, prefix="/categories", tags=["Categories"])
-category_router.include_router(categories_by_id.router, prefix="/categories", tags=["Categories by ID"])
+category_router.include_router(
+    categories.router, prefix="/categories", tags=["Categories"]
+)
+category_router.include_router(
+    categories_by_id.router, prefix="/categories", tags=["Categories by ID"]
+)
 category_router.include_router(
     categories_by_slug.router, prefix="/categories", tags=["Categories by Slug"]
 )
 
 # Subcategory Endpoints
-category_router.include_router(subcategories.router, prefix="/subcategories", tags=["Subcategories"])
+category_router.include_router(
+    subcategories.router, prefix="/subcategories", tags=["Subcategories"]
+)
 category_router.include_router(
     sub_categories_by_id.router,
     prefix="/subcategories",

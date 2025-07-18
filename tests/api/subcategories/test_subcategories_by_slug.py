@@ -523,9 +523,7 @@ class TestSoftDeleteSubcategoryBySlug:
         )
         await test_db_session.commit()
 
-        res = await test_client.delete(
-            "/api/v1/subcategories/slug/tennis/soft"
-        )
+        res = await test_client.delete("/api/v1/subcategories/slug/tennis/soft")
         body = res.json()
 
         assert res.status_code == 200
@@ -585,9 +583,7 @@ class TestSoftDeleteSubcategoryBySlug:
         )
         await test_db_session.commit()
 
-        res = await test_client.delete(
-            "/api/v1/subcategories/slug/chess/soft"
-        )
+        res = await test_client.delete("/api/v1/subcategories/slug/chess/soft")
         body = res.json()
 
         assert res.status_code == 400

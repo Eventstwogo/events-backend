@@ -16,16 +16,16 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 from starlette.responses import JSONResponse
 
-from shared.core.api_response import api_response
-from shared.core.config import settings
-from shared.db.models import Category
-from shared.db.sessions.database import get_db
 from category_service.services.category_service import (
     CategoryData,
     ConflictCheckData,
     validate_category_conflicts,
     validate_category_data,
 )
+from shared.core.api_response import api_response
+from shared.core.config import settings
+from shared.db.models import Category
+from shared.db.sessions.database import get_db
 from shared.utils.exception_handlers import exception_handler
 from shared.utils.file_uploads import get_media_url, save_uploaded_file
 from shared.utils.format_validators import is_valid_filename
@@ -115,7 +115,7 @@ def _prepare_input_values_by_slug(
         input_name = normalize_whitespace(sanitized_name)
     else:
         input_name = ""
-    
+
     if input_slug:
         sanitized_slug = sanitize_input(input_slug)
         if isinstance(sanitized_slug, JSONResponse):
@@ -123,7 +123,7 @@ def _prepare_input_values_by_slug(
         input_slug = normalize_whitespace(sanitized_slug)
     else:
         input_slug = ""
-    
+
     if input_description:
         sanitized_description = sanitize_input(input_description)
         if isinstance(sanitized_description, JSONResponse):
@@ -131,7 +131,7 @@ def _prepare_input_values_by_slug(
         input_description = normalize_whitespace(sanitized_description)
     else:
         input_description = ""
-    
+
     if input_meta_title:
         sanitized_meta_title = sanitize_input(input_meta_title)
         if isinstance(sanitized_meta_title, JSONResponse):
@@ -139,15 +139,17 @@ def _prepare_input_values_by_slug(
         input_meta_title = normalize_whitespace(sanitized_meta_title)
     else:
         input_meta_title = ""
-    
+
     if input_meta_description:
         sanitized_meta_description = sanitize_input(input_meta_description)
         if isinstance(sanitized_meta_description, JSONResponse):
             return sanitized_meta_description
-        input_meta_description = normalize_whitespace(sanitized_meta_description)
+        input_meta_description = normalize_whitespace(
+            sanitized_meta_description
+        )
     else:
         input_meta_description = ""
-    
+
     return (
         input_name,
         input_slug,
@@ -403,7 +405,7 @@ async def update_category_by_slug(
 
     # === Prepare inputs with fallback ===
     input_values = _prepare_input_values_by_slug(params, category)
-    
+
     # Check if sanitization failed
     if isinstance(input_values, JSONResponse):
         return input_values

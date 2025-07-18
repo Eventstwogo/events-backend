@@ -18,7 +18,7 @@ def send_admin_password_reset_email(
     reset_link: str,
     ip_address: Optional[str] = None,
     request_time: Optional[str] = None,
-    expiry_minutes: int = 60, # Default to 1 hour
+    expiry_minutes: int = 60,  # Default to 1 hour
 ) -> bool:
     """Send admin password reset email."""
     context = {
@@ -26,7 +26,8 @@ def send_admin_password_reset_email(
         "email": email,
         "reset_link": reset_link,
         "ip_address": ip_address,
-        "request_time": request_time or datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
+        "request_time": request_time
+        or datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
         "expiry_minutes": expiry_minutes,
         "year": str(datetime.now(tz=timezone.utc).year),
     }
@@ -103,9 +104,9 @@ def send_admin_new_event_notification(
     priority_class_map = {
         "high": "priority-high",
         "medium": "priority-medium",
-        "low": "priority-low"
+        "low": "priority-low",
     }
-    
+
     context = {
         "admin_name": admin_name,
         "event_id": event_id,
@@ -116,7 +117,8 @@ def send_admin_new_event_notification(
         "event_category": event_category,
         "event_capacity": event_capacity,
         "ticket_price": ticket_price,
-        "submission_date": submission_date or datetime.now(tz=timezone.utc).strftime("%B %d, %Y at %I:%M %p UTC"),
+        "submission_date": submission_date
+        or datetime.now(tz=timezone.utc).strftime("%B %d, %Y at %I:%M %p UTC"),
         "organizer_name": organizer_name,
         "organizer_email": organizer_email,
         "organizer_phone": organizer_phone,
@@ -142,6 +144,8 @@ def send_admin_new_event_notification(
     )
 
     if not success:
-        logger.warning("Failed to send admin event notification email to %s", admin_email)
+        logger.warning(
+            "Failed to send admin event notification email to %s", admin_email
+        )
 
     return success

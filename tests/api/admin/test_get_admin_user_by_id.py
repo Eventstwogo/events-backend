@@ -1,8 +1,8 @@
 import pytest
 from httpx import AsyncClient
 
-from shared.db.models import AdminUser
 from shared.core.security import generate_searchable_hash
+from shared.db.models import AdminUser
 
 
 @pytest.mark.asyncio
@@ -15,7 +15,7 @@ async def test_get_admin_user_by_id_success(
 
     username = "admin1"
     email = "admin1@example.com"
-    
+
     user = AdminUser(
         user_id="usr123",
         username_encrypted=username,
@@ -31,9 +31,7 @@ async def test_get_admin_user_by_id_success(
     test_db_session.add(user)
     await test_db_session.commit()
 
-    response = await test_client.get(
-        f"/api/v1/admin/users/{user.user_id}"
-    )
+    response = await test_client.get(f"/api/v1/admin/users/{user.user_id}")
     body = response.json()
 
     assert response.status_code == 200
@@ -65,7 +63,7 @@ async def test_get_admin_user_not_found(test_client: AsyncClient, clean_db):
     body = response.json()
 
     assert response.status_code == 404
-    assert "User Account not found" in body["detail"]["message"]
+    assert "User not found." in body["detail"]["message"]
 
 
 @pytest.mark.asyncio
@@ -78,7 +76,7 @@ async def test_get_admin_user_null_profile_picture(
 
     username = "picless"
     email = "picless@admin.com"
-    
+
     user = AdminUser(
         user_id="usr789",
         username_encrypted=username,
@@ -94,9 +92,7 @@ async def test_get_admin_user_null_profile_picture(
     test_db_session.add(user)
     await test_db_session.commit()
 
-    res = await test_client.get(
-        f"/api/v1/admin/users/{user.user_id}"
-    )
+    res = await test_client.get(f"/api/v1/admin/users/{user.user_id}")
     body = res.json()
 
     assert res.status_code == 200

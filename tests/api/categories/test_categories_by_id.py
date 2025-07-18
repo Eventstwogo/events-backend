@@ -14,6 +14,7 @@ from io import BytesIO
 import pytest
 from httpx import AsyncClient
 from sqlalchemy import insert, select
+
 from shared.db.models import Category, SubCategory
 
 
@@ -164,9 +165,7 @@ class TestUpdateCategoryById:
             "featured": "true",
         }
 
-        res = await test_client.put(
-            "/api/v1/categories/CAT100", data=data
-        )
+        res = await test_client.put("/api/v1/categories/CAT100", data=data)
         body = res.json()
 
         assert res.status_code == 200
@@ -189,9 +188,7 @@ class TestUpdateCategoryById:
         """Test updating non-existent category returns 404."""
         data = {"name": "New Name"}
 
-        res = await test_client.put(
-            "/api/v1/categories/INVALID_ID", data=data
-        )
+        res = await test_client.put("/api/v1/categories/INVALID_ID", data=data)
         body = res.json()
 
         assert res.status_code == 404
@@ -218,9 +215,7 @@ class TestUpdateCategoryById:
 
         data = {}  # No changes
 
-        res = await test_client.put(
-            "/api/v1/categories/CAT101", data=data
-        )
+        res = await test_client.put("/api/v1/categories/CAT101", data=data)
         body = res.json()
 
         # The API might return 200 if no changes are made, so let's be flexible
@@ -259,9 +254,7 @@ class TestUpdateCategoryById:
 
         data = {"name": "Electronics"}  # Duplicate name
 
-        res = await test_client.put(
-            "/api/v1/categories/CAT103", data=data
-        )
+        res = await test_client.put("/api/v1/categories/CAT103", data=data)
         body = res.json()
 
         assert res.status_code == 400
@@ -416,9 +409,7 @@ class TestSoftDeleteCategoryById:
         self, test_client: AsyncClient, clean_db
     ):
         """Test soft deleting non-existent category returns 404."""
-        res = await test_client.delete(
-            "/api/v1/categories/INVALID_ID/soft"
-        )
+        res = await test_client.delete("/api/v1/categories/INVALID_ID/soft")
         body = res.json()
 
         assert res.status_code == 404
@@ -608,9 +599,7 @@ class TestHardDeleteCategoryById:
         self, test_client: AsyncClient, clean_db
     ):
         """Test hard deleting non-existent category returns 404."""
-        res = await test_client.delete(
-            "/api/v1/categories/INVALID_ID/hard"
-        )
+        res = await test_client.delete("/api/v1/categories/INVALID_ID/hard")
         body = res.json()
 
         assert res.status_code == 404

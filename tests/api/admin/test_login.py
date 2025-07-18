@@ -3,8 +3,8 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from httpx import AsyncClient
 
-from shared.db.models import AdminUser
 from shared.core.security import generate_searchable_hash
+from shared.db.models import AdminUser
 
 
 @pytest.mark.asyncio
@@ -16,7 +16,7 @@ async def test_login_success(
 
     username = "loguser"
     email = "log@admin.com"
-    
+
     user = AdminUser(
         user_id="usr001",
         username_encrypted=username,
@@ -34,7 +34,7 @@ async def test_login_success(
     await test_db_session.commit()
 
     res = await test_client.post(
-        "/api/v1/admin-auth/login",
+        "/api/v1/admin/login",
         data={"username": user.email, "password": config.default_password},
     )
     body = res.json()
@@ -53,7 +53,7 @@ async def test_login_initial_login_prompt(
 
     username = "initlogin"
     email = "init@admin.com"
-    
+
     user = AdminUser(
         user_id="usr002",
         username_encrypted=username,
@@ -71,7 +71,7 @@ async def test_login_initial_login_prompt(
     await test_db_session.commit()
 
     res = await test_client.post(
-        "/api/v1/admin-auth/login",
+        "/api/v1/admin/login",
         data={"username": user.email, "password": config.default_password},
     )
     body = res.json()
@@ -90,7 +90,7 @@ async def test_login_password_expired(
 
     username = "expiredpass"
     email = "expired@admin.com"
-    
+
     user = AdminUser(
         user_id="usr003",
         username_encrypted=username,
@@ -108,7 +108,7 @@ async def test_login_password_expired(
     await test_db_session.commit()
 
     res = await test_client.post(
-        "/api/v1/admin-auth/login",
+        "/api/v1/admin/login",
         data={"username": user.email, "password": config.default_password},
     )
     body = res.json()
@@ -120,7 +120,7 @@ async def test_login_password_expired(
 @pytest.mark.asyncio
 async def test_login_account_not_found(test_client: AsyncClient, clean_db):
     res = await test_client.post(
-        "/api/v1/admin-auth/login",
+        "/api/v1/admin/login",
         data={"username": "nosuchuser@example.com", "password": "anyvalue"},
     )
     body = res.json()
@@ -138,7 +138,7 @@ async def test_login_account_deactivated(
 
     username = "deact"
     email = "deact@admin.com"
-    
+
     user = AdminUser(
         user_id="usr004",
         username_encrypted=username,
@@ -153,7 +153,7 @@ async def test_login_account_deactivated(
     await test_db_session.commit()
 
     res = await test_client.post(
-        "/api/v1/admin-auth/login",
+        "/api/v1/admin/login",
         data={"username": email, "password": config.default_password},
     )
     body = res.json()
@@ -171,7 +171,7 @@ async def test_login_invalid_password(
 
     username = "wrongpass"
     email = "wrong@admin.com"
-    
+
     user = AdminUser(
         user_id="usr005",
         username_encrypted=username,
@@ -188,7 +188,7 @@ async def test_login_invalid_password(
     await test_db_session.commit()
 
     res = await test_client.post(
-        "/api/v1/admin-auth/login",
+        "/api/v1/admin/login",
         data={"username": email, "password": "wrongpassword"},
     )
     body = res.json()
@@ -220,7 +220,7 @@ async def test_login_locked_after_3_attempts(
     await test_db_session.commit()
 
     res = await test_client.post(
-        "/api/v1/admin-auth/login",
+        "/api/v1/admin/login",
         data={"username": user.email, "password": "wrongagain"},
     )
     body = res.json()
@@ -253,7 +253,7 @@ async def test_login_locked_within_24h(
     await test_db_session.commit()
 
     res = await test_client.post(
-        "/api/v1/admin-auth/login",
+        "/api/v1/admin/login",
         data={"username": user.email, "password": config.default_password},
     )
     body = res.json()
@@ -265,7 +265,7 @@ async def test_login_locked_within_24h(
 @pytest.mark.asyncio
 async def test_login_invalid_input_format(test_client: AsyncClient, clean_db):
     res = await test_client.post(
-        "/api/v1/admin-auth/login",
+        "/api/v1/admin/login",
         data={"username": "", "password": ""},  # Invalid format
     )
 

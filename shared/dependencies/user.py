@@ -9,27 +9,27 @@ from fastapi.security import HTTPBearer, OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
 
-from user_service.services.response_builders import (
-    user_not_found_response,
-)
-from user_service.services.user_service import get_user_by_id
 from shared.core.config import PUBLIC_KEY
 from shared.core.logging_config import get_logger
 from shared.db.models import User
 from shared.db.sessions.database import get_db
+from user_service.services.response_builders import (
+    user_not_found_response,
+)
 from user_service.services.session_management import TokenSessionManager
+from user_service.services.user_service import get_user_by_id
 from user_service.utils.auth import verify_jwt_token
 
 logger = get_logger(__name__)
 
 # OAuth2 scheme for token authentication
 user_oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl="/api/v1/users/login",
-    scheme_name="UserAuth"
+    tokenUrl="/api/v1/users/login", scheme_name="UserAuth"
 )
 
 # Alternative Bearer token scheme for user
 user_bearer_scheme = HTTPBearer(scheme_name="UserBearer")
+
 
 async def get_current_user(
     request: Request,
@@ -40,7 +40,9 @@ async def get_current_user(
     # Try OAuth2 token first, then fallback to request extraction
     auth_token = token or extract_token_from_request(request)
     if not auth_token:
-        raise HTTPException(status_code=401, detail="Missing authentication token")
+        raise HTTPException(
+            status_code=401, detail="Missing authentication token"
+        )
     user = await get_current_user_from_token(auth_token, db)
 
     # Store the request object for later use (to access token in other endpoints)
@@ -64,10 +66,16 @@ def extract_token_from_request(request: Request) -> Optional[str]:
     if header and header.startswith("Bearer "):
         return header[7:]
     cookie = request.cookies.get("access_token")
-    return cookie if cookie and cookie.lower() not in ["undefined", "null"] else None
+    return (
+        cookie
+        if cookie and cookie.lower() not in ["undefined", "null"]
+        else None
+    )
 
 
-async def get_current_user_from_token(token: str, db: AsyncSession) -> User | JSONResponse:
+async def get_current_user_from_token(
+    token: str, db: AsyncSession
+) -> User | JSONResponse:
     """Get current authenticated user from JWT token with session validation"""
     public_key = PUBLIC_KEY.get_secret_value()
     if not public_key:
@@ -84,7 +92,9 @@ async def get_current_user_from_token(token: str, db: AsyncSession) -> User | JS
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
     # Validate session if session info is present in token
-    session_valid, session_error = await TokenSessionManager.validate_token_session(payload, db)
+    session_valid, session_error = (
+        await TokenSessionManager.validate_token_session(payload, db)
+    )
     if not session_valid:
         logger.warning(f"Session validation failed: {session_error}")
         raise HTTPException(status_code=401, detail="Session no longer valid")

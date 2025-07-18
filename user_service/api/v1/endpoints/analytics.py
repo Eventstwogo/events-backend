@@ -1,4 +1,5 @@
 from typing import Annotated
+
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
@@ -7,11 +8,11 @@ from shared.core.api_response import api_response
 from shared.db.models import User
 from shared.db.sessions.database import get_db
 from shared.dependencies.user import get_current_active_user
+from shared.utils.exception_handlers import exception_handler
 from user_service.services.analytics import (
     get_admin_user_analytics,
     get_daily_registrations,
 )
-from shared.utils.exception_handlers import exception_handler
 
 router = APIRouter()
 
@@ -35,9 +36,13 @@ async def user_analytics(
     daily_data_result = await get_daily_registrations(db, days=30)
 
     # Format results
-    summary_dict = dict(summary_data._mapping)  # pylint: disable=protected-access
+    summary_dict = dict(
+        summary_data._mapping
+    )  # pylint: disable=protected-access
 
-    daily_data = [{"date": str(r.date), "count": r.count} for r in daily_data_result]
+    daily_data = [
+        {"date": str(r.date), "count": r.count} for r in daily_data_result
+    ]
 
     return api_response(
         status_code=status.HTTP_200_OK,

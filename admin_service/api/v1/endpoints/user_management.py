@@ -5,12 +5,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
 
+from admin_service.schemas.admin_user import AdminUserResponse
 from admin_service.services.response_builders import user_not_found_response
 from admin_service.services.user_service import get_user_by_id
 from shared.core.api_response import api_response
 from shared.db.models import AdminUser, Role
 from shared.db.sessions.database import get_db
-from admin_service.schemas.admin_user import AdminUserResponse
 from shared.utils.exception_handlers import exception_handler
 from shared.utils.file_uploads import get_media_url
 from shared.utils.security_validators import contains_xss
@@ -29,7 +29,9 @@ router = APIRouter()
 async def get_admin_users(
     is_deleted: Optional[bool] = Query(
         None,
-        description=("Filter by account status: false=active, true=inactive, omit=all"),
+        description=(
+            "Filter by account status: false=active, true=inactive, omit=all"
+        ),
     ),
     db: AsyncSession = Depends(get_db),
 ) -> JSONResponse:
@@ -48,7 +50,9 @@ async def get_admin_users(
     if is_deleted is False:
         stmt = stmt.where(AdminUser.is_deleted.is_(False))  # fetch active users
     elif is_deleted is True:
-        stmt = stmt.where(AdminUser.is_deleted.is_(True))  # fetch inactive users
+        stmt = stmt.where(
+            AdminUser.is_deleted.is_(True)
+        )  # fetch inactive users
 
     result = await db.execute(stmt)
     rows = result.all()
@@ -162,11 +166,15 @@ async def update_username_and_role(
     # Skip validation if username is None or empty string
     if new_username is not None:
         new_username = normalize_whitespace(new_username)
-        if not new_username:  # If empty after normalization, set to None to skip
+        if (
+            not new_username
+        ):  # If empty after normalization, set to None to skip
             new_username = None
         else:
             # Validate only if not empty
-            if not is_valid_username(new_username, allow_spaces=True, allow_hyphens=True):
+            if not is_valid_username(
+                new_username, allow_spaces=True, allow_hyphens=True
+            ):
                 return api_response(
                     status.HTTP_400_BAD_REQUEST,
                     "Username can only contain letters, numbers, spaces, and hyphens.",
@@ -190,7 +198,9 @@ async def update_username_and_role(
                     "Username contains excessive repeated characters.",
                     log_error=True,
                 )
-            if len(new_username) < 3 or not all(c.isalpha() for c in new_username[:3]):
+            if len(new_username) < 3 or not all(
+                c.isalpha() for c in new_username[:3]
+            ):
                 return api_response(
                     status.HTTP_400_BAD_REQUEST,
                     "First three characters of username must be letters.",
@@ -212,11 +222,15 @@ async def update_username_and_role(
                 )
 
     # Fetch user
-    result = await db.execute(select(AdminUser).where(AdminUser.user_id == user_id))
+    result = await db.execute(
+        select(AdminUser).where(AdminUser.user_id == user_id)
+    )
     user = result.scalar_one_or_none()
 
     if not user:
-        return api_response(status.HTTP_404_NOT_FOUND, "User not found.", log_error=True)
+        return api_response(
+            status.HTTP_404_NOT_FOUND, "User not found.", log_error=True
+        )
 
     if user.is_deleted:
         return api_response(
@@ -253,10 +267,14 @@ async def update_username_and_role(
 
     # === Update role ===
     if new_role_id and new_role_id != user.role_id:
-        role_result = await db.execute(select(Role).where(Role.role_id == new_role_id))
+        role_result = await db.execute(
+            select(Role).where(Role.role_id == new_role_id)
+        )
         role = role_result.scalar_one_or_none()
         if not role:
-            return api_response(status.HTTP_404_NOT_FOUND, "Role not found.", log_error=True)
+            return api_response(
+                status.HTTP_404_NOT_FOUND, "Role not found.", log_error=True
+            )
 
         if role.role_status:
             return api_response(
@@ -290,7 +308,9 @@ async def update_username_and_role(
 
     # Fetch role name if not updated
     if not role_name:
-        role_result = await db.execute(select(Role).where(Role.role_id == user.role_id))
+        role_result = await db.execute(
+            select(Role).where(Role.role_id == user.role_id)
+        )
         role = role_result.scalar_one_or_none()
         role_name = role.role_name if role else None
 
@@ -396,11 +416,9 @@ async def hard_delete_user(
         JSONResponse: Success message confirming permanent deletion
     """
     # Find user using the common utility function
-    user_result = await get_user_by_id(db, user_id)
-    if isinstance(user_result, JSONResponse):
-        return user_result
-
-    user = user_result
+    user = await get_user_by_id(db, user_id)
+    if not user:
+        return user_not_found_response()
 
     await db.delete(user)
     await db.commit()

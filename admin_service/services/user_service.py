@@ -1,9 +1,9 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from admin_service.utils.user_validators import is_account_locked
 from shared.core.logging_config import get_logger
 from shared.db.models import AdminUser
-from admin_service.utils.user_validators import is_account_locked
 from shared.db.models.config import Config
 from shared.db.models.rbac import Role
 
@@ -17,7 +17,9 @@ async def get_user_by_email(db: AsyncSession, email: str) -> AdminUser | None:
 
 
 async def get_user_by_id(db: AsyncSession, user_id: str) -> AdminUser | None:
-    result = await db.execute(select(AdminUser).where(AdminUser.user_id == user_id))
+    result = await db.execute(
+        select(AdminUser).where(AdminUser.user_id == user_id)
+    )
     return result.scalar_one_or_none()
 
 
@@ -28,14 +30,18 @@ async def check_user_exists_by_email(db: AsyncSession, email: str) -> bool:
     return result.scalar_one_or_none() is not None
 
 
-async def check_user_exists_by_username(db: AsyncSession, username: str) -> bool:
+async def check_user_exists_by_username(
+    db: AsyncSession, username: str
+) -> bool:
     query = AdminUser.by_username_query(username.lower())
     query = query.with_only_columns(AdminUser.user_id)
     result = await db.execute(query)
     return result.scalar_one_or_none() is not None
 
 
-async def get_user_by_username(db: AsyncSession, username: str) -> AdminUser | None:
+async def get_user_by_username(
+    db: AsyncSession, username: str
+) -> AdminUser | None:
     query = AdminUser.by_username_query(username.lower())
     result = await db.execute(query)
     return result.scalar_one_or_none()

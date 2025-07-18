@@ -2,8 +2,8 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 
-from shared.db.models import AdminUser
 from shared.core.security import generate_searchable_hash
+from shared.db.models import AdminUser
 
 
 @pytest.mark.asyncio
@@ -15,7 +15,7 @@ async def test_soft_delete_success(
 
     username = "softuser"
     email = "softuser@example.com"
-    
+
     user = AdminUser(
         user_id="usr001",
         username_encrypted=username,
@@ -36,10 +36,12 @@ async def test_soft_delete_success(
     body = res.json()
 
     assert res.status_code == 200
-    assert "soft-deleted successfully" in body["message"]
+    assert "User soft-deleted successfully." in body["message"]
 
     await test_db_session.refresh(user)
-    assert user.is_deleted is True  # User should be inactive (deleted) after soft delete
+    assert (
+        user.is_deleted is True
+    )  # User should be inactive (deleted) after soft delete
 
 
 @pytest.mark.asyncio
@@ -60,7 +62,7 @@ async def test_soft_delete_already_inactive(
 
     username = "inactiveuser"
     email = "inactive@example.com"
-    
+
     user = AdminUser(
         user_id="usr002",
         username_encrypted=username,
@@ -96,7 +98,7 @@ async def test_restore_success(
 
     username = "restoreuser"
     email = "restore@example.com"
-    
+
     user = AdminUser(
         user_id="usr003",
         username_encrypted=username,
@@ -111,14 +113,18 @@ async def test_restore_success(
     test_db_session.add(user)
     await test_db_session.commit()
 
-    res = await test_client.patch(f"/api/v1/admin/users/{user.user_id}/reactivate")
+    res = await test_client.patch(
+        f"/api/v1/admin/users/{user.user_id}/reactivate"
+    )
     body = res.json()
 
     assert res.status_code == 200
     assert "restored successfully" in body["message"]
 
     await test_db_session.refresh(user)
-    assert user.is_deleted is False  # User should be active (not deleted) after restore
+    assert (
+        user.is_deleted is False
+    )  # User should be active (not deleted) after restore
 
 
 @pytest.mark.asyncio
@@ -139,7 +145,7 @@ async def test_restore_user_already_active(
 
     username = "alreadyactive"
     email = "active@example.com"
-    
+
     user = AdminUser(
         user_id="usr004",
         username_encrypted=username,
@@ -154,7 +160,9 @@ async def test_restore_user_already_active(
     test_db_session.add(user)
     await test_db_session.commit()
 
-    res = await test_client.patch(f"/api/v1/admin/users/{user.user_id}/reactivate")
+    res = await test_client.patch(
+        f"/api/v1/admin/users/{user.user_id}/reactivate"
+    )
     body = res.json()
 
     assert res.status_code == 400
@@ -173,7 +181,7 @@ async def test_hard_delete_success(
 
     username = "deleteuser"
     email = "delete@example.com"
-    
+
     user = AdminUser(
         user_id="usr005",
         username_encrypted=username,
@@ -188,9 +196,7 @@ async def test_hard_delete_success(
     test_db_session.add(user)
     await test_db_session.commit()
 
-    res = await test_client.delete(
-        f"/api/v1/admin/users/{user.user_id}"
-    )
+    res = await test_client.delete(f"/api/v1/admin/users/{user.user_id}")
     body = res.json()
 
     assert res.status_code == 200

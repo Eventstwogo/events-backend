@@ -1,5 +1,6 @@
-﻿from datetime import datetime, timedelta, timezone
-import secrets
+﻿import secrets
+import string
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, status
 from sqlalchemy import select
@@ -7,11 +8,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 from starlette.responses import JSONResponse
 
-from shared.core.logging_config import get_logger
 from shared.core.api_response import api_response
 from shared.core.config import settings
+from shared.core.logging_config import get_logger
 from shared.db.models import User, UserVerification
 from shared.db.sessions.database import get_db
+from shared.utils.email import email_sender
+from shared.utils.exception_handlers import exception_handler
+from shared.utils.sms import send_sms_otp
 from user_service.schemas.register import AddPhoneNumberRequest
 from user_service.schemas.verify import (
     EmailVerificationRequest,
@@ -25,10 +29,6 @@ from user_service.schemas.verify import (
 )
 from user_service.services.response_builders import user_not_found_response
 from user_service.services.user_service import get_user_by_email, get_user_by_id
-from shared.utils.email import email_sender
-from shared.utils.exception_handlers import exception_handler
-from shared.utils.sms import send_sms_otp
-import string
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -49,11 +49,15 @@ def generate_verification_tokens(
         tuple[str, datetime]: A secure random token and its expiration time
     """
     token = secrets.token_urlsafe(length)
-    expiration_time = datetime.now(timezone.utc) + timedelta(minutes=expires_in_minutes)
+    expiration_time = datetime.now(timezone.utc) + timedelta(
+        minutes=expires_in_minutes
+    )
     return token, expiration_time
 
 
-def generate_otps(length: int = 6, expires_in_minutes: int = 10) -> tuple[str, datetime]:
+def generate_otps(
+    length: int = 6, expires_in_minutes: int = 10
+) -> tuple[str, datetime]:
     """
     Generate a numeric OTP (One-Time Password) with expiration time.
 
@@ -65,7 +69,9 @@ def generate_otps(length: int = 6, expires_in_minutes: int = 10) -> tuple[str, d
         tuple[str, datetime]: A random string of digits and its expiration time
     """
     otp = "".join(secrets.choice(string.digits) for _ in range(length))
-    expiration_time = datetime.now(timezone.utc) + timedelta(minutes=expires_in_minutes)
+    expiration_time = datetime.now(timezone.utc) + timedelta(
+        minutes=expires_in_minutes
+    )
     return otp, expiration_time
 
 
@@ -94,7 +100,9 @@ async def verify_email(
     email_lower = request.email.lower()
     logger.info(f"Looking for user with email: {email_lower}")
 
-    stmt = User.by_email_query(email_lower).options(joinedload(User.verification))
+    stmt = User.by_email_query(email_lower).options(
+        joinedload(User.verification)
+    )
 
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
@@ -187,7 +195,11 @@ async def resend_email_token(
         return user_not_found_response()
 
     # Load user with verification data using selectinload
-    stmt = select(User).options(selectinload(User.verification)).where(User.user_id == user.user_id)
+    stmt = (
+        select(User)
+        .options(selectinload(User.verification))
+        .where(User.user_id == user.user_id)
+    )
 
     result = await db.execute(stmt)
     user_with_verification = result.scalar_one_or_none()
@@ -218,7 +230,9 @@ async def resend_email_token(
         )
 
     # Generate verification token using the utility function
-    verification_token, expiration_time = generate_verification_tokens(expires_in_minutes=30)
+    verification_token, expiration_time = generate_verification_tokens(
+        expires_in_minutes=30
+    )
 
     # Update verification record
     verification.email_verification_token = verification_token
@@ -227,9 +241,7 @@ async def resend_email_token(
     await db.commit()
 
     # Create verification link
-    verification_link = (
-        f"{settings.FRONTEND_URL}/verify-email?email={user.email}&token={verification_token}"
-    )
+    verification_link = f"{settings.FRONTEND_URL}/verify-email?email={user.email}&token={verification_token}"
 
     # Send verification email
     email_context = {
@@ -264,7 +276,11 @@ async def resend_email_token(
     )
 
 
-@router.post("/phone/add", response_model=PhoneOTPSentResponse, summary="Add User phone number")
+@router.post(
+    "/phone/add",
+    response_model=PhoneOTPSentResponse,
+    summary="Add User phone number",
+)
 @exception_handler
 async def add_phone_number(
     request: AddPhoneNumberRequest,
@@ -289,7 +305,11 @@ async def add_phone_number(
         return user_not_found_response()
 
     # Load user with verification data using selectinload
-    stmt = select(User).options(selectinload(User.verification)).where(User.user_id == user.user_id)
+    stmt = (
+        select(User)
+        .options(selectinload(User.verification))
+        .where(User.user_id == user.user_id)
+    )
 
     result = await db.execute(stmt)
     user_with_verification = result.scalar_one_or_none()
@@ -377,7 +397,11 @@ async def update_phone_number(
         return user_not_found_response()
 
     # Load user with verification data using selectinload
-    stmt = select(User).options(selectinload(User.verification)).where(User.user_id == user.user_id)
+    stmt = (
+        select(User)
+        .options(selectinload(User.verification))
+        .where(User.user_id == user.user_id)
+    )
 
     result = await db.execute(stmt)
     user_with_verification = result.scalar_one_or_none()
@@ -458,7 +482,9 @@ async def verify_phone_otp(
     """
     # Find user by ID with verification data using joinedload
     stmt = (
-        select(User).options(joinedload(User.verification)).where(User.user_id == request.user_id)
+        select(User)
+        .options(joinedload(User.verification))
+        .where(User.user_id == request.user_id)
     )
 
     result = await db.execute(stmt)
@@ -559,7 +585,11 @@ async def resend_phone_otp(
         return user_not_found_response()
 
     # Load user with verification data using selectinload
-    stmt = select(User).options(selectinload(User.verification)).where(User.user_id == user.user_id)
+    stmt = (
+        select(User)
+        .options(selectinload(User.verification))
+        .where(User.user_id == user.user_id)
+    )
 
     result = await db.execute(stmt)
     user_with_verification = result.scalar_one_or_none()
@@ -572,7 +602,10 @@ async def resend_phone_otp(
         )
 
     # Check if user has a phone number
-    if not user_with_verification.phone_number or user_with_verification.phone_number == "0":
+    if (
+        not user_with_verification.phone_number
+        or user_with_verification.phone_number == "0"
+    ):
         return api_response(
             status_code=status.HTTP_400_BAD_REQUEST,
             message="User does not have a phone number. Please update the phone number first.",

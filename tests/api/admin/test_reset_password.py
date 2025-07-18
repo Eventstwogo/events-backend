@@ -33,7 +33,7 @@ async def test_reset_password_success(
     await test_db_session.refresh(user)
 
     res = await test_client.patch(
-        "/api/v1/admin-auth/reset-password",
+        "/api/v1/admin/reset-password",
         json={"email": user.email, "new_password": new_password},
     )
     body = res.json()
@@ -51,7 +51,7 @@ async def test_reset_password_user_not_found(
     test_client: AsyncClient, clean_db
 ):
     res = await test_client.patch(
-        "/api/v1/admin-auth/reset-password",
+        "/api/v1/admin/reset-password",
         json={"email": "nonexistent@admin.com", "new_password": "SomePass@123"},
     )
     body = res.json()
@@ -78,7 +78,7 @@ async def test_reset_password_same_as_old(
     await test_db_session.commit()
 
     res = await test_client.patch(
-        "/api/v1/admin-auth/reset-password",
+        "/api/v1/admin/reset-password",
         json={"email": user.email, "new_password": SAME_OLD_PASSWORD},
     )
     body = res.json()
@@ -92,19 +92,19 @@ async def test_reset_password_invalid_payload(
     test_client: AsyncClient, clean_db
 ):
     # Missing fields
-    res = await test_client.patch("/api/v1/admin-auth/reset-password", json={})
+    res = await test_client.patch("/api/v1/admin/reset-password", json={})
     assert res.status_code == 422
 
     # Empty email
     res2 = await test_client.patch(
-        "/api/v1/admin-auth/reset-password",
+        "/api/v1/admin/reset-password",
         json={"email": "", "new_password": "Valid@Pass123"},
     )
     assert res2.status_code == 422
 
     # Empty password
     res3 = await test_client.patch(
-        "/api/v1/admin-auth/reset-password",
+        "/api/v1/admin/reset-password",
         json={"email": "valid@admin.com", "new_password": ""},
     )
     assert res3.status_code == 422

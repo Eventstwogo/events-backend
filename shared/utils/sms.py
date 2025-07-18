@@ -19,6 +19,7 @@ def generate_otp(length: int = 6) -> str:
     """
     return "".join(secrets.choice(string.digits) for _ in range(length))
 
+
 def send_sms_otp(phone_number: str, otp_code: str) -> bool:
     """
     Send SMS OTP to the provided phone number.

@@ -26,7 +26,7 @@ async def test_logout_success(
 
     # Login to get a real token
     login_response = await test_client.post(
-        "/api/v1/admin-auth/login",
+        "/api/v1/admin/login",
         data={"username": user.email, "password": config.default_password},
     )
     login_body = login_response.json()
@@ -34,8 +34,8 @@ async def test_logout_success(
 
     # Now test logout with the real token
     response = await test_client.post(
-        "/api/v1/admin-auth/logout",
-        headers={"Authorization": f"Bearer {access_token}"}
+        "/api/v1/admin/logout",
+        headers={"Authorization": f"Bearer {access_token}"},
     )
     body = response.json()
 

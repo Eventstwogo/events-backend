@@ -27,7 +27,9 @@ def generate_password_reset_token(
     # Generate a 32-character token using secrets.token_urlsafe
     # token_urlsafe(24) generates ~32 characters
     token = secrets.token_urlsafe(24)
-    expires_at = datetime.now(timezone.utc) + timedelta(minutes=expires_in_minutes)
+    expires_at = datetime.now(timezone.utc) + timedelta(
+        minutes=expires_in_minutes
+    )
     return token, expires_at
 
 
@@ -48,7 +50,9 @@ async def create_password_reset_record(
     """
     try:
         # Check if a password reset record already exists for this user
-        stmt = select(UserPasswordReset).where(UserPasswordReset.user_id == user_id)
+        stmt = select(UserPasswordReset).where(
+            UserPasswordReset.user_id == user_id
+        )
         result = await db.execute(stmt)
         password_reset = result.scalar_one_or_none()
 
@@ -77,7 +81,9 @@ async def create_password_reset_record(
         raise
 
 
-async def get_password_reset_by_token(db: AsyncSession, token: str) -> Optional[UserPasswordReset]:
+async def get_password_reset_by_token(
+    db: AsyncSession, token: str
+) -> Optional[UserPasswordReset]:
     """
     Get password reset record by token.
 
@@ -157,7 +163,9 @@ async def mark_password_reset_used(db: AsyncSession, user_id: str) -> None:
         user_id: User ID
     """
     try:
-        stmt = select(UserPasswordReset).where(UserPasswordReset.user_id == user_id)
+        stmt = select(UserPasswordReset).where(
+            UserPasswordReset.user_id == user_id
+        )
         result = await db.execute(stmt)
         password_reset = result.scalar_one_or_none()
 

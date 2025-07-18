@@ -61,9 +61,7 @@ class TestSubcategoryFocusedScenarios:
         )
         await test_db_session.commit()
 
-        res = await test_client.get(
-            "/api/v1/category-items/SUB_DETAILED"
-        )
+        res = await test_client.get("/api/v1/category-items/SUB_DETAILED")
         body = res.json()
 
         assert res.status_code == 200

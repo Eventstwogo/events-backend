@@ -1,19 +1,24 @@
 # auth_service.py
 from datetime import datetime, timedelta, timezone
-from fastapi import status
-from starlette.responses import JSONResponse
-from sqlalchemy.ext.asyncio import AsyncSession
 
+from fastapi import status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.responses import JSONResponse
+
+from admin_service.utils.auth import create_jwt_token, verify_password
 from shared.core.api_response import api_response
 from shared.core.config import PRIVATE_KEY, settings
 from shared.db.models import AdminUser, AdminUserDeviceSession
-from admin_service.utils.auth import create_jwt_token, verify_password
-from sqlalchemy import select
 
 
-async def check_account_lock(user: AdminUser, db: AsyncSession) -> JSONResponse | None:
+async def check_account_lock(
+    user: AdminUser, db: AsyncSession
+) -> JSONResponse | None:
     if user.login_status == 1:
-        if user.last_login and (datetime.now(timezone.utc) - user.last_login) < timedelta(hours=24):
+        if user.last_login and (
+            datetime.now(timezone.utc) - user.last_login
+        ) < timedelta(hours=24):
             return api_response(
                 status_code=status.HTTP_423_LOCKED,
                 message=(
@@ -28,7 +33,9 @@ async def check_account_lock(user: AdminUser, db: AsyncSession) -> JSONResponse 
     return None
 
 
-async def check_password(user: AdminUser, password: str, db: AsyncSession) -> JSONResponse | None:
+async def check_password(
+    user: AdminUser, password: str, db: AsyncSession
+) -> JSONResponse | None:
     if not verify_password(password, user.password_hash):
         user.failure_login_attempts += 1
         if user.failure_login_attempts >= 3:

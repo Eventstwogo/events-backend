@@ -5,6 +5,7 @@ from fastapi import Request
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from shared.core.config import PRIVATE_KEY, settings
 from shared.core.logging_config import get_logger
 from shared.db.models import User, UserDeviceSession
 from shared.utils.device_info import (
@@ -12,7 +13,6 @@ from shared.utils.device_info import (
     DeviceSessionManager,
     LocationService,
 )
-from shared.core.config import PRIVATE_KEY, settings
 from user_service.utils.auth import create_jwt_token
 
 logger = get_logger(__name__)
@@ -44,7 +44,9 @@ class SessionManager:
             UserDeviceSession: The created or reused session
         """
         # Extract comprehensive device information
-        device_info = DeviceInfoExtractor.extract_comprehensive_device_info(request)
+        device_info = DeviceInfoExtractor.extract_comprehensive_device_info(
+            request
+        )
         fingerprint = device_info.get("fingerprint")
         browser_family = device_info.get("browser_family")
         ip_address = device_info.get("ip_address")
@@ -75,13 +77,17 @@ class SessionManager:
         # Get location information if requested
         location_info = None
         if include_location and ip_address:
-            location_info = await LocationService.get_location_from_ip(ip_address)
+            location_info = await LocationService.get_location_from_ip(
+                ip_address
+            )
 
         # Generate device name
         device_name = DeviceSessionManager.generate_device_name(device_info)
 
         # Check if we should create a new session or reuse existing one
-        existing_sessions = await SessionManager._get_active_sessions(user.user_id, db)
+        existing_sessions = await SessionManager._get_active_sessions(
+            user.user_id, db
+        )
 
         # Clean up old sessions if we're at the limit
         if len(existing_sessions) >= SessionManager.MAX_SESSIONS_PER_USER:
@@ -114,17 +120,19 @@ class SessionManager:
 
         # Add location information if available
         if location_info:
-            session.location = (
-                f"{location_info.get('city', '')}, {location_info.get('country', '')}"
-            )
+            session.location = f"{location_info.get('city', '')}, {location_info.get('country', '')}"
             session.country = location_info.get("country")
             session.country_code = location_info.get("country_code")
             session.city = location_info.get("city")
             session.latitude = (
-                str(location_info.get("latitude")) if location_info.get("latitude") else None
+                str(location_info.get("latitude"))
+                if location_info.get("latitude")
+                else None
             )
             session.longitude = (
-                str(location_info.get("longitude")) if location_info.get("longitude") else None
+                str(location_info.get("longitude"))
+                if location_info.get("longitude")
+                else None
             )
             session.timezone = location_info.get("timezone")
             session.isp = location_info.get("isp")
@@ -133,7 +141,9 @@ class SessionManager:
         await db.commit()
         await db.refresh(session)
 
-        logger.info(f"Created new session {session.session_id} for user {user.user_id}")
+        logger.info(
+            f"Created new session {session.session_id} for user {user.user_id}"
+        )
 
         return session
 
@@ -177,7 +187,9 @@ class SessionManager:
             return False
 
         except Exception as e:
-            logger.error(f"Failed to update session activity for session {session_id}: {e}")
+            logger.error(
+                f"Failed to update session activity for session {session_id}: {e}"
+            )
             return False
 
     @staticmethod
@@ -208,7 +220,9 @@ class SessionManager:
                     session.is_active = False
                     session.logged_out_at = datetime.now(timezone.utc)
                     await db.commit()
-                    logger.info(f"Terminated session {session_id} (reason: {reason})")
+                    logger.info(
+                        f"Terminated session {session_id} (reason: {reason})"
+                    )
                     return True
                 else:
                     logger.info(f"Session {session_id} already terminated")
@@ -244,7 +258,9 @@ class SessionManager:
             )
 
             if except_session_id:
-                stmt = stmt.where(UserDeviceSession.session_id != except_session_id)
+                stmt = stmt.where(
+                    UserDeviceSession.session_id != except_session_id
+                )
 
             result = await db.execute(stmt)
             sessions = list(result.scalars().all())
@@ -259,14 +275,20 @@ class SessionManager:
 
             if terminated_count > 0:
                 await db.commit()
-                logger.info(f"Terminated {terminated_count} sessions for user {user_id}")
+                logger.info(
+                    f"Terminated {terminated_count} sessions for user {user_id}"
+                )
             else:
-                logger.info(f"No active sessions to terminate for user {user_id}")
+                logger.info(
+                    f"No active sessions to terminate for user {user_id}"
+                )
 
             return terminated_count
 
         except Exception as e:
-            logger.error(f"Failed to terminate sessions for user {user_id}: {e}")
+            logger.error(
+                f"Failed to terminate sessions for user {user_id}: {e}"
+            )
             return 0
 
     @staticmethod
@@ -289,12 +311,16 @@ class SessionManager:
             List of UserDeviceSession objects
         """
         try:
-            stmt = select(UserDeviceSession).where(UserDeviceSession.user_id == user_id)
+            stmt = select(UserDeviceSession).where(
+                UserDeviceSession.user_id == user_id
+            )
 
             if active_only:
                 stmt = stmt.where(UserDeviceSession.is_active == True)
 
-            stmt = stmt.order_by(desc(UserDeviceSession.last_used_at)).limit(limit)
+            stmt = stmt.order_by(desc(UserDeviceSession.last_used_at)).limit(
+                limit
+            )
 
             result = await db.execute(stmt)
             return list(result.scalars().all())
@@ -322,12 +348,19 @@ class SessionManager:
 
         try:
             # Get recent sessions for comparison
-            recent_sessions = await SessionManager._get_recent_sessions(user_id, db, hours=24)
+            recent_sessions = await SessionManager._get_recent_sessions(
+                user_id, db, hours=24
+            )
 
             # Check for unusual location
             if current_session.country and recent_sessions:
-                recent_countries = {s.country for s in recent_sessions if s.country}
-                if recent_countries and current_session.country not in recent_countries:
+                recent_countries = {
+                    s.country for s in recent_sessions if s.country
+                }
+                if (
+                    recent_countries
+                    and current_session.country not in recent_countries
+                ):
                     alerts.append(
                         {
                             "type": "new_location",
@@ -339,11 +372,14 @@ class SessionManager:
             # Check for unusual device
             if current_session.device_fingerprint and recent_sessions:
                 recent_fingerprints = {
-                    s.device_fingerprint for s in recent_sessions if s.device_fingerprint
+                    s.device_fingerprint
+                    for s in recent_sessions
+                    if s.device_fingerprint
                 }
                 if (
                     recent_fingerprints
-                    and current_session.device_fingerprint not in recent_fingerprints
+                    and current_session.device_fingerprint
+                    not in recent_fingerprints
                 ):
                     alerts.append(
                         {
@@ -354,9 +390,13 @@ class SessionManager:
                     )
 
             # Check for concurrent sessions from different locations
-            concurrent_sessions = await SessionManager._get_active_sessions(user_id, db)
+            concurrent_sessions = await SessionManager._get_active_sessions(
+                user_id, db
+            )
             if len(concurrent_sessions) > 1:
-                countries = {s.country for s in concurrent_sessions if s.country}
+                countries = {
+                    s.country for s in concurrent_sessions if s.country
+                }
                 if len(countries) > 1:
                     alerts.append(
                         {
@@ -367,12 +407,16 @@ class SessionManager:
                     )
 
         except Exception as e:
-            logger.error(f"Failed to detect suspicious activity for user {user_id}: {e}")
+            logger.error(
+                f"Failed to detect suspicious activity for user {user_id}: {e}"
+            )
 
         return alerts
 
     @staticmethod
-    async def _get_active_sessions(user_id: str, db: AsyncSession) -> List[UserDeviceSession]:
+    async def _get_active_sessions(
+        user_id: str, db: AsyncSession
+    ) -> List[UserDeviceSession]:
         """Get all active sessions for a user"""
         stmt = (
             select(UserDeviceSession)
@@ -422,7 +466,9 @@ class SessionManager:
         sessions = list(result.scalars().all())
 
         # Keep only the most recent sessions
-        sessions_to_terminate = sessions[SessionManager.MAX_SESSIONS_PER_USER - 1 :]
+        sessions_to_terminate = sessions[
+            SessionManager.MAX_SESSIONS_PER_USER - 1 :
+        ]
 
         logout_time = datetime.now(timezone.utc)
         for session in sessions_to_terminate:
@@ -431,7 +477,9 @@ class SessionManager:
 
         await db.commit()
 
-        logger.info(f"Cleaned up {len(sessions_to_terminate)} old sessions for user {user_id}")
+        logger.info(
+            f"Cleaned up {len(sessions_to_terminate)} old sessions for user {user_id}"
+        )
 
 
 class TokenSessionManager:

@@ -75,7 +75,9 @@ async def validate_role(db: AsyncSession, role_id: str) -> JSONResponse | Role:
     return role
 
 
-async def validate_superadmin_uniqueness(db: AsyncSession, role: Role) -> JSONResponse | None:
+async def validate_superadmin_uniqueness(
+    db: AsyncSession, role: Role
+) -> JSONResponse | None:
     if role.role_name.lower() in {"superadmin", "super admin"}:
         superadmin_query = await db.execute(
             select(AdminUser).where(AdminUser.role_id == role.role_id)

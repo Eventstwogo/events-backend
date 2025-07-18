@@ -7,7 +7,6 @@ from rbac_service.services.init_roles_permissions import init_roles_permissions
 from shared.core.logging_config import get_logger
 from shared.db.sessions.database import AsyncSessionLocal, init_db, shutdown_db
 
-
 logger = get_logger(__name__)
 
 

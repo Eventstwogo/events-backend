@@ -18,9 +18,6 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 from starlette.responses import JSONResponse
 
-from shared.core.api_response import api_response
-from shared.db.models import Category, SubCategory
-from shared.db.sessions.database import get_db
 from category_service.schemas.categories import CategoryOut
 from category_service.services.category_service import (
     CategoryData,
@@ -30,6 +27,9 @@ from category_service.services.category_service import (
     validate_category_data,
     validate_subcategory_conflicts,
 )
+from shared.core.api_response import api_response
+from shared.db.models import Category, SubCategory
+from shared.db.sessions.database import get_db
 from shared.utils.exception_handlers import exception_handler
 from shared.utils.file_uploads import get_media_url, save_uploaded_file
 from shared.utils.id_generators import (

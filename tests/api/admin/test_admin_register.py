@@ -129,10 +129,10 @@ async def test_register_admin_missing_fields(
     """Test request fails when required fields are missing."""
     res = await test_client.post("/api/v1/admin/register", json={})
     body = res.json()
-    
+
     assert res.status_code == 422
     detail = body["detail"]
-    
+
     # The model validator will return the first missing field error
     assert len(detail) == 1
     assert detail[0]["type"] == "value_error"

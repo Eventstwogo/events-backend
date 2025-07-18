@@ -1,8 +1,8 @@
 from fastapi import APIRouter
 
-from rbac_service.api.routes import rbac_api_router
-from category_service.api.routes import category_router
 from admin_service.api.routes import admin_router
+from category_service.api.routes import category_router
+from rbac_service.api.routes import rbac_api_router
 from user_service.api.routes import user_router
 
 api_router = APIRouter()

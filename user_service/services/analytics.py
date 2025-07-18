@@ -17,9 +17,15 @@ async def get_admin_user_analytics(
     results = await db.execute(
         select(
             func.count().label("total_users"),
-            func.sum(case((User.is_deleted.is_(False), 1), else_=0)).label("active_users"),
-            func.sum(case((User.is_deleted.is_(True), 1), else_=0)).label("inactive_users"),
-            func.sum(case((User.login_status == 1, 1), else_=0)).label("locked_users"),
+            func.sum(case((User.is_deleted.is_(False), 1), else_=0)).label(
+                "active_users"
+            ),
+            func.sum(case((User.is_deleted.is_(True), 1), else_=0)).label(
+                "inactive_users"
+            ),
+            func.sum(case((User.login_status == 1, 1), else_=0)).label(
+                "locked_users"
+            ),
             func.sum(case((User.days_180_flag.is_(True), 1), else_=0)).label(
                 "with_expiry_flag"
             ),
@@ -35,9 +41,9 @@ async def get_admin_user_analytics(
                     else_=0,
                 )
             ).label("expired_passwords"),
-            func.sum(case((User.failure_login_attempts >= 3, 1), else_=0)).label(
-                "high_failed_attempts"
-            ),
+            func.sum(
+                case((User.failure_login_attempts >= 3, 1), else_=0)
+            ).label("high_failed_attempts"),
             func.min(User.created_at).label("earliest_user"),
             func.max(User.created_at).label("latest_user"),
         )

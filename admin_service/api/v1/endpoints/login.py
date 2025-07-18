@@ -12,7 +12,11 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse, Response
 
-from shared.dependencies.admin import extract_token_from_request, get_current_user
+from admin_service.services.auth import (
+    check_account_lock,
+    check_password,
+    check_password_expiry,
+)
 from admin_service.services.response_builders import (
     account_deactivated,
     initial_login_response,
@@ -20,19 +24,21 @@ from admin_service.services.response_builders import (
     password_expired_response,
     user_not_found_response,
 )
+from admin_service.services.session_management import (
+    SessionManager,
+    TokenSessionManager,
+)
 from admin_service.services.user_service import get_user_by_email
+from admin_service.utils.auth import revoke_token
 from shared.core.api_response import api_response
 from shared.core.config import PUBLIC_KEY, settings
 from shared.core.logging_config import get_logger
 from shared.db.models import AdminUser
 from shared.db.sessions.database import get_db
-from admin_service.services.auth import (
-    check_account_lock,
-    check_password,
-    check_password_expiry,
+from shared.dependencies.admin import (
+    extract_token_from_request,
+    get_current_user,
 )
-from admin_service.services.session_management import SessionManager, TokenSessionManager
-from admin_service.utils.auth import revoke_token
 from shared.utils.exception_handlers import exception_handler
 
 logger = get_logger(__name__)
@@ -105,10 +111,14 @@ async def process_successful_login(
     user.successful_login_count += 1
 
     # Step 7: Create a comprehensive device session record
-    session = await SessionManager.create_session(user, request, db, include_location=True)
+    session = await SessionManager.create_session(
+        user, request, db, include_location=True
+    )
 
     # Step 7.1: Check for suspicious activity
-    suspicious_alerts = await SessionManager.detect_suspicious_activity(user.user_id, session, db)
+    suspicious_alerts = await SessionManager.detect_suspicious_activity(
+        user.user_id, session, db
+    )
     if suspicious_alerts:
         # Log suspicious activity (you might want to send notifications here)
         for alert in suspicious_alerts:
@@ -119,10 +129,14 @@ async def process_successful_login(
     await db.refresh(user)
 
     # Step 8: Generate JWT access token with session information
-    access_token = TokenSessionManager.create_token_with_session(user, session, "access")
+    access_token = TokenSessionManager.create_token_with_session(
+        user, session, "access"
+    )
 
     # Step 9: Generate refresh token with session information
-    refresh_token = TokenSessionManager.create_token_with_session(user, session, "refresh")
+    refresh_token = TokenSessionManager.create_token_with_session(
+        user, session, "refresh"
+    )
 
     # Set access token cookie
     response.set_cookie(
@@ -139,14 +153,18 @@ async def process_successful_login(
     # Also set the token in the Authorization header for better compatibility
     response.headers["Authorization"] = f"Bearer {access_token}"
 
-    logger.info(f"Set access token cookie and Authorization header for user {user.user_id}")
+    logger.info(
+        f"Set access token cookie and Authorization header for user {user.user_id}"
+    )
 
     # Step 10: Return appropriate response
     if password_expired:
         return password_expired_response(user, access_token, refresh_token)
 
     # Return successful login response
-    return login_success_response(user, access_token, refresh_token, session.session_id)
+    return login_success_response(
+        user, access_token, refresh_token, session.session_id
+    )
 
 
 @router.post("/logout")
@@ -184,7 +202,9 @@ async def logout(
                         token,
                         public_key,
                         algorithms=[settings.JWT_ALGORITHM],
-                        options={"verify_exp": False},  # Allow expired tokens for logout
+                        options={
+                            "verify_exp": False
+                        },  # Allow expired tokens for logout
                     )
                     session_id = payload.get("sid")
             except Exception as e:
@@ -196,9 +216,13 @@ async def logout(
                 session_id, db, reason="user_logout"
             )
             if session_terminated:
-                logger.info(f"Session {session_id} terminated for user {user_id}")
+                logger.info(
+                    f"Session {session_id} terminated for user {user_id}"
+                )
             else:
-                logger.warning(f"Failed to terminate session {session_id} for user {user_id}")
+                logger.warning(
+                    f"Failed to terminate session {session_id} for user {user_id}"
+                )
         else:
             # Fallback for older tokens without session_id
             ip_address = request.client.host if request.client else None
@@ -251,8 +275,12 @@ async def logout(
         try:
             public_key = PUBLIC_KEY.get_secret_value()
             if not public_key:
-                logger.warning("Public key not available for token verification during logout")
-                return api_response(status_code=200, message="Logout successful.")
+                logger.warning(
+                    "Public key not available for token verification during logout"
+                )
+                return api_response(
+                    status_code=200, message="Logout successful."
+                )
 
             # Revoke the access token
             try:
@@ -271,7 +299,9 @@ async def logout(
                     token,
                     public_key,
                     algorithms=[settings.JWT_ALGORITHM],
-                    options={"verify_exp": False},  # Allow expired tokens for logout
+                    options={
+                        "verify_exp": False
+                    },  # Allow expired tokens for logout
                 )
                 user_id = payload.get("uid")
                 session_id = payload.get("sid")
@@ -294,7 +324,9 @@ async def logout(
                         session_id, db, reason="user_logout"
                     )
                     if session_terminated:
-                        logger.info(f"Session {session_id} terminated for user {user_id}")
+                        logger.info(
+                            f"Session {session_id} terminated for user {user_id}"
+                        )
                     else:
                         logger.warning(
                             f"Failed to terminate session {session_id} for user {user_id}"
@@ -304,8 +336,10 @@ async def logout(
                     ip_address = request.client.host if request.client else None
                     if ip_address:
                         # Get all active sessions for the user and find by IP
-                        active_sessions = await SessionManager.get_user_sessions(
-                            user_id, db, active_only=True
+                        active_sessions = (
+                            await SessionManager.get_user_sessions(
+                                user_id, db, active_only=True
+                            )
                         )
                         session_found = False
                         for session in active_sessions:
@@ -336,7 +370,9 @@ async def logout(
                     # The current token is already a refresh token, so we just revoked it above
                     logger.info("Refresh token revoked during logout")
                 except Exception as e:
-                    logger.warning(f"Failed to revoke refresh token during logout: {e}")
+                    logger.warning(
+                        f"Failed to revoke refresh token during logout: {e}"
+                    )
 
         except Exception as e:
             logger.error(f"Logout error: {e}")

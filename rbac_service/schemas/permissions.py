@@ -26,10 +26,14 @@ class CreatePermission(BaseModel):
             raise ValueError("Permission name cannot be empty.")
 
         if not is_valid_name(value):
-            raise ValueError("Permission name must contain only letters, spaces, or hyphens.")
+            raise ValueError(
+                "Permission name must contain only letters, spaces, or hyphens."
+            )
 
         if not validate_length_range(value, 3, 50):
-            raise ValueError("Permission name must be between 3 and 50 characters.")
+            raise ValueError(
+                "Permission name must be between 3 and 50 characters."
+            )
 
         validate_strict_input("permission_name", value)
 
@@ -69,10 +73,14 @@ class PermissionUpdate(BaseModel):
                 raise ValueError("Permission name cannot be empty.")
 
             if not is_valid_name(value):
-                raise ValueError("Permission name must contain only letters, spaces, or hyphens.")
+                raise ValueError(
+                    "Permission name must contain only letters, spaces, or hyphens."
+                )
 
             if not validate_length_range(value, 3, 50):
-                raise ValueError("Permission name must be between 3 and 50 characters.")
+                raise ValueError(
+                    "Permission name must be between 3 and 50 characters."
+                )
 
             validate_strict_input("permission_name", value)
 

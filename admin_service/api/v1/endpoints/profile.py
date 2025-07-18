@@ -5,12 +5,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
 
-from shared.dependencies.admin import get_current_active_user
+from admin_service.schemas.profile import UpdateProfileRequest, UserProfile
 from shared.core.api_response import api_response
 from shared.core.config import settings
 from shared.db.models import AdminUser, Role
 from shared.db.sessions.database import get_db
-from admin_service.schemas.profile import UpdateProfileRequest, UserProfile
+from shared.dependencies.admin import get_current_active_user
 from shared.utils.exception_handlers import exception_handler
 from shared.utils.file_uploads import (
     get_media_url,
@@ -29,9 +29,7 @@ from shared.utils.validators import (
 router = APIRouter()
 
 
-@router.get(
-    "/", response_model=UserProfile, summary="Get current user profile"
-)
+@router.get("/", response_model=UserProfile, summary="Get current user profile")
 @exception_handler
 async def get_profile(
     current_user: Annotated[AdminUser, Depends(get_current_active_user)],

@@ -10,12 +10,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
 
+from admin_service.schemas.config import ConfigOut
+from admin_service.utils.auth import hash_password
 from shared.core.api_response import api_response
 from shared.core.config import settings
 from shared.db.models import Config
 from shared.db.sessions.database import get_db
-from admin_service.schemas.config import ConfigOut
-from admin_service.utils.auth import hash_password
 from shared.utils.exception_handlers import exception_handler, handle_not_found
 from shared.utils.file_uploads import (
     get_media_url,
@@ -172,7 +172,7 @@ async def update_config(
     # === Update boolean flag ===
     if global_180_day_flag is not None:
         config.global_180_day_flag = global_180_day_flag
-        
+
     old_logo_url = config.logo_url
 
     # === Handle logo upload ===
@@ -183,7 +183,7 @@ async def update_config(
         # Only remove old logo if it exists and is not None
         if old_logo_url:
             remove_file_if_exists(old_logo_url)
-        
+
     await db.commit()
     await db.refresh(config)
 

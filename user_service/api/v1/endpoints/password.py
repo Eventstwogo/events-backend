@@ -8,6 +8,9 @@ from shared.core.api_response import api_response
 from shared.core.config import settings
 from shared.core.logging_config import get_logger
 from shared.db.sessions.database import get_db
+from shared.utils.email import send_password_reset_email
+from shared.utils.email_validators import EmailValidator
+from shared.utils.exception_handlers import exception_handler
 from user_service.schemas.password import (
     ForgotPassword,
     ResetPasswordWithToken,
@@ -19,15 +22,15 @@ from user_service.services.password_reset_service import (
     mark_password_reset_used,
     validate_reset_token,
 )
-from user_service.services.response_builders import account_deactivated, user_not_found_response
+from user_service.services.response_builders import (
+    account_deactivated,
+    user_not_found_response,
+)
 from user_service.services.user_service import get_user_by_email, get_user_by_id
 from user_service.utils.auth import (
     hash_password,
     verify_password,
 )
-from shared.utils.email import send_password_reset_email
-from shared.utils.email_validators import EmailValidator
-from shared.utils.exception_handlers import exception_handler
 
 logger = get_logger(__name__)
 
@@ -55,7 +58,7 @@ async def forgot_password(
 
         # Log or use the IP address
         print(f"Password reset requested by user with IP: {ip_address}")
-        
+
         # Step 1: Validate email format and normalize
         email = data.email.strip().lower()
         EmailValidator.validate(email)
@@ -83,9 +86,7 @@ async def forgot_password(
         )
 
         # Step 6: Create the reset link
-        reset_link = (
-            f"{settings.FRONTEND_URL}/reset-password?email={email}&token={reset_token}"
-        )
+        reset_link = f"{settings.FRONTEND_URL}/reset-password?email={email}&token={reset_token}"
 
         # Step 7: Send the password reset email
         send_password_reset_email(

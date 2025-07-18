@@ -49,12 +49,8 @@ class User(EventsBase):
     username_hash: Mapped[str] = mapped_column(
         String(64), nullable=False, unique=True, index=True
     )
-    first_name_hash: Mapped[str] = mapped_column(
-        String(64), nullable=False
-    )
-    last_name_hash: Mapped[str] = mapped_column(
-        String(64), nullable=False
-    )
+    first_name_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    last_name_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     email_hash: Mapped[str] = mapped_column(
         String(64), nullable=False, unique=True, index=True
     )

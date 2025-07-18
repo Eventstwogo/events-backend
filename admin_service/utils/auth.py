@@ -5,7 +5,7 @@ from typing import Any, Dict, Union
 import jwt
 from passlib.context import CryptContext
 
-from shared.core.config import JWT_KEY_ID, settings, PUBLIC_KEY
+from shared.core.config import JWT_KEY_ID, PUBLIC_KEY, settings
 from shared.core.logging_config import get_logger
 from shared.utils.token_blacklist import add_to_blacklist, is_blacklisted
 
@@ -83,7 +83,9 @@ def create_jwt_token(
             )
         except Exception as verify_error:
             logger.error(f"Generated token failed verification: {verify_error}")
-            raise RuntimeError(f"Token generation failed verification: {verify_error}")
+            raise RuntimeError(
+                f"Token generation failed verification: {verify_error}"
+            )
 
         return token
     except Exception as e:
@@ -136,7 +138,9 @@ def verify_jwt_token(
 
         # Check if token is blacklisted
         if "jti" in payload and is_blacklisted(payload["jti"]):
-            logger.warning(f"Attempt to use blacklisted token with JTI: {payload['jti']}")
+            logger.warning(
+                f"Attempt to use blacklisted token with JTI: {payload['jti']}"
+            )
             raise ValueError("Token has been revoked.")
 
         return payload
@@ -212,7 +216,9 @@ def revoke_token(token: str, public_key: Union[str, bytes]) -> bool:
         exp_datetime = datetime.fromtimestamp(payload["exp"], tz=timezone.utc)
         add_to_blacklist(payload["jti"], exp_datetime)
 
-        logger.info(f"Token for user {payload.get('uid', 'unknown')} has been revoked")
+        logger.info(
+            f"Token for user {payload.get('uid', 'unknown')} has been revoked"
+        )
         return True
 
     except jwt.InvalidTokenError as exc:

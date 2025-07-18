@@ -10,7 +10,6 @@ from shared.core.config import settings
 from shared.db.models import User
 from shared.db.sessions.database import get_db
 from shared.dependencies.user import get_current_active_user
-from user_service.schemas.profile import UpdateProfileRequest, UserProfile
 from shared.utils.exception_handlers import exception_handler
 from shared.utils.file_uploads import (
     get_media_url,
@@ -25,6 +24,7 @@ from shared.utils.validators import (
     normalize_whitespace,
     validate_length_range,
 )
+from user_service.schemas.profile import UpdateProfileRequest, UserProfile
 
 router = APIRouter()
 
@@ -60,7 +60,11 @@ async def get_profile(
         "first_name": user.first_name,
         "last_name": user.last_name,
         "email": user.email,
-        "profile_picture": (get_media_url(user.profile_picture) if user.profile_picture else None),
+        "profile_picture": (
+            get_media_url(user.profile_picture)
+            if user.profile_picture
+            else None
+        ),
     }
 
     return api_response(
@@ -87,7 +91,9 @@ async def update_profile(
         JSONResponse: Updated user profile
     """
     # Fetch the user
-    result = await db.execute(select(User).where(User.user_id == current_user.user_id))
+    result = await db.execute(
+        select(User).where(User.user_id == current_user.user_id)
+    )
     user = result.scalar_one_or_none()
 
     if not user:
@@ -100,7 +106,7 @@ async def update_profile(
     # Validate first name and last name
     new_first_name = normalize_whitespace(profile_data.first_name)
     new_last_name = normalize_whitespace(profile_data.last_name)
-    
+
     # Check if first name and last name are the same
     if new_first_name.lower() == new_last_name.lower():
         return api_response(
@@ -108,7 +114,7 @@ async def update_profile(
             message="First name and last name cannot be the same.",
             log_error=True,
         )
-    
+
     # Validate first name
     if not validate_length_range(new_first_name, 1, 255):
         return api_response(
@@ -116,21 +122,21 @@ async def update_profile(
             message="First name must be 1–255 characters long.",
             log_error=True,
         )
-    
+
     if contains_xss(new_first_name):
         return api_response(
             status_code=status.HTTP_400_BAD_REQUEST,
             message="First name contains potentially malicious content.",
             log_error=True,
         )
-    
+
     if has_excessive_repetition(new_first_name, max_repeats=3):
         return api_response(
             status_code=status.HTTP_400_BAD_REQUEST,
             message="First name contains excessive repeated characters.",
             log_error=True,
         )
-    
+
     # Validate last name
     if not validate_length_range(new_last_name, 1, 255):
         return api_response(
@@ -138,14 +144,14 @@ async def update_profile(
             message="Last name must be 1–255 characters long.",
             log_error=True,
         )
-    
+
     if contains_xss(new_last_name):
         return api_response(
             status_code=status.HTTP_400_BAD_REQUEST,
             message="Last name contains potentially malicious content.",
             log_error=True,
         )
-    
+
     if has_excessive_repetition(new_last_name, max_repeats=3):
         return api_response(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -157,7 +163,9 @@ async def update_profile(
     new_username = normalize_whitespace(profile_data.username)
     if new_username.lower() != user.username:
         # Validate username format
-        if not is_valid_username(new_username, allow_spaces=True, allow_hyphens=True):
+        if not is_valid_username(
+            new_username, allow_spaces=True, allow_hyphens=True
+        ):
             return api_response(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 message="Username can only contain letters, numbers, spaces, and hyphens.",
@@ -185,7 +193,9 @@ async def update_profile(
                 log_error=True,
             )
 
-        if len(new_username) < 3 or not all(c.isalpha() for c in new_username[:3]):
+        if len(new_username) < 3 or not all(
+            c.isalpha() for c in new_username[:3]
+        ):
             return api_response(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 message="First three characters of username must be letters.",
@@ -237,7 +247,9 @@ async def update_profile(
             "last_name": user.last_name,
             "email": user.email,
             "profile_picture": (
-                get_media_url(user.profile_picture) if user.profile_picture else None
+                get_media_url(user.profile_picture)
+                if user.profile_picture
+                else None
             ),
         },
     )
@@ -268,7 +280,9 @@ async def update_profile_picture(
         )
 
     # Fetch the user
-    result = await db.execute(select(User).where(User.user_id == current_user.user_id))
+    result = await db.execute(
+        select(User).where(User.user_id == current_user.user_id)
+    )
     user = result.scalar_one_or_none()
 
     if not user:
@@ -281,7 +295,9 @@ async def update_profile_picture(
     # Upload new profile picture
     uploaded_url = await save_uploaded_file(
         profile_picture,
-        settings.PROFILE_PICTURE_UPLOAD_PATH.format(username=secure_filename(user.username)),
+        settings.PROFILE_PICTURE_UPLOAD_PATH.format(
+            username=secure_filename(user.username)
+        ),
     )
 
     # Delete previous profile picture
@@ -313,7 +329,9 @@ async def delete_account(
         JSONResponse: Success message
     """
     # Fetch the user
-    result = await db.execute(select(User).where(User.user_id == current_user.user_id))
+    result = await db.execute(
+        select(User).where(User.user_id == current_user.user_id)
+    )
     user = result.scalar_one_or_none()
 
     if not user:

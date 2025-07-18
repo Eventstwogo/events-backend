@@ -1,6 +1,10 @@
-from .roles import CreateRole, RoleDetails, RoleUpdate
 from .permissions import CreatePermission, PermissionDetails, PermissionUpdate
-from .role_permissions import CreateRolePermission, RolePermissionDetails, RolePermissionUpdate
+from .role_permissions import (
+    CreateRolePermission,
+    RolePermissionDetails,
+    RolePermissionUpdate,
+)
+from .roles import CreateRole, RoleDetails, RoleUpdate
 
 __all__ = [
     "CreateRole",

@@ -12,14 +12,18 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
 
+from admin_service.schemas.token import TokenRefreshRequest, TokenResponse
+from admin_service.services.session_management import TokenSessionManager
+from admin_service.utils.auth import (
+    create_jwt_token,
+    revoke_token,
+    verify_jwt_token,
+)
 from shared.core.api_response import api_response
 from shared.core.config import PRIVATE_KEY, PUBLIC_KEY, settings
 from shared.core.logging_config import get_logger
 from shared.db.models import AdminUser, AdminUserDeviceSession
 from shared.db.sessions.database import get_db
-from admin_service.schemas.token import TokenRefreshRequest, TokenResponse
-from admin_service.services.session_management import TokenSessionManager
-from admin_service.utils.auth import create_jwt_token, revoke_token, verify_jwt_token
 from shared.utils.exception_handlers import exception_handler
 
 logger = get_logger(__name__)
@@ -168,7 +172,7 @@ async def refresh_token(
                     "token_type": "refresh",
                 },
                 private_key=PRIVATE_KEY.get_secret_value(),
-                expires_in=settings.REFRESH_TOKEN_EXPIRE_DAYS_IN_SECONDS
+                expires_in=settings.REFRESH_TOKEN_EXPIRE_DAYS_IN_SECONDS,
             )
 
         # Update user's last activity
