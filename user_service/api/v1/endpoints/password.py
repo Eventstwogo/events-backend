@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
 
@@ -12,7 +12,6 @@ from user_service.schemas.password import (
     ForgotPassword,
     ResetPasswordWithToken,
     UserChangePassword,
-    UserPasswordReset,
 )
 from user_service.services.password_reset_service import (
     create_password_reset_record,
@@ -38,11 +37,25 @@ router = APIRouter()
 @router.post("/forgot-password", status_code=status.HTTP_200_OK)
 @exception_handler
 async def forgot_password(
+    request: Request,
     data: ForgotPassword = Depends(ForgotPassword.as_form),
     db: AsyncSession = Depends(get_db),
 ) -> JSONResponse:
     """Send a password reset link to the user's email if the account exists and is active."""
     try:
+        # Get the client's IP address
+        client_host = request.client.host if request.client else "unknown"
+
+        # Or check headers (especially if behind a reverse proxy/load balancer)
+        x_forwarded_for = request.headers.get("x-forwarded-for")
+        if x_forwarded_for:
+            ip_address = x_forwarded_for.split(",")[0].strip()
+        else:
+            ip_address = client_host
+
+        # Log or use the IP address
+        print(f"Password reset requested by user with IP: {ip_address}")
+        
         # Step 1: Validate email format and normalize
         email = data.email.strip().lower()
         EmailValidator.validate(email)
@@ -71,7 +84,7 @@ async def forgot_password(
 
         # Step 6: Create the reset link
         reset_link = (
-            f"{settings.FRONTEND_URL}/reset-password?token={reset_token}"
+            f"{settings.FRONTEND_URL}/reset-password?email={email}&token={reset_token}"
         )
 
         # Step 7: Send the password reset email
@@ -79,6 +92,9 @@ async def forgot_password(
             email=user.email,
             username=user.username,
             reset_link=reset_link,
+            expiry_minutes=60,  # 1 hour expiry
+            ip_address=ip_address,
+            request_time=datetime.now(timezone.utc).isoformat(),
         )
 
         # Return success message (don't include token in response for security)
@@ -145,39 +161,6 @@ async def reset_password_with_token(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             message="An error occurred while resetting the password.",
         )
-
-
-# @router.patch("/reset-password")
-# @exception_handler
-# async def reset_password(
-#     data: UserPasswordReset,
-#     db: AsyncSession = Depends(get_db),
-# ) -> JSONResponse:
-#     """Reset password for authenticated user (user function)"""
-#     # Find user using the common utility function
-#     user = await get_user_by_email(db, data.email)
-#     if not user:
-#         return user_not_found_response()
-
-#     # Prevent using the same password
-#     if verify_password(data.new_password, user.password_hash):
-#         return api_response(
-#             status_code=status.HTTP_409_CONFLICT,
-#             message="New password cannot be the same as old password.",
-#             log_error=False,
-
-#         )
-
-#     # Hash and update password
-#     user.password_hash = hash_password(data.new_password)
-#     # Set status 0 but require password reset
-#     user.login_status = 0
-#     await db.commit()
-#     await db.refresh(user)
-#     return api_response(
-#         status_code=status.HTTP_200_OK,
-#         message="Password reset successfully.",
-#     )
 
 
 @router.post("/change-password", status_code=status.HTTP_200_OK)

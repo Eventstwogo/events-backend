@@ -95,7 +95,7 @@ class AppTestSettings(BaseSettings):
     # === JWT ===
     JWT_ALGORITHM: str = "RS256"
     JWT_ACCESS_TOKEN_EXPIRE_SECONDS: int = 3600
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 1
+    REFRESH_TOKEN_EXPIRE_DAYS_IN_SECONDS: int = 604800
     JWT_KEYS_DIR: str = "keys/test"
 
     # === DigitalOcean Spaces (for mocking in test) ===

@@ -18,7 +18,7 @@ def send_admin_password_reset_email(
     reset_link: str,
     ip_address: Optional[str] = None,
     request_time: Optional[str] = None,
-    expiry_hours: int = 24,
+    expiry_minutes: int = 60, # Default to 1 hour
 ) -> bool:
     """Send admin password reset email."""
     context = {
@@ -27,7 +27,7 @@ def send_admin_password_reset_email(
         "reset_link": reset_link,
         "ip_address": ip_address,
         "request_time": request_time or datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
-        "expiry_hours": expiry_hours,
+        "expiry_minutes": expiry_minutes,
         "year": str(datetime.now(tz=timezone.utc).year),
     }
 

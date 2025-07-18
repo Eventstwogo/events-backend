@@ -467,7 +467,7 @@ class TokenSessionManager:
         if token_type == "access":
             expires_in = settings.JWT_ACCESS_TOKEN_EXPIRE_SECONDS
         else:  # refresh
-            expires_in = settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
+            expires_in = settings.REFRESH_TOKEN_EXPIRE_DAYS_IN_SECONDS
 
         return create_jwt_token(
             data=token_data,

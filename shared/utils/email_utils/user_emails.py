@@ -75,7 +75,7 @@ def send_password_reset_email(
     reset_link: str,
     ip_address: Optional[str] = None,
     request_time: Optional[str] = None,
-    expiry_hours: int = 24,
+    expiry_minutes: int = 24,
 ) -> bool:
     """Send a password reset email to a user."""
     context = {
@@ -85,7 +85,7 @@ def send_password_reset_email(
         "ip_address": ip_address,
         "request_time": request_time
         or datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
-        "expiry_hours": expiry_hours,
+        "expiry_minutes": expiry_minutes,
         "year": str(datetime.now(tz=timezone.utc).year),
     }
 
@@ -140,7 +140,7 @@ def send_security_alert_email(
 
 
 def send_user_verification_email(
-    email: EmailStr, username: str, verification_token: str, user_id: str
+    email: EmailStr, username: str, verification_token: str, user_id: str, expires_in_minutes: int = 60
 ) -> bool:
     """
     Send a welcome email to a new user with email verification link.
@@ -164,6 +164,7 @@ def send_user_verification_email(
         "verification_link": verification_link,
         "welcome_url": f"{settings.FRONTEND_URL}",
         "year": str(datetime.now(tz=timezone.utc).year),
+        "expires_in_minutes":expires_in_minutes,
     }
 
     success = email_sender.send_email(
