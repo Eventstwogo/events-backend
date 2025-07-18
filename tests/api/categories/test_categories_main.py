@@ -1,10 +1,11 @@
 """
 Test cases for main categories endpoints (/api/v1/categories/)
 Tests for categories.py endpoints:
-- POST /create - Create category or subcategory
+- POST / - Create category or subcategory
 - GET / - Get all categories with filtering
 - GET /analytics - Category analytics
-- GET /total_categories_count - Total categories count
+- GET /list - List categories and subcategories by status
+- GET /count - Total categories count
 """
 
 import uuid
@@ -13,7 +14,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import insert, select
 
-from db.models import Category, SubCategory
+from shared.db.models import Category, SubCategory
 
 
 def uuid_str():
@@ -39,7 +40,7 @@ class TestCreateCategory:
             "show_in_menu": "true",
         }
 
-        res = await test_client.post("/api/v1/categories/create", data=data)
+        res = await test_client.post("/api/v1/categories/", data=data)
         body = res.json()
 
         assert res.status_code == 201
@@ -63,7 +64,7 @@ class TestCreateCategory:
         """Test creating category with minimal required data."""
         data = {"name": "Books"}
 
-        res = await test_client.post("/api/v1/categories/create", data=data)
+        res = await test_client.post("/api/v1/categories/", data=data)
         body = res.json()
 
         assert res.status_code == 201
@@ -99,7 +100,7 @@ class TestCreateCategory:
             "description": "Mobile phones and accessories",
         }
 
-        res = await test_client.post("/api/v1/categories/create", data=data)
+        res = await test_client.post("/api/v1/categories/", data=data)
         body = res.json()
 
         assert res.status_code == 201
@@ -134,7 +135,7 @@ class TestCreateCategory:
 
         data = {"name": "Electronics"}
 
-        res = await test_client.post("/api/v1/categories/create", data=data)
+        res = await test_client.post("/api/v1/categories/", data=data)
         body = res.json()
 
         assert res.status_code == 400
@@ -154,7 +155,7 @@ class TestCreateCategory:
         """Test creating category with invalid name fails."""
         data = {"name": ""}  # Empty name
 
-        res = await test_client.post("/api/v1/categories/create", data=data)
+        res = await test_client.post("/api/v1/categories/", data=data)
 
         assert res.status_code in [400, 422]  # Validation error
 
@@ -168,7 +169,7 @@ class TestCreateCategory:
             "name": "Smartphones",
         }
 
-        res = await test_client.post("/api/v1/categories/create", data=data)
+        res = await test_client.post("/api/v1/categories/", data=data)
         body = res.json()
 
         assert res.status_code == 404
@@ -322,7 +323,7 @@ class TestListCategories:
 
         await test_db_session.commit()
 
-        res = await test_client.get("/api/v1/categories/list-categories")
+        res = await test_client.get("/api/v1/categories/list")
         body = res.json()
 
         assert res.status_code == 200
@@ -370,7 +371,7 @@ class TestListCategories:
         await test_db_session.commit()
 
         res = await test_client.get(
-            "/api/v1/categories/list-categories?status_value=false"
+            "/api/v1/categories/list?status_value=false"
         )
         body = res.json()
 
@@ -404,7 +405,7 @@ class TestListCategories:
         await test_db_session.commit()
 
         res = await test_client.get(
-            "/api/v1/categories/list-categories?status_value=true"
+            "/api/v1/categories/list?status_value=true"
         )
         body = res.json()
 
@@ -508,7 +509,7 @@ class TestCategoryAnalytics:
         )
         await test_db_session.commit()
 
-        res = await test_client.get("/api/v1/categories/total_categories_count")
+        res = await test_client.get("/api/v1/categories/count")
         body = res.json()
 
         assert res.status_code == 200
@@ -536,7 +537,7 @@ class TestCategoryValidation:
         files = {"file": ("category_image.jpg", fake_image, "image/jpeg")}
 
         res = await test_client.post(
-            "/api/v1/categories/create", data=data, files=files
+            "/api/v1/categories/", data=data, files=files
         )
         body = res.json()
 
@@ -557,7 +558,7 @@ class TestCategoryValidation:
         files = {"file": (fake_image.name, fake_image, "image/jpeg")}
 
         res = await test_client.post(
-            "/api/v1/categories/create", data=data, files=files
+            "/api/v1/categories/", data=data, files=files
         )
         body = res.json()
 

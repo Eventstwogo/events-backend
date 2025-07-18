@@ -3,7 +3,8 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from httpx import AsyncClient
 
-from db.models import AdminUser
+from shared.db.models import AdminUser
+from shared.core.security import generate_searchable_hash
 
 
 @pytest.mark.asyncio
@@ -13,15 +14,20 @@ async def test_login_success(
     role = await seed_roles("HR")
     config = seed_config
 
+    username = "loguser"
+    email = "log@admin.com"
+    
     user = AdminUser(
         user_id="usr001",
-        username="loguser",
-        email="log@admin.com",
+        username_encrypted=username,
+        email_encrypted=email,
+        username_hash=generate_searchable_hash(username),
+        email_hash=generate_searchable_hash(email),
         role_id=role.role_id,
         password_hash=config.default_password_hash,  # assumes hash is correct
-        is_active=False,
+        is_deleted=False,
         login_status=0,
-        login_attempts=0,
+        failure_login_attempts=0,
         days_180_flag=False,
     )
     test_db_session.add(user)
@@ -29,13 +35,13 @@ async def test_login_success(
 
     res = await test_client.post(
         "/api/v1/admin-auth/login",
-        json={"email": user.email, "password": config.default_password},
+        data={"username": user.email, "password": config.default_password},
     )
     body = res.json()
 
     assert res.status_code == 200
     assert body["message"] == "Login successful."
-    assert "access_token" in body["data"]
+    assert "access_token" in body
 
 
 @pytest.mark.asyncio
@@ -45,15 +51,20 @@ async def test_login_initial_login_prompt(
     role = await seed_roles("HR")
     config = seed_config
 
+    username = "initlogin"
+    email = "init@admin.com"
+    
     user = AdminUser(
         user_id="usr002",
-        username="initlogin",
-        email="init@admin.com",
+        username_encrypted=username,
+        email_encrypted=email,
+        username_hash=generate_searchable_hash(username),
+        email_hash=generate_searchable_hash(email),
         role_id=role.role_id,
         password_hash=config.default_password_hash,
-        is_active=False,
+        is_deleted=False,
         login_status=-1,
-        login_attempts=0,
+        failure_login_attempts=0,
         days_180_flag=False,
     )
     test_db_session.add(user)
@@ -61,7 +72,7 @@ async def test_login_initial_login_prompt(
 
     res = await test_client.post(
         "/api/v1/admin-auth/login",
-        json={"email": user.email, "password": config.default_password},
+        data={"username": user.email, "password": config.default_password},
     )
     body = res.json()
 
@@ -77,13 +88,18 @@ async def test_login_password_expired(
     config = seed_config
     expired_date = datetime.now(timezone.utc) - timedelta(days=181)
 
+    username = "expiredpass"
+    email = "expired@admin.com"
+    
     user = AdminUser(
         user_id="usr003",
-        username="expiredpass",
-        email="expired@admin.com",
+        username_encrypted=username,
+        email_encrypted=email,
+        username_hash=generate_searchable_hash(username),
+        email_hash=generate_searchable_hash(email),
         role_id=role.role_id,
         password_hash=config.default_password_hash,
-        is_active=False,
+        is_deleted=False,
         login_status=0,
         days_180_flag=True,
         days_180_timestamp=expired_date,
@@ -93,19 +109,19 @@ async def test_login_password_expired(
 
     res = await test_client.post(
         "/api/v1/admin-auth/login",
-        json={"email": user.email, "password": config.default_password},
+        data={"username": user.email, "password": config.default_password},
     )
     body = res.json()
 
     assert res.status_code == 409
-    assert "Password expired" in body["detail"]["message"]
+    assert "Password expired" in body["message"]
 
 
 @pytest.mark.asyncio
 async def test_login_account_not_found(test_client: AsyncClient, clean_db):
     res = await test_client.post(
         "/api/v1/admin-auth/login",
-        json={"email": "nosuchuser@example.com", "password": "anyvalue"},
+        data={"username": "nosuchuser@example.com", "password": "anyvalue"},
     )
     body = res.json()
 
@@ -120,25 +136,30 @@ async def test_login_account_deactivated(
     role = await seed_roles("HR")
     config = seed_config
 
+    username = "deact"
+    email = "deact@admin.com"
+    
     user = AdminUser(
         user_id="usr004",
-        username="deact",
-        email="deact@admin.com",
+        username_encrypted=username,
+        email_encrypted=email,
+        username_hash=generate_searchable_hash(username),
+        email_hash=generate_searchable_hash(email),
         role_id=role.role_id,
         password_hash=config.default_password_hash,
-        is_active=True,  # deactivated
+        is_deleted=True,  # deactivated
     )
     test_db_session.add(user)
     await test_db_session.commit()
 
     res = await test_client.post(
         "/api/v1/admin-auth/login",
-        json={"email": user.email, "password": config.default_password},
+        data={"username": email, "password": config.default_password},
     )
     body = res.json()
 
-    assert res.status_code == 404
-    assert "deactivated" in body["detail"]["message"]
+    assert res.status_code == 403
+    assert "inactive" in body["detail"]["message"]
 
 
 @pytest.mark.asyncio
@@ -148,22 +169,27 @@ async def test_login_invalid_password(
     role = await seed_roles("HR")
     config = seed_config
 
+    username = "wrongpass"
+    email = "wrong@admin.com"
+    
     user = AdminUser(
         user_id="usr005",
-        username="wrongpass",
-        email="wrong@admin.com",
+        username_encrypted=username,
+        email_encrypted=email,
+        username_hash=generate_searchable_hash(username),
+        email_hash=generate_searchable_hash(email),
         role_id=role.role_id,
         password_hash=config.default_password_hash,
-        is_active=False,
+        is_deleted=False,
         login_status=0,
-        login_attempts=0,
+        failure_login_attempts=0,
     )
     test_db_session.add(user)
     await test_db_session.commit()
 
     res = await test_client.post(
         "/api/v1/admin-auth/login",
-        json={"email": user.email, "password": "wrongpassword"},
+        data={"username": email, "password": "wrongpassword"},
     )
     body = res.json()
 
@@ -180,20 +206,22 @@ async def test_login_locked_after_3_attempts(
 
     user = AdminUser(
         user_id="usr006",
-        username="lockeduser",
-        email="locked@admin.com",
+        username_encrypted="lockeduser",
+        email_encrypted="locked@admin.com",
+        username_hash=generate_searchable_hash("lockeduser"),
+        email_hash=generate_searchable_hash("locked@admin.com"),
         role_id=role.role_id,
         password_hash=config.default_password_hash,
-        is_active=False,
+        is_deleted=False,
         login_status=0,
-        login_attempts=2,
+        failure_login_attempts=2,
     )
     test_db_session.add(user)
     await test_db_session.commit()
 
     res = await test_client.post(
         "/api/v1/admin-auth/login",
-        json={"email": user.email, "password": "wrongagain"},
+        data={"username": user.email, "password": "wrongagain"},
     )
     body = res.json()
 
@@ -210,13 +238,15 @@ async def test_login_locked_within_24h(
 
     user = AdminUser(
         user_id="usr007",
-        username="recentlock",
-        email="recentlock@admin.com",
+        username_encrypted="recentlock",
+        email_encrypted="recentlock@admin.com",
+        username_hash=generate_searchable_hash("recentlock"),
+        email_hash=generate_searchable_hash("recentlock@admin.com"),
         role_id=role.role_id,
         password_hash=config.default_password_hash,
-        is_active=False,
+        is_deleted=False,
         login_status=1,
-        login_attempts=3,
+        failure_login_attempts=3,
         last_login=datetime.now(timezone.utc) - timedelta(hours=2),
     )
     test_db_session.add(user)
@@ -224,7 +254,7 @@ async def test_login_locked_within_24h(
 
     res = await test_client.post(
         "/api/v1/admin-auth/login",
-        json={"email": user.email, "password": config.default_password},
+        data={"username": user.email, "password": config.default_password},
     )
     body = res.json()
 
@@ -236,7 +266,7 @@ async def test_login_locked_within_24h(
 async def test_login_invalid_input_format(test_client: AsyncClient, clean_db):
     res = await test_client.post(
         "/api/v1/admin-auth/login",
-        json={"email": "", "password": ""},  # Invalid format
+        data={"username": "", "password": ""},  # Invalid format
     )
 
-    assert res.status_code == 422  # FastAPI input validation
+    assert res.status_code == 404  # Empty username treated as user not found

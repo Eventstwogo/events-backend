@@ -1,7 +1,7 @@
 import pytest
 from httpx import AsyncClient
 
-from db.models import Permission
+from shared.db.models import Permission
 
 
 @pytest.mark.asyncio

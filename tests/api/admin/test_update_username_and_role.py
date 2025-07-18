@@ -2,7 +2,8 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 
-from db.models import AdminUser, Role
+from shared.db.models import AdminUser, Role
+from shared.core.security import generate_searchable_hash
 
 
 @pytest.mark.asyncio
@@ -17,12 +18,14 @@ async def test_update_username_success(
 
     user = AdminUser(
         user_id="usr001",
-        username="testuser",
-        email="testuser@example.com",
+        username_encrypted="testuser",
+        email_encrypted="testuser@example.com",
+        username_hash=generate_searchable_hash("testuser"),
+        email_hash=generate_searchable_hash("testuser@example.com"),
         role_id=role.role_id,
         password_hash=config.default_password_hash,
         days_180_flag=False,
-        is_active=False,
+        is_deleted=False,
     )
     test_db_session.add(user)
     await test_db_session.commit()
@@ -30,7 +33,7 @@ async def test_update_username_success(
     update_data = {"new_username": "updated-username", "new_role_id": None}
 
     response = await test_client.put(
-        f"/api/v1/admin-users/update-user/{user.user_id}", data=update_data
+        f"/api/v1/admin/users/{user.user_id}", data=update_data
     )
 
     assert response.status_code == 200
@@ -59,12 +62,14 @@ async def test_update_role_success(
 
     user = AdminUser(
         user_id="usr002",
-        username="testuser2",
-        email="testuser2@example.com",
+        username_encrypted="testuser2",
+        email_encrypted="testuser2@example.com",
+        username_hash=generate_searchable_hash("testuser2"),
+        email_hash=generate_searchable_hash("testuser2@example.com"),
         role_id=old_role.role_id,
         password_hash=config.default_password_hash,
         days_180_flag=False,
-        is_active=False,
+        is_deleted=False,
     )
     test_db_session.add(user)
     await test_db_session.commit()
@@ -72,7 +77,7 @@ async def test_update_role_success(
     update_data = {"new_username": None, "new_role_id": new_role.role_id}
 
     response = await test_client.put(
-        f"/api/v1/admin-users/update-user/{user.user_id}", data=update_data
+        f"/api/v1/admin/users/{user.user_id}", data=update_data
     )
 
     assert response.status_code == 200
@@ -101,12 +106,14 @@ async def test_update_username_and_role_success(
 
     user = AdminUser(
         user_id="usr003",
-        username="testuser3",
-        email="testuser3@example.com",
+        username_encrypted="testuser3",
+        email_encrypted="testuser3@example.com",
+        username_hash=generate_searchable_hash("testuser3"),
+        email_hash=generate_searchable_hash("testuser3@example.com"),
         role_id=old_role.role_id,
         password_hash=config.default_password_hash,
         days_180_flag=False,
-        is_active=False,
+        is_deleted=False,
     )
     test_db_session.add(user)
     await test_db_session.commit()
@@ -117,7 +124,7 @@ async def test_update_username_and_role_success(
     }
 
     response = await test_client.put(
-        f"/api/v1/admin-users/update-user/{user.user_id}", data=update_data
+        f"/api/v1/admin/users/{user.user_id}", data=update_data
     )
 
     assert response.status_code == 200
@@ -145,12 +152,14 @@ async def test_update_inactive_user_fails(
 
     inactive_user = AdminUser(
         user_id="usr004",
-        username="inactiveuser",
-        email="inactiveuser@example.com",
+        username_encrypted="inactiveuser",
+        email_encrypted="inactiveuser@example.com",
+        username_hash=generate_searchable_hash("inactiveuser"),
+        email_hash=generate_searchable_hash("inactiveuser@example.com"),
         role_id=role.role_id,
         password_hash=config.default_password_hash,
         days_180_flag=False,
-        is_active=True,
+        is_deleted=True,
     )
     test_db_session.add(inactive_user)
     await test_db_session.commit()
@@ -158,7 +167,7 @@ async def test_update_inactive_user_fails(
     update_data = {"new_username": "should-fail", "new_role_id": None}
 
     response = await test_client.put(
-        f"/api/v1/admin-users/update-user/{inactive_user.user_id}",
+        f"/api/v1/admin/users/{inactive_user.user_id}",
         data=update_data,
     )
 
@@ -180,7 +189,7 @@ async def test_update_nonexistent_user_fails(
     update_data = {"new_username": "should-fail", "new_role_id": None}
 
     response = await test_client.put(
-        "/api/v1/admin-users/update-user/usr999",  # Use valid format but non-existent ID (6 chars)
+        "/api/v1/admin/users/usr999",  # Use valid format but non-existent ID (6 chars)
         json=update_data,
     )
 
@@ -206,21 +215,25 @@ async def test_update_username_conflict_fails(
 
     user1 = AdminUser(
         user_id="usr005",
-        username="user1",
-        email="user1@example.com",
+        username_encrypted="user1",
+        email_encrypted="user1@example.com",
+        username_hash=generate_searchable_hash("user1"),
+        email_hash=generate_searchable_hash("user1@example.com"),
         role_id=role.role_id,
         password_hash=config.default_password_hash,
         days_180_flag=False,
-        is_active=False,
+        is_deleted=False,
     )
     user2 = AdminUser(
         user_id="usr006",
-        username="user2",
-        email="user2@example.com",
+        username_encrypted="user2",
+        email_encrypted="user2@example.com",
+        username_hash=generate_searchable_hash("user2"),
+        email_hash=generate_searchable_hash("user2@example.com"),
         role_id=role.role_id,
         password_hash=config.default_password_hash,
         days_180_flag=False,
-        is_active=False,
+        is_deleted=False,
     )
     test_db_session.add(user1)
     test_db_session.add(user2)
@@ -230,7 +243,7 @@ async def test_update_username_conflict_fails(
     update_data = {"new_username": user2.username, "new_role_id": None}
 
     response = await test_client.put(
-        f"/api/v1/admin-users/update-user/{user1.user_id}", data=update_data
+        f"/api/v1/admin/users/{user1.user_id}", data=update_data
     )
 
     assert response.status_code == 409
@@ -250,12 +263,14 @@ async def test_update_nonexistent_role_fails(
 
     user = AdminUser(
         user_id="usr007",
-        username="testuser7",
-        email="testuser7@example.com",
+        username_encrypted="testuser7",
+        email_encrypted="testuser7@example.com",
+        username_hash=generate_searchable_hash("testuser7"),
+        email_hash=generate_searchable_hash("testuser7@example.com"),
         role_id=role.role_id,
         password_hash=config.default_password_hash,
         days_180_flag=False,
-        is_active=False,
+        is_deleted=False,
     )
     test_db_session.add(user)
     await test_db_session.commit()
@@ -266,7 +281,7 @@ async def test_update_nonexistent_role_fails(
     }
 
     response = await test_client.put(
-        f"/api/v1/admin-users/update-user/{user.user_id}", data=update_data
+        f"/api/v1/admin/users/{user.user_id}", data=update_data
     )
 
     assert response.status_code == 404
@@ -286,12 +301,14 @@ async def test_update_inactive_role_fails(
 
     user = AdminUser(
         user_id="usr008",
-        username="testuser8",
-        email="testuser8@example.com",
+        username_encrypted="testuser8",
+        email_encrypted="testuser8@example.com",
+        username_hash=generate_searchable_hash("testuser8"),
+        email_hash=generate_searchable_hash("testuser8@example.com"),
         role_id=inactive_role.role_id,
         password_hash=config.default_password_hash,
         days_180_flag=False,
-        is_active=False,
+        is_deleted=False,
     )
     test_db_session.add(user)
 
@@ -307,7 +324,7 @@ async def test_update_inactive_role_fails(
     update_data = {"new_username": None, "new_role_id": inactive_role.role_id}
 
     response = await test_client.put(
-        f"/api/v1/admin-users/update-user/{user.user_id}", data=update_data
+        f"/api/v1/admin/users/{user.user_id}", data=update_data
     )
 
     assert response.status_code == 400
@@ -327,12 +344,14 @@ async def test_update_no_changes_fails(
 
     user = AdminUser(
         user_id="usr009",
-        username="testuser9",
-        email="testuser9@example.com",
+        username_encrypted="testuser9",
+        email_encrypted="testuser9@example.com",
+        username_hash=generate_searchable_hash("testuser9"),
+        email_hash=generate_searchable_hash("testuser9@example.com"),
         role_id=role.role_id,
         password_hash=config.default_password_hash,
         days_180_flag=False,
-        is_active=False,
+        is_deleted=False,
     )
     test_db_session.add(user)
     await test_db_session.commit()
@@ -344,7 +363,7 @@ async def test_update_no_changes_fails(
     }
 
     response = await test_client.put(
-        f"/api/v1/admin-users/update-user/{user.user_id}", data=update_data
+        f"/api/v1/admin/users/{user.user_id}", data=update_data
     )
 
     assert response.status_code == 400

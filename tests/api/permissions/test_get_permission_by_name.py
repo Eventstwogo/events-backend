@@ -1,7 +1,7 @@
 import pytest
 from httpx import AsyncClient
 
-from db.models import Permission
+from shared.db.models import Permission
 
 
 @pytest.mark.asyncio
@@ -18,7 +18,7 @@ async def test_get_permission_id_by_name_success(
     await test_db_session.commit()
 
     res = await test_client.get(
-        "/api/v1/permissions/find", params={"permission_name": "ReadAccess"}
+        "/api/v1/permissions/search", params={"permission_name": "ReadAccess"}
     )
     body = res.json()
 
@@ -32,7 +32,7 @@ async def test_get_permission_id_by_name_not_found(
     test_client: AsyncClient, test_db_session, clean_db
 ):
     res = await test_client.get(
-        "/api/v1/permissions/find",
+        "/api/v1/permissions/search",
         params={"permission_name": "NonExistingPerm"},
     )
     body = res.json()

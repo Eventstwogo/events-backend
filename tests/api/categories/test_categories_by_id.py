@@ -1,11 +1,11 @@
 """
 Test cases for category by ID endpoints (/api/v1/categories/)
 Tests for categories_by_id.py endpoints:
-- GET /details/{category_id} - Get category by ID
-- PUT /update/{category_id} - Update category by ID
-- DELETE /soft-delete/{category_id} - Soft delete category
-- PUT /restore/{category_id} - Restore category
-- DELETE /hard-delete/{category_id} - Hard delete category
+- GET /{category_id} - Get category by ID
+- PUT /{category_id} - Update category by ID
+- DELETE /{category_id}/soft - Soft delete category
+- PUT /{category_id}/restore - Restore category
+- DELETE /{category_id}/hard - Hard delete category
 """
 
 import uuid
@@ -14,8 +14,7 @@ from io import BytesIO
 import pytest
 from httpx import AsyncClient
 from sqlalchemy import insert, select
-
-from db.models import Category, SubCategory
+from shared.db.models import Category, SubCategory
 
 
 def uuid_str():
@@ -46,7 +45,7 @@ class TestGetCategoryById:
         )
         await test_db_session.commit()
 
-        res = await test_client.get("/api/v1/categories/details/CAT001")
+        res = await test_client.get("/api/v1/categories/CAT001")
         body = res.json()
 
         assert res.status_code == 200
@@ -97,7 +96,7 @@ class TestGetCategoryById:
         )
         await test_db_session.commit()
 
-        res = await test_client.get("/api/v1/categories/details/CAT002")
+        res = await test_client.get("/api/v1/categories/CAT002")
         body = res.json()
 
         assert res.status_code == 200
@@ -109,7 +108,7 @@ class TestGetCategoryById:
         self, test_client: AsyncClient, clean_db
     ):
         """Test fetching non-existent category returns 404."""
-        res = await test_client.get("/api/v1/categories/details/INVALID_ID")
+        res = await test_client.get("/api/v1/categories/INVALID_ID")
         body = res.json()
 
         assert res.status_code == 404
@@ -134,7 +133,7 @@ class TestGetCategoryById:
         )
         await test_db_session.commit()
 
-        res = await test_client.get("/api/v1/categories/details/CAT003")
+        res = await test_client.get("/api/v1/categories/CAT003")
         body = res.json()
 
         assert res.status_code == 200
@@ -166,7 +165,7 @@ class TestUpdateCategoryById:
         }
 
         res = await test_client.put(
-            "/api/v1/categories/update/CAT100", data=data
+            "/api/v1/categories/CAT100", data=data
         )
         body = res.json()
 
@@ -191,7 +190,7 @@ class TestUpdateCategoryById:
         data = {"name": "New Name"}
 
         res = await test_client.put(
-            "/api/v1/categories/update/INVALID_ID", data=data
+            "/api/v1/categories/INVALID_ID", data=data
         )
         body = res.json()
 
@@ -220,7 +219,7 @@ class TestUpdateCategoryById:
         data = {}  # No changes
 
         res = await test_client.put(
-            "/api/v1/categories/update/CAT101", data=data
+            "/api/v1/categories/CAT101", data=data
         )
         body = res.json()
 
@@ -261,7 +260,7 @@ class TestUpdateCategoryById:
         data = {"name": "Electronics"}  # Duplicate name
 
         res = await test_client.put(
-            "/api/v1/categories/update/CAT103", data=data
+            "/api/v1/categories/CAT103", data=data
         )
         body = res.json()
 
@@ -294,7 +293,7 @@ class TestUpdateCategoryById:
         files = {"file": ("new_image.jpg", fake_image, "image/jpeg")}
 
         res = await test_client.put(
-            "/api/v1/categories/update/CAT104", data=data, files=files
+            "/api/v1/categories/CAT104", data=data, files=files
         )
         body = res.json()
 
@@ -323,7 +322,7 @@ class TestUpdateCategoryById:
         files = {"file": (fake_image.name, fake_image, "image/jpeg")}
 
         res = await test_client.put(
-            "/api/v1/categories/update/CAT105", data=data, files=files
+            "/api/v1/categories/CAT105", data=data, files=files
         )
         body = res.json()
 
@@ -353,7 +352,7 @@ class TestSoftDeleteCategoryById:
         )
         await test_db_session.commit()
 
-        res = await test_client.delete("/api/v1/categories/soft-delete/CAT200")
+        res = await test_client.delete("/api/v1/categories/CAT200/soft")
         body = res.json()
 
         assert res.status_code == 200
@@ -392,7 +391,7 @@ class TestSoftDeleteCategoryById:
         )
         await test_db_session.commit()
 
-        res = await test_client.delete("/api/v1/categories/soft-delete/CAT201")
+        res = await test_client.delete("/api/v1/categories/CAT201/soft")
         body = res.json()
 
         assert res.status_code == 200
@@ -418,7 +417,7 @@ class TestSoftDeleteCategoryById:
     ):
         """Test soft deleting non-existent category returns 404."""
         res = await test_client.delete(
-            "/api/v1/categories/soft-delete/INVALID_ID"
+            "/api/v1/categories/INVALID_ID/soft"
         )
         body = res.json()
 
@@ -444,7 +443,7 @@ class TestSoftDeleteCategoryById:
         )
         await test_db_session.commit()
 
-        res = await test_client.delete("/api/v1/categories/soft-delete/CAT202")
+        res = await test_client.delete("/api/v1/categories/CAT202/soft")
         body = res.json()
 
         assert res.status_code == 400
@@ -473,7 +472,7 @@ class TestRestoreCategoryById:
         )
         await test_db_session.commit()
 
-        res = await test_client.put("/api/v1/categories/restore/CAT300")
+        res = await test_client.put("/api/v1/categories/CAT300/restore")
         body = res.json()
 
         assert res.status_code == 200
@@ -512,7 +511,7 @@ class TestRestoreCategoryById:
         )
         await test_db_session.commit()
 
-        res = await test_client.put("/api/v1/categories/restore/CAT301")
+        res = await test_client.put("/api/v1/categories/CAT301/restore")
         body = res.json()
 
         assert res.status_code == 200
@@ -537,7 +536,7 @@ class TestRestoreCategoryById:
         self, test_client: AsyncClient, clean_db
     ):
         """Test restoring non-existent category returns 404."""
-        res = await test_client.put("/api/v1/categories/restore/INVALID_ID")
+        res = await test_client.put("/api/v1/categories/INVALID_ID/restore")
         body = res.json()
 
         assert res.status_code == 404
@@ -562,7 +561,7 @@ class TestRestoreCategoryById:
         )
         await test_db_session.commit()
 
-        res = await test_client.put("/api/v1/categories/restore/CAT302")
+        res = await test_client.put("/api/v1/categories/CAT302/restore")
         body = res.json()
 
         assert res.status_code == 400
@@ -591,7 +590,7 @@ class TestHardDeleteCategoryById:
         )
         await test_db_session.commit()
 
-        res = await test_client.delete("/api/v1/categories/hard-delete/CAT400")
+        res = await test_client.delete("/api/v1/categories/CAT400/hard")
         body = res.json()
 
         assert res.status_code == 200
@@ -610,7 +609,7 @@ class TestHardDeleteCategoryById:
     ):
         """Test hard deleting non-existent category returns 404."""
         res = await test_client.delete(
-            "/api/v1/categories/hard-delete/INVALID_ID"
+            "/api/v1/categories/INVALID_ID/hard"
         )
         body = res.json()
 
@@ -636,7 +635,7 @@ class TestHardDeleteCategoryById:
         )
         await test_db_session.commit()
 
-        res = await test_client.delete("/api/v1/categories/hard-delete/CAT401")
+        res = await test_client.delete("/api/v1/categories/CAT401/hard")
         body = res.json()
 
         assert res.status_code == 200

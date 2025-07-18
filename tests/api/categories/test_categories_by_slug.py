@@ -2,10 +2,10 @@
 Test cases for category by slug endpoints (/api/v1/categories/)
 Tests for categories_by_slug.py endpoints:
 - GET /slug/{slug} - Get category by slug
-- PUT /update/by-slug/{category_slug} - Update category by slug
-- DELETE /soft-delete/by-slug/{category_slug} - Soft delete by slug
-- PUT /restore/by-slug/{category_slug} - Restore by slug
-- DELETE /hard-delete/by-slug/{category_slug} - Hard delete by slug
+- PUT /slug/{category_slug} - Update category by slug
+- DELETE /slug/{category_slug}/soft - Soft delete by slug
+- PUT /slug/{category_slug}/restore - Restore by slug
+- DELETE /slug/{category_slug}/hard - Hard delete by slug
 """
 
 import uuid
@@ -15,7 +15,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import insert, select
 
-from db.models import Category, SubCategory
+from shared.db.models import Category, SubCategory
 
 
 def uuid_str():
@@ -188,7 +188,7 @@ class TestUpdateCategoryBySlug:
         }
 
         res = await test_client.put(
-            "/api/v1/categories/update/by-slug/old-name", data=data
+            "/api/v1/categories/slug/old-name", data=data
         )
         body = res.json()
 
@@ -213,7 +213,7 @@ class TestUpdateCategoryBySlug:
         data = {"name": "New Name"}
 
         res = await test_client.put(
-            "/api/v1/categories/update/by-slug/nonexistent", data=data
+            "/api/v1/categories/slug/nonexistent", data=data
         )
         body = res.json()
 
@@ -242,7 +242,7 @@ class TestUpdateCategoryBySlug:
         data = {}  # No changes
 
         res = await test_client.put(
-            "/api/v1/categories/update/by-slug/electronics", data=data
+            "/api/v1/categories/slug/electronics", data=data
         )
         body = res.json()
 
@@ -277,7 +277,7 @@ class TestUpdateCategoryBySlug:
         data = {"name": "Electronics"}  # Duplicate name
 
         res = await test_client.put(
-            "/api/v1/categories/update/by-slug/books", data=data
+            "/api/v1/categories/slug/books", data=data
         )
         body = res.json()
 
@@ -306,7 +306,7 @@ class TestUpdateCategoryBySlug:
         files = {"file": ("new_image.jpg", fake_image, "image/jpeg")}
 
         res = await test_client.put(
-            "/api/v1/categories/update/by-slug/electronics",
+            "/api/v1/categories/slug/electronics",
             data=data,
             files=files,
         )
@@ -333,7 +333,7 @@ class TestUpdateCategoryBySlug:
         data = {"slug": "new-electronics"}
 
         res = await test_client.put(
-            "/api/v1/categories/update/by-slug/old-electronics", data=data
+            "/api/v1/categories/slug/old-electronics", data=data
         )
         body = res.json()
 
@@ -367,7 +367,7 @@ class TestSoftDeleteCategoryBySlug:
         await test_db_session.commit()
 
         res = await test_client.delete(
-            "/api/v1/categories/soft-delete/by-slug/to-delete"
+            "/api/v1/categories/slug/to-delete/soft"
         )
         body = res.json()
 
@@ -408,7 +408,7 @@ class TestSoftDeleteCategoryBySlug:
         await test_db_session.commit()
 
         res = await test_client.delete(
-            "/api/v1/categories/soft-delete/by-slug/parent"
+            "/api/v1/categories/slug/parent/soft"
         )
         body = res.json()
 
@@ -432,7 +432,7 @@ class TestSoftDeleteCategoryBySlug:
     ):
         """Test soft deleting non-existent category by slug returns 404."""
         res = await test_client.delete(
-            "/api/v1/categories/soft-delete/by-slug/nonexistent"
+            "/api/v1/categories/slug/nonexistent/soft"
         )
         body = res.json()
 
@@ -455,7 +455,7 @@ class TestSoftDeleteCategoryBySlug:
         await test_db_session.commit()
 
         res = await test_client.delete(
-            "/api/v1/categories/soft-delete/by-slug/inactive"
+            "/api/v1/categories/slug/inactive/soft"
         )
         body = res.json()
 
@@ -482,7 +482,7 @@ class TestRestoreCategoryBySlug:
         await test_db_session.commit()
 
         res = await test_client.put(
-            "/api/v1/categories/restore/by-slug/to-restore"
+            "/api/v1/categories/slug/to-restore/restore"
         )
         body = res.json()
 
@@ -522,7 +522,7 @@ class TestRestoreCategoryBySlug:
         )
         await test_db_session.commit()
 
-        res = await test_client.put("/api/v1/categories/restore/by-slug/parent")
+        res = await test_client.put("/api/v1/categories/slug/parent/restore")
         body = res.json()
 
         assert res.status_code == 200
@@ -545,7 +545,7 @@ class TestRestoreCategoryBySlug:
     ):
         """Test restoring non-existent category by slug returns 404."""
         res = await test_client.put(
-            "/api/v1/categories/restore/by-slug/nonexistent"
+            "/api/v1/categories/slug/nonexistent/restore"
         )
         body = res.json()
 
@@ -567,7 +567,7 @@ class TestRestoreCategoryBySlug:
         )
         await test_db_session.commit()
 
-        res = await test_client.put("/api/v1/categories/restore/by-slug/active")
+        res = await test_client.put("/api/v1/categories/slug/active/restore")
         body = res.json()
 
         assert res.status_code == 200
@@ -593,7 +593,7 @@ class TestHardDeleteCategoryBySlug:
         await test_db_session.commit()
 
         res = await test_client.delete(
-            "/api/v1/categories/hard-delete/by-slug/to-delete"
+            "/api/v1/categories/slug/to-delete/hard"
         )
         body = res.json()
 
@@ -613,7 +613,7 @@ class TestHardDeleteCategoryBySlug:
     ):
         """Test hard deleting non-existent category by slug returns 404."""
         res = await test_client.delete(
-            "/api/v1/categories/hard-delete/by-slug/nonexistent"
+            "/api/v1/categories/slug/nonexistent/hard"
         )
         body = res.json()
 
@@ -636,7 +636,7 @@ class TestHardDeleteCategoryBySlug:
         await test_db_session.commit()
 
         res = await test_client.delete(
-            "/api/v1/categories/hard-delete/by-slug/active"
+            "/api/v1/categories/slug/active/hard"
         )
         body = res.json()
 
@@ -677,7 +677,7 @@ class TestHardDeleteCategoryBySlug:
         await test_db_session.commit()
 
         res = await test_client.delete(
-            "/api/v1/categories/hard-delete/by-slug/parent-to-delete"
+            "/api/v1/categories/slug/parent-to-delete/hard"
         )
         body = res.json()
 
