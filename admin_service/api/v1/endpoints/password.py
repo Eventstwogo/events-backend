@@ -34,7 +34,7 @@ from shared.core.logging_config import get_logger
 from shared.db.models.admin_users import AdminUser
 from shared.db.sessions.database import get_db
 from shared.dependencies.admin import get_current_active_user
-from shared.utils.email_utils.admin_emails import (
+from shared.utils.email_utils import (
     send_admin_password_reset_email,
 )
 from shared.utils.email_validators import EmailValidator

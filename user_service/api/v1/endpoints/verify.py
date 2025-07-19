@@ -241,7 +241,10 @@ async def resend_email_token(
     await db.commit()
 
     # Create verification link
-    verification_link = f"{settings.FRONTEND_URL}/verify-email?email={user.email}&token={verification_token}"
+    verification_link = (
+        f"{settings.FRONTEND_URL}/verify-email?email={user.email}"
+        f"&token={verification_token}"
+    )
 
     # Send verification email
     email_context = {

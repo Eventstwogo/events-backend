@@ -8,10 +8,10 @@ from fastapi import (
     Request,
     Response,
 )
+from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from starlette.responses import JSONResponse, Response
 
 from shared.core.api_response import api_response
 from shared.core.config import PRIVATE_KEY, PUBLIC_KEY, settings
@@ -360,17 +360,22 @@ async def logout(
                                 )
                                 session_found = True
                                 logger.info(
-                                    f"Session {session.session_id} terminated for user {user_id} by IP match"
+                                    f"Session {session.session_id} terminated "
+                                    f""
+                                    f"for user {user_id} by IP match"
                                 )
                                 break
 
                         if not session_found:
                             logger.warning(
-                                f"No matching session found for user {user_id} with IP {ip_address}"
+                                f"No matching session found for user {user_id} "
+                                f""
+                                f"with IP {ip_address}"
                             )
                     else:
                         logger.warning(
-                            f"No IP address available for fallback session termination for user {user_id}"
+                            f"No IP address available for fallback session "
+                            f"termination for user {user_id}"
                         )
 
             # Handle refresh token revocation if we have one

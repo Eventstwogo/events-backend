@@ -54,7 +54,10 @@ async def get_user_sessions(
             SessionInfo(
                 session_id=session.session_id,
                 device_name=session.device_name or "Unknown Device",
-                browser=f"{session.browser_family or 'Unknown'} {session.browser_version or ''}".strip(),
+                browser=(
+                    f"{session.browser_family or 'Unknown'} "
+                    f"{session.browser_version or ''}"
+                ).strip(),
                 os=f"{session.os_family or 'Unknown'} {session.os_version or ''}".strip(),
                 location=session.location or "Unknown Location",
                 ip_address=session.ip_address or "Unknown",

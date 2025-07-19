@@ -56,7 +56,7 @@ class SessionManager:
         if fingerprint and browser_family:
             stmt = select(AdminUserDeviceSession).where(
                 AdminUserDeviceSession.user_id == user.user_id,
-                AdminUserDeviceSession.is_active == True,
+                AdminUserDeviceSession.is_active.is_(True),
                 AdminUserDeviceSession.device_fingerprint == fingerprint,
                 AdminUserDeviceSession.browser_family == browser_family,
             )
@@ -65,7 +65,8 @@ class SessionManager:
 
             if existing_session:
                 logger.info(
-                    f"Reusing existing session {existing_session.session_id} for user {user.user_id}"
+                    f"Reusing existing session {existing_session.session_id} "
+                    f"for user {user.user_id}"
                 )
                 # Update the session with current information
                 existing_session.last_used_at = datetime.now(timezone.utc)
@@ -120,7 +121,9 @@ class SessionManager:
 
         # Add location information if available
         if location_info:
-            session.location = f"{location_info.get('city', '')}, {location_info.get('country', '')}"
+            city = location_info.get("city", "")
+            country = location_info.get("country", "")
+            session.location = f"{city}, {country}"
             session.country = location_info.get("country")
             session.country_code = location_info.get("country_code")
             session.city = location_info.get("city")
@@ -167,7 +170,7 @@ class SessionManager:
         try:
             stmt = select(AdminUserDeviceSession).where(
                 AdminUserDeviceSession.session_id == session_id,
-                AdminUserDeviceSession.is_active == True,
+                AdminUserDeviceSession.is_active.is_(True),
             )
             result = await db.execute(stmt)
             session = result.scalar_one_or_none()
@@ -254,7 +257,7 @@ class SessionManager:
             # Get all active sessions for the user
             stmt = select(AdminUserDeviceSession).where(
                 AdminUserDeviceSession.user_id == user_id,
-                AdminUserDeviceSession.is_active == True,
+                AdminUserDeviceSession.is_active.is_(True),
             )
 
             if except_session_id:
@@ -316,7 +319,7 @@ class SessionManager:
             )
 
             if active_only:
-                stmt = stmt.where(AdminUserDeviceSession.is_active == True)
+                stmt = stmt.where(AdminUserDeviceSession.is_active.is_(True))
 
             stmt = stmt.order_by(
                 desc(AdminUserDeviceSession.last_used_at)
@@ -401,7 +404,10 @@ class SessionManager:
                     alerts.append(
                         {
                             "type": "concurrent_locations",
-                            "message": f"Concurrent sessions from multiple countries: {', '.join(countries)}",
+                            "message": (
+                                f"Concurrent sessions from multiple countries: "
+                                f"{', '.join(countries)}"
+                            ),
                             "severity": "high",
                         }
                     )
@@ -422,7 +428,7 @@ class SessionManager:
             select(AdminUserDeviceSession)
             .where(
                 AdminUserDeviceSession.user_id == user_id,
-                AdminUserDeviceSession.is_active == True,
+                AdminUserDeviceSession.is_active.is_(True),
             )
             .order_by(desc(AdminUserDeviceSession.last_used_at))
         )
@@ -457,7 +463,7 @@ class SessionManager:
             select(AdminUserDeviceSession)
             .where(
                 AdminUserDeviceSession.user_id == user_id,
-                AdminUserDeviceSession.is_active == True,
+                AdminUserDeviceSession.is_active.is_(True),
             )
             .order_by(desc(AdminUserDeviceSession.last_used_at))
         )
@@ -549,7 +555,7 @@ class TokenSessionManager:
             stmt = select(AdminUserDeviceSession).where(
                 AdminUserDeviceSession.session_id == session_id,
                 AdminUserDeviceSession.user_id == user_id,
-                AdminUserDeviceSession.is_active == True,
+                AdminUserDeviceSession.is_active.is_(True),
             )
 
             result = await db.execute(stmt)

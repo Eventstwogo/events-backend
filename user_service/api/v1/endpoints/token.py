@@ -125,7 +125,7 @@ async def refresh_token(
             stmt = select(UserDeviceSession).where(
                 UserDeviceSession.session_id == session_id,
                 UserDeviceSession.user_id == user_id,
-                UserDeviceSession.is_active == True,
+                UserDeviceSession.is_active.is_(True),
             )
             result = await db.execute(stmt)
             session = result.scalar_one_or_none()
@@ -248,7 +248,7 @@ async def revoke_token(
             stmt = select(UserDeviceSession).where(
                 UserDeviceSession.session_id == session_id,
                 UserDeviceSession.user_id == user_id,
-                UserDeviceSession.is_active == True,
+                UserDeviceSession.is_active.is_(True),
             )
 
             result = await db.execute(stmt)

@@ -8,7 +8,7 @@ from starlette.responses import JSONResponse
 from shared.core.api_response import api_response
 from shared.db.models import User, UserVerification
 from shared.db.sessions.database import get_db
-from shared.utils.email import send_user_verification_email
+from shared.utils.email_utils import send_user_verification_email
 from shared.utils.exception_handlers import exception_handler
 from shared.utils.id_generators import (
     generate_lower_uppercase,

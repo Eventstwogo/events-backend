@@ -48,7 +48,8 @@ def validate_person_name(value: str, field_name: str) -> str:
         value, FIRST_LAST_NAME_MIN_LENGTH, FIRST_LAST_NAME_MAX_LENGTH
     ):
         raise ValueError(
-            f"{field_name} must be {FIRST_LAST_NAME_MIN_LENGTH}-{FIRST_LAST_NAME_MAX_LENGTH} characters long."
+            f"{field_name} must be {FIRST_LAST_NAME_MIN_LENGTH}-"
+            f"{FIRST_LAST_NAME_MAX_LENGTH} characters long."
         )
     return value
 

@@ -80,7 +80,7 @@ async def update_session_activity(db: AsyncSession, session_id: int) -> bool:
     """Update the last_used_at timestamp for a session"""
     stmt = select(UserDeviceSession).where(
         UserDeviceSession.session_id == session_id,
-        UserDeviceSession.is_active == True,
+        UserDeviceSession.is_active.is_(True),
     )
 
     result = await db.execute(stmt)

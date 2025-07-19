@@ -16,7 +16,7 @@ from admin_service.services.user_validation import (
 from shared.core.api_response import api_response
 from shared.db.models import AdminUser, Role
 from shared.db.sessions.database import get_db
-from shared.utils.email import send_welcome_email
+from shared.utils.email_utils import send_admin_welcome_email
 from shared.utils.exception_handlers import exception_handler
 from shared.utils.file_uploads import get_media_url
 from shared.utils.id_generators import generate_lower_uppercase
@@ -99,11 +99,12 @@ async def register_user(
         logo_url = ""  # Provide empty string if None
 
     background_tasks.add_task(
-        send_welcome_email,
+        send_admin_welcome_email,
         email=user_data.email,
         username=user_data.username,
         password=config.default_password,
-        logo_url=logo_url,
+        role=role.role_name,
+        logo=logo_url,
     )
 
     # Return success response

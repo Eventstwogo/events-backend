@@ -138,6 +138,3 @@ email_config = EmailConfig(
 )
 
 email_sender = EmailSender(email_config)
-
-# Import all email functions from the email_utils package for backward compatibility
-from shared.utils.email_utils import *
