@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from sqlalchemy import (
     Boolean,
@@ -19,6 +19,9 @@ from sqlalchemy.orm import (
 from shared.core.security import generate_searchable_hash
 from shared.db.models.base import EventsBase
 from shared.db.types import EncryptedString
+
+if TYPE_CHECKING:
+    from shared.db.models.events import Event
 
 
 # User Table
@@ -101,8 +104,13 @@ class User(EventsBase):
     password_reset: Mapped[Optional["UserPasswordReset"]] = relationship(
         back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
-    device_sessions: Mapped[list["UserDeviceSession"]] = relationship(
+    device_sessions: Mapped[List["UserDeviceSession"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
+    )
+    organized_events: Mapped[List["Event"]] = relationship(
+        "Event",
+        back_populates="organizer",
+        lazy="dynamic",
     )
 
     # Properties for username, first_name, last_name, email, and phone_number.

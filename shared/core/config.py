@@ -93,6 +93,9 @@ class Settings(BaseSettings):
     PROFILE_PICTURE_UPLOAD_PATH: str = (
         "users/profile_pictures/{username}_avatar"
     )
+    EVENT_CARD_IMAGE_UPLOAD_PATH: str = "events/{event_id}/card_image"
+    EVENT_BANNER_IMAGE_UPLOAD_PATH: str = "events/{event_id}/banner_image"
+    EVENT_EXTRA_IMAGES_UPLOAD_PATH: str = "events/{event_id}/extra_images"
 
     # === Email ===
     SMTP_TLS: bool = True

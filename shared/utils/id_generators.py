@@ -57,6 +57,23 @@ def generate_digits_lowercase(length: int = 6) -> str:
     return "".join(secrets.choice(seq=chars) for _ in range(length))
 
 
+# Event IDS
+def generate_digits_upper_lower_case(length: int = 6) -> str:
+    """
+    Generate a secure random string with digits, uppercase and lowercase letters.
+
+    Args:
+        length (int): Length of the string to generate. Default is 6.
+
+    Returns:
+        str: A secure random string.
+    """
+    chars: LiteralString = (
+        string.digits + string.ascii_lowercase + string.ascii_uppercase
+    )
+    return "".join(secrets.choice(seq=chars) for _ in range(length))
+
+
 def generate_verification_token(length: int = 32) -> str:
     """
     Generate a cryptographically secure verification token.

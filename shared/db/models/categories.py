@@ -1,7 +1,12 @@
+from typing import TYPE_CHECKING, List
+
 from sqlalchemy import Boolean, DateTime, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from shared.db.models.base import EventsBase
+
+if TYPE_CHECKING:
+    from shared.db.models.events import Event
 
 
 class Category(EventsBase):
@@ -35,9 +40,14 @@ class Category(EventsBase):
         DateTime(timezone=True), nullable=True, server_default=func.now()
     )
 
-    # Relationship to SubCategory
-    subcategories: Mapped[list["SubCategory"]] = relationship(
+    # Relationships
+    subcategories: Mapped[List["SubCategory"]] = relationship(
         back_populates="category", cascade="all, delete-orphan"
+    )
+    events: Mapped[List["Event"]] = relationship(
+        "Event",
+        back_populates="category",
+        lazy="dynamic",
     )
 
 
@@ -74,5 +84,10 @@ class SubCategory(EventsBase):
         DateTime(timezone=True), nullable=True, server_default=func.now()
     )
 
-    # Relationship to Category
+    # Relationships
     category: Mapped["Category"] = relationship(back_populates="subcategories")
+    events: Mapped[List["Event"]] = relationship(
+        "Event",
+        back_populates="subcategory",
+        lazy="dynamic",
+    )

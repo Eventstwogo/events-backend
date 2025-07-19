@@ -31,6 +31,7 @@ from .categories import Category, SubCategory
 # Import models in dependency order to avoid circular imports at runtime
 # Models with no model dependencies
 from .config import Config
+from .events import Event, EventSlot
 
 # Models with potential circular dependencies - order matters
 # Import RBAC models before user models since user.py imports from rbac.py
@@ -48,6 +49,9 @@ __all__ = [
     # Categories
     "Category",
     "SubCategory",
+    # Events
+    "Event",
+    "EventSlot",
     # Role-Based Access Control
     "Role",
     "Permission",
