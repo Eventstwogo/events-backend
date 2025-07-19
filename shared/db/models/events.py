@@ -33,8 +33,8 @@ class Event(EventsBase):
     category_id: Mapped[str] = mapped_column(
         ForeignKey(column="e2gcategories.category_id"), nullable=False
     )
-    subcategory_id: Mapped[str] = mapped_column(
-        ForeignKey(column="e2gsubcategories.subcategory_id"), nullable=False
+    subcategory_id: Mapped[Optional[str]] = mapped_column(
+        ForeignKey(column="e2gsubcategories.subcategory_id"), nullable=True
     )
     event_slug: Mapped[str] = mapped_column(String, nullable=False, unique=True)
     event_title: Mapped[str] = mapped_column(
@@ -89,7 +89,7 @@ class Event(EventsBase):
         "Category",
         lazy="selectin",
     )
-    subcategory: Mapped["SubCategory"] = relationship(
+    subcategory: Mapped[Optional["SubCategory"]] = relationship(
         "SubCategory",
         lazy="selectin",
     )

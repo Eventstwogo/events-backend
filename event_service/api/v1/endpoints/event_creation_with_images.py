@@ -41,17 +41,15 @@ router = APIRouter()
 @exception_handler
 async def create_event_with_images(
     # Text/JSON data as form fields
-    user_id: Annotated[str, Form(..., description="User ID of the organizer")],
-    event_title: Annotated[str, Form(..., description="Event title")],
-    event_slug: Annotated[str, Form(..., description="Event slug")],
-    category_id: Annotated[str, Form(..., description="Category ID")],
-    subcategory_id: Annotated[str, Form(..., description="Subcategory ID")],
-    extra_data: Annotated[
-        str, Form(description="Additional event data as JSON string")
-    ] = "{}",
-    hash_tags: Annotated[
-        str, Form(description="List of hashtags as JSON string")
-    ] = "[]",
+    user_id: str = Form(..., description="User ID of the organizer"),
+    event_title: str = Form(..., description="Event title"),
+    event_slug: str = Form(..., description="Event slug"),
+    category_id: str = Form(..., description="Category ID"),
+    subcategory_id: Optional[str] = Form(None, description="Subcategory ID"),
+    extra_data: str = Form(
+        "{}", description="Additional event data as JSON string"
+    ),
+    hash_tags: str = Form("[]", description="List of hashtags as JSON string"),
     # Image files (optional)
     card_image: Optional[UploadFile] = File(
         None, description="Event card image"
@@ -177,17 +175,18 @@ async def create_event_with_images(
     if not category:
         return category_not_found_response()
 
-    subcategory = await check_subcategory_exists(db, subcategory_id)
-    if not subcategory:
-        return subcategory_not_found_response()
+    if subcategory_id:
+        subcategory = await check_subcategory_exists(db, subcategory_id)
+        if not subcategory:
+            return subcategory_not_found_response()
 
-    existing_category_subcategory = (
-        await check_category_and_subcategory_exists_using_joins(
-            db, category_id, subcategory_id
+        existing_category_subcategory = (
+            await check_category_and_subcategory_exists_using_joins(
+                db, category_id, subcategory_id
+            )
         )
-    )
-    if not existing_category_subcategory:
-        return category_and_subcategory_not_found_response()
+        if not existing_category_subcategory:
+            return category_and_subcategory_not_found_response()
 
     # Generate a new event ID
     new_event_id = generate_digits_upper_lower_case(length=6)
@@ -294,8 +293,8 @@ async def create_event_with_images(
 )
 @exception_handler
 async def update_event_with_images(
-    user_id: Annotated[str, Form(..., description="User ID of the organizer")],
-    event_id: Annotated[str, Path(..., description="Event ID")],
+    user_id: str = Form(..., description="User ID of the organizer"),
+    event_id: str = Path(..., description="Event ID"),
     # Optional text/JSON data as form fields
     event_title: Optional[str] = Form(None, description="Event title"),
     event_slug: Optional[str] = Form(None, description="Event slug"),
