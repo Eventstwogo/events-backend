@@ -374,6 +374,35 @@ class EventSlugUpdateRequest(BaseModel):
         return v
 
 
+class CategoryEventResponse(BaseModel):
+    """Schema for category event response - latest event from each category"""
+
+    event_id: str = Field(..., description="Event ID")
+    event_slug: str = Field(..., description="Event slug")
+    event_title: str = Field(..., description="Event title")
+    banner_image: Optional[str] = Field(None, description="Banner image URL")
+    description: Optional[str] = Field(
+        None, description="Event description from extra_data"
+    )
+
+    @field_serializer("banner_image")
+    def serialize_banner_image(self, value: Optional[str]) -> Optional[str]:
+        """Convert relative path to full media URL"""
+        return get_media_url(value)
+
+    class Config:
+        from_attributes = True
+
+
+class CategoryEventListResponse(BaseModel):
+    """Schema for category events list response"""
+
+    events: List[CategoryEventResponse] = Field(
+        ..., description="List of category events"
+    )
+    total: int = Field(..., description="Total number of events returned")
+
+
 class EventSummaryResponse(BaseModel):
     """Schema for event summary/analytics"""
 

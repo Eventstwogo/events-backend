@@ -22,7 +22,9 @@ async def check_event_exists_with_slug(
 async def check_event_exists_with_title(
     db: AsyncSession, event_title: str
 ) -> bool:
-    query = select(Event).filter(func.lower(Event.event_title) == event_title.lower())
+    query = select(Event).filter(
+        func.lower(Event.event_title) == event_title.lower()
+    )
     result = await db.execute(query)
     return result.scalars().first() is not None
 
@@ -301,7 +303,8 @@ async def check_event_title_unique_for_update(
     """Check if event title is unique excluding the current event"""
     query = select(Event).filter(
         and_(
-            func.lower(Event.event_title) == event_title.lower(), Event.event_id != event_id
+            func.lower(Event.event_title) == event_title.lower(),
+            Event.event_id != event_id,
         )
     )
     result = await db.execute(query)
@@ -415,10 +418,10 @@ async def fetch_events_by_category_or_subcategory_slug(
     db: AsyncSession, slug: str, page: int = 1, per_page: int = 10
 ) -> Tuple[List[Event], int]:
     """Fetch events by category slug or subcategory slug with all related entities loaded"""
-    
+
     # Calculate offset for pagination
     offset = (page - 1) * per_page
-    
+
     # First try to find events by category slug
     category_query = (
         select(Event)
@@ -434,10 +437,10 @@ async def fetch_events_by_category_or_subcategory_slug(
         .offset(offset)
         .limit(per_page)
     )
-    
+
     category_result = await db.execute(category_query)
     category_events = list(category_result.scalars().all())
-    
+
     if category_events:
         # Get total count for category
         count_query = (
@@ -448,16 +451,18 @@ async def fetch_events_by_category_or_subcategory_slug(
         total_result = await db.execute(count_query)
         total = total_result.scalar() or 0
         return category_events, total
-    
+
     # If no events found by category slug, check if category exists at all
-    category_exists_query = select(Category).filter(Category.category_slug == slug.lower())
+    category_exists_query = select(Category).filter(
+        Category.category_slug == slug.lower()
+    )
     category_exists_result = await db.execute(category_exists_query)
     category_exists = category_exists_result.scalars().first() is not None
-    
+
     if category_exists:
         # Category exists but no events, return empty result
         return [], 0
-    
+
     # If category doesn't exist, try subcategory slug
     subcategory_query = (
         select(Event)
@@ -473,10 +478,10 @@ async def fetch_events_by_category_or_subcategory_slug(
         .offset(offset)
         .limit(per_page)
     )
-    
+
     subcategory_result = await db.execute(subcategory_query)
     subcategory_events = list(subcategory_result.scalars().all())
-    
+
     # Get total count for subcategory
     count_query = (
         select(func.count(Event.event_id))
@@ -485,7 +490,7 @@ async def fetch_events_by_category_or_subcategory_slug(
     )
     total_result = await db.execute(count_query)
     total = total_result.scalar() or 0
-    
+
     return subcategory_events, total
 
 
@@ -811,6 +816,48 @@ async def get_events_by_hashtag(
     # Execute query
     result = await db.execute(query)
     events = list(result.scalars().all())
+
+    return events, total
+
+
+async def fetch_latest_event_from_each_category(
+    db: AsyncSession,
+) -> Tuple[List[Event], int]:
+    """Fetch the latest event from each category"""
+
+    # Subquery to get the latest event_id for each category
+    latest_events_subquery = (
+        select(
+            Event.category_id,
+            func.max(Event.created_at).label("max_created_at"),
+        )
+        .where(Event.event_status == False)  # Only published events
+        .group_by(Event.category_id)
+        .subquery()
+    )
+
+    # Main query to get the actual events
+    query = (
+        select(Event)
+        .join(
+            latest_events_subquery,
+            and_(
+                Event.category_id == latest_events_subquery.c.category_id,
+                Event.created_at == latest_events_subquery.c.max_created_at,
+            ),
+        )
+        .options(
+            selectinload(Event.category),
+            selectinload(Event.subcategory),
+            selectinload(Event.organizer),
+        )
+        .order_by(Event.created_at.desc())
+    )
+
+    # Execute query
+    result = await db.execute(query)
+    events = list(result.scalars().all())
+    total = len(events)
 
     return events, total
 

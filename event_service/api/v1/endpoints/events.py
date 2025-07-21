@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from event_service.schemas.advanced_events import (
+    CategoryEventListResponse,
+    CategoryEventResponse,
     EventListResponse,
     EventResponse,
     EventStatusUpdateRequest,
@@ -14,6 +16,7 @@ from event_service.services.events import (
     fetch_event_by_slug_with_relations,
     fetch_events_by_category_or_subcategory_slug,
     fetch_events_without_filters,
+    fetch_latest_event_from_each_category,
     fetch_limited_events_without_filters,
     update_event_status,
 )
@@ -143,7 +146,9 @@ async def get_event_by_slug(
 async def get_events_by_category_or_subcategory_slug(
     slug: str,
     page: int = Query(1, ge=1, description="Page number (starts from 1)"),
-    per_page: int = Query(10, ge=1, le=100, description="Number of events per page (max 100)"),
+    per_page: int = Query(
+        10, ge=1, le=100, description="Number of events per page (max 100)"
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     """Retrieve events by category slug or subcategory slug with pagination"""
@@ -152,12 +157,12 @@ async def get_events_by_category_or_subcategory_slug(
     events, total = await fetch_events_by_category_or_subcategory_slug(
         db, slug.lower(), page, per_page
     )
-    
+
     # Calculate pagination metadata
     total_pages = (total + per_page - 1) // per_page if total > 0 else 0
     has_next = page < total_pages
     has_prev = page > 1
-    
+
     if not events:
         return api_response(
             status_code=status.HTTP_200_OK,
@@ -247,4 +252,46 @@ async def delete_event_by_id(
         status_code=status.HTTP_200_OK,
         message="Event deleted successfully",
         data={"event_id": event_id, "deleted": True},
+    )
+
+
+@router.get(
+    "/by-category/latest",
+    status_code=status.HTTP_200_OK,
+    response_model=CategoryEventListResponse,
+)
+@exception_handler
+async def get_latest_events_from_each_category(
+    db: AsyncSession = Depends(get_db),
+):
+    """Get the latest event from each category with event_id, slug, title, banner_image, and description"""
+
+    # Fetch latest events from each category
+    events, total = await fetch_latest_event_from_each_category(db)
+
+    # Convert to response format with description extraction
+    event_responses = []
+    for event in events:
+        # Extract description from extra_data if present
+        description = None
+        if event.extra_data and isinstance(event.extra_data, dict):
+            description = event.extra_data.get("description")
+
+        # Create response object
+        event_response = CategoryEventResponse(
+            event_id=event.event_id,
+            event_slug=event.event_slug,
+            event_title=event.event_title,
+            banner_image=event.banner_image,
+            description=description,
+        )
+        event_responses.append(event_response)
+
+    return api_response(
+        status_code=status.HTTP_200_OK,
+        message="Latest events from each category retrieved successfully",
+        data={
+            "events": [event.model_dump() for event in event_responses],
+            "total": total,
+        },
     )
