@@ -512,8 +512,9 @@ class EventUpdateRequest(BaseModel):
         if v is None:
             return v
 
+        # Convert empty string to None
         if not v.strip():
-            raise ValueError("Subcategory ID cannot be empty if provided")
+            return None
 
         v = v.strip()
 

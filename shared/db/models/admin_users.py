@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from sqlalchemy import (
     Boolean,
@@ -21,6 +21,7 @@ from shared.db.models.base import EventsBase
 from shared.db.types import EncryptedString
 
 if TYPE_CHECKING:
+    from shared.db.models.events import Event
     from shared.db.models.rbac import Role
 
 
@@ -93,6 +94,11 @@ class AdminUser(EventsBase):
     )
     device_sessions: Mapped[list["AdminUserDeviceSession"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
+    )
+    organized_events: Mapped[List["Event"]] = relationship(
+        "Event",
+        back_populates="organizer",
+        lazy="dynamic",
     )
 
     # Properties for username and email

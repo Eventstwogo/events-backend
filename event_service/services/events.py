@@ -225,6 +225,32 @@ async def fetch_events_without_filters(
     return events, total
 
 
+async def fetch_limited_events_without_filters(
+    db: AsyncSession,
+) -> Tuple[List[Event], int]:
+    """Fetch events with filtering, pagination, and sorting"""
+
+    # Build base query with relations
+    query = select(Event).options(
+        selectinload(Event.category),
+        selectinload(Event.subcategory),
+        selectinload(Event.organizer),
+    )
+
+    # Get total count
+    count_query = select(func.count(Event.event_id))
+
+    total_result = await db.execute(count_query)
+    total = total_result.scalar()
+
+    # Execute query
+    result = await db.execute(query)
+    events = list(result.scalars().all())
+    total = total if total is not None else 0
+
+    return events, total
+
+
 async def update_event(
     db: AsyncSession, event_id: str, update_data: dict
 ) -> Event | None:

@@ -17,8 +17,8 @@ from sqlalchemy.sql import func
 from shared.db.models.base import EventsBase
 
 if TYPE_CHECKING:
+    from shared.db.models.admin_users import AdminUser
     from shared.db.models.categories import Category, SubCategory
-    from shared.db.models.users import User
 
 
 class Event(EventsBase):
@@ -34,7 +34,8 @@ class Event(EventsBase):
         ForeignKey(column="e2gcategories.category_id"), nullable=False
     )
     subcategory_id: Mapped[Optional[str]] = mapped_column(
-        ForeignKey(column="e2gsubcategories.subcategory_id"), nullable=True
+        ForeignKey("e2gsubcategories.subcategory_id", ondelete="SET NULL"),
+        nullable=True,
     )
     event_slug: Mapped[str] = mapped_column(String, nullable=False, unique=True)
     event_title: Mapped[str] = mapped_column(
@@ -43,7 +44,7 @@ class Event(EventsBase):
     )
     organizer_id: Mapped[str] = mapped_column(
         String(6),
-        ForeignKey("e2gusers.user_id"),
+        ForeignKey("e2gadminusers.user_id"),
         nullable=False,
         index=True,
     )
@@ -93,8 +94,8 @@ class Event(EventsBase):
         "SubCategory",
         lazy="selectin",
     )
-    organizer: Mapped["User"] = relationship(
-        "User",
+    organizer: Mapped["AdminUser"] = relationship(
+        "AdminUser",
         lazy="selectin",
     )
     slots: Mapped[List["EventSlot"]] = relationship(

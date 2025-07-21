@@ -20,9 +20,6 @@ from shared.core.security import generate_searchable_hash
 from shared.db.models.base import EventsBase
 from shared.db.types import EncryptedString
 
-if TYPE_CHECKING:
-    from shared.db.models.events import Event
-
 
 # User Table
 class User(EventsBase):
@@ -106,11 +103,6 @@ class User(EventsBase):
     )
     device_sessions: Mapped[List["UserDeviceSession"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
-    )
-    organized_events: Mapped[List["Event"]] = relationship(
-        "Event",
-        back_populates="organizer",
-        lazy="dynamic",
     )
 
     # Properties for username, first_name, last_name, email, and phone_number.

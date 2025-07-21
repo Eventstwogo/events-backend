@@ -26,6 +26,7 @@ from event_service.services.events import (
     fetch_event_by_id_with_relations,
     fetch_event_by_slug_with_relations,
     fetch_events_without_filters,
+    fetch_limited_events_without_filters,
     update_event,
     update_event_status,
 )
@@ -132,6 +133,33 @@ async def list_events(
 
     # Fetch events with filters
     events, total = await fetch_events_without_filters(db)
+
+    # Convert to response format
+    event_responses = [EventResponse.model_validate(event) for event in events]
+
+    return api_response(
+        status_code=status.HTTP_200_OK,
+        message="Events retrieved successfully",
+        data={
+            "events": event_responses,
+            "total": total,
+        },
+    )
+
+
+@router.get(
+    "/limited-list",
+    status_code=status.HTTP_200_OK,
+    response_model=EventListResponse,
+)
+@exception_handler
+async def limited_list_events(
+    db: AsyncSession = Depends(get_db),
+):
+    """Get all events - returns event_id, event_title, slug, card_image, organizer_id, username, etc."""
+
+    # Fetch events with filters
+    events, total = await fetch_limited_events_without_filters(db)
 
     # Convert to response format
     event_responses = [EventResponse.model_validate(event) for event in events]

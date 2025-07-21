@@ -213,6 +213,10 @@ async def create_event_with_images(
     if not category:
         return category_not_found_response()
 
+    # Convert empty string to None for subcategory_id
+    if subcategory_id == "":
+        subcategory_id = None
+
     if subcategory_id:
         subcategory = await check_subcategory_exists(db, subcategory_id)
         if not subcategory:
@@ -479,9 +483,15 @@ async def update_event_with_images(
 
     # Validate subcategory if provided
     if subcategory_id is not None:
-        subcategory = await check_subcategory_exists(db, subcategory_id)
-        if not subcategory:
-            return subcategory_not_found_response()
+        # Convert empty string to None for subcategory_id
+        if subcategory_id == "":
+            subcategory_id = None
+
+        if subcategory_id:
+            subcategory = await check_subcategory_exists(db, subcategory_id)
+            if not subcategory:
+                return subcategory_not_found_response()
+
         update_data["subcategory_id"] = subcategory_id
 
     # Add other fields
