@@ -315,6 +315,62 @@ async def delete_event_by_id(
 
 
 @router.get(
+    "/latest/category-or-subcategory/{slug}",
+    status_code=status.HTTP_200_OK,
+)
+@exception_handler
+async def get_latest_5_events_by_category_or_subcategory_slug(
+    slug: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Get the latest 5 events by category slug or subcategory slug.
+    
+    - Returns the latest 5 events ordered by creation date
+    - Only returns active events (event_status = false)
+    """
+
+    # Fetch latest 5 events by category or subcategory slug
+    events, total, matched_slug, is_category = await fetch_events_by_category_or_subcategory_slug(
+        db, slug.lower(), page=1, per_page=5
+    )
+
+    if not events:
+        return api_response(
+            status_code=status.HTTP_200_OK,
+            message=f"No active events found for '{slug}'",
+            data={
+                "events": [],
+                "total": 0,
+                "is_category": is_category,
+                "matched_slug": matched_slug,
+            },
+        )
+
+    # Convert to response format without organizer details
+    event_responses = []
+    for event in events:
+        event_data = EventResponse.model_validate(event)
+        # Convert to dict and remove organizer
+        event_dict = event_data.model_dump()
+        event_dict.pop('organizer', None)
+        event_responses.append(event_dict)
+
+    entity_type = "category" if is_category else "subcategory"
+    
+    return api_response(
+        status_code=status.HTTP_200_OK,
+        message=f"Latest {len(events)} events retrieved successfully for {entity_type} '{matched_slug}'",
+        data={
+            "events": event_responses,
+            "total": len(events),
+            "is_category": is_category,
+            "matched_slug": matched_slug,
+        },
+    )
+
+
+@router.get(
     "/by-category/latest",
     status_code=status.HTTP_200_OK,
     response_model=CategoryEventListResponse,
