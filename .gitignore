@@ -102,6 +102,7 @@ Thumbs.db
 # Media and temp folders
 /media/
 # /keys/
+.notes
 
 # Alembic
 alembic/versions/*.pyc

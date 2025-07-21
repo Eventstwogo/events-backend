@@ -90,6 +90,31 @@ class EventResponse(BaseModel):
         json_encoders = {datetime: lambda v: v.isoformat()}
 
 
+class LimitedEventResponse(BaseModel):
+    """Schema for event response"""
+
+    event_id: str = Field(..., description="Event ID")
+    event_title: str = Field(..., description="Event title")
+    event_slug: str = Field(..., description="Event slug")
+
+    # Event content
+    card_image: Optional[str] = Field(None, description="Card image URL")
+
+    # Status
+    event_status: bool = Field(
+        ..., description="Event status (active/inactive)"
+    )
+
+    @field_serializer("card_image")
+    def serialize_card_image(self, value: Optional[str]) -> Optional[str]:
+        """Convert relative path to full media URL"""
+        return get_media_url(value)
+
+    class Config:
+        from_attributes = True
+        json_encoders = {datetime: lambda v: v.isoformat()}
+
+
 class EventSimpleResponse(BaseModel):
     """Schema for simplified event response without related entities"""
 
@@ -149,6 +174,15 @@ class EventListResponse(BaseModel):
     per_page: int = Field(..., description="Items per page")
     has_next: bool = Field(..., description="Whether there are more pages")
     has_prev: bool = Field(..., description="Whether there are previous pages")
+
+
+class LimitedEventListResponse(BaseModel):
+    """Schema for paginated limited event list response"""
+
+    events: List[LimitedEventResponse] = Field(
+        ..., description="List of limited events"
+    )
+    total: int = Field(..., description="Total number of events")
 
 
 class EventSimpleListResponse(BaseModel):
