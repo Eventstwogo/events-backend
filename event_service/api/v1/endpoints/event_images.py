@@ -143,7 +143,7 @@ async def update_event_banner_image(
     )
 
 
-@router.post("/{event_id}/extra-images", summary="Add extra images to event")
+@router.patch("/{event_id}/extra-images", summary="Add extra images to event")
 @exception_handler
 async def add_event_extra_images(
     user_id: str,

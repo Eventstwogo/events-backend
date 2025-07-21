@@ -1,17 +1,26 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_serializer, field_validator
 
 from event_service.schemas.events import (
     CategoryInfo,
     OrganizerInfo,
     SubCategoryInfo,
 )
+from shared.utils.file_uploads import get_media_url
 from shared.utils.security_validators import contains_xss
 from shared.utils.validators import (
     normalize_whitespace,
 )
+
+
+def extra_images_media_urls(value: Optional[List[str]]) -> Optional[List[str]]:
+    if not value:
+        return None
+    result = [get_media_url(url) for url in value]
+    result = [r for r in result if r is not None]
+    return result if result else None
 
 
 class EventResponse(BaseModel):
@@ -21,10 +30,10 @@ class EventResponse(BaseModel):
     event_title: str = Field(..., description="Event title")
     event_slug: str = Field(..., description="Event slug")
 
-    # Foreign key IDs
-    category_id: str = Field(..., description="Category ID")
-    subcategory_id: str = Field(..., description="Subcategory ID")
-    organizer_id: str = Field(..., description="Organizer ID")
+    # # Foreign key IDs
+    # category_id: str = Field(..., description="Category ID")
+    # subcategory_id: str = Field(..., description="Subcategory ID")
+    # organizer_id: str = Field(..., description="Organizer ID")
 
     # Related entity information
     category: Optional[CategoryInfo] = Field(
@@ -40,6 +49,9 @@ class EventResponse(BaseModel):
     # Event content
     card_image: Optional[str] = Field(None, description="Card image URL")
     banner_image: Optional[str] = Field(None, description="Banner image URL")
+    event_extra_images: Optional[List[str]] = Field(
+        None, description="List of additional event images"
+    )
     extra_data: Optional[Dict[str, Any]] = Field(
         None, description="Additional event data"
     )
@@ -53,6 +65,25 @@ class EventResponse(BaseModel):
     )
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
+
+    @field_serializer("card_image")
+    def serialize_card_image(self, value: Optional[str]) -> Optional[str]:
+        """Convert relative path to full media URL"""
+        return get_media_url(value)
+
+    @field_serializer("banner_image")
+    def serialize_banner_image(self, value: Optional[str]) -> Optional[str]:
+        """Convert relative path to full media URL"""
+        return get_media_url(value)
+
+    @field_serializer("event_extra_images")
+    def serialize_event_extra_images(
+        self, value: Optional[List[str]]
+    ) -> Optional[List[str]]:
+        """Convert relative paths to full media URLs"""
+        if not value:
+            return value
+        return extra_images_media_urls(value)
 
     class Config:
         from_attributes = True
@@ -70,6 +101,9 @@ class EventSimpleResponse(BaseModel):
     organizer_id: str = Field(..., description="Organizer ID")
     card_image: Optional[str] = Field(None, description="Card image URL")
     banner_image: Optional[str] = Field(None, description="Banner image URL")
+    event_extra_images: Optional[List[str]] = Field(
+        None, description="List of additional event images"
+    )
     extra_data: Optional[Dict[str, Any]] = Field(
         None, description="Additional event data"
     )
@@ -81,6 +115,25 @@ class EventSimpleResponse(BaseModel):
     )
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
+
+    @field_serializer("card_image")
+    def serialize_card_image(self, value: Optional[str]) -> Optional[str]:
+        """Convert relative path to full media URL"""
+        return get_media_url(value)
+
+    @field_serializer("banner_image")
+    def serialize_banner_image(self, value: Optional[str]) -> Optional[str]:
+        """Convert relative path to full media URL"""
+        return get_media_url(value)
+
+    @field_serializer("event_extra_images")
+    def serialize_event_extra_images(
+        self, value: Optional[List[str]]
+    ) -> Optional[List[str]]:
+        """Convert relative paths to full media URLs"""
+        if not value:
+            return value
+        return extra_images_media_urls(value)
 
     class Config:
         from_attributes = True

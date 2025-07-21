@@ -1,11 +1,9 @@
 # response_builders.py
-from typing import Optional
 
 from fastapi import status
 from starlette.responses import JSONResponse
 
 from shared.core.api_response import api_response
-from shared.db.models import User
 
 
 def event_alreay_exists_with_slug_response() -> JSONResponse:

@@ -91,9 +91,14 @@ def get_media_url(relative_path: Optional[str]) -> Optional[str]:
     """
     Converts a relative media path to a full URL for frontend usage.
     Returns a default image URL if path is None or invalid.
+    If the path starts with http or https, returns it as-is.
     """
     if not relative_path or not isinstance(relative_path, str):
         return None
+
+    # If the path is already a full URL, return it as-is
+    if relative_path.startswith(("http://", "https://")):
+        return relative_path
 
     relative_path = relative_path.strip().lstrip("/\\")
     if not relative_path:

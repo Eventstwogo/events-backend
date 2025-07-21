@@ -1,5 +1,5 @@
 import json
-from typing import Annotated, List, Optional
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, Form, Path, UploadFile, status
 from slugify import slugify
@@ -24,9 +24,8 @@ from event_service.services.response_builder import (
 )
 from shared.core.api_response import api_response
 from shared.core.config import settings
-from shared.db.models import Event, User
+from shared.db.models import Event
 from shared.db.sessions.database import get_db
-from shared.dependencies.user import get_current_active_user
 from shared.utils.exception_handlers import exception_handler
 from shared.utils.file_uploads import (
     get_media_url,
@@ -35,6 +34,45 @@ from shared.utils.file_uploads import (
 from shared.utils.id_generators import generate_digits_upper_lower_case
 
 router = APIRouter()
+
+
+def safe_json_parse(json_string, field_name, default_value=None):
+    """Safely parse JSON string with better error handling"""
+    if not json_string or json_string.strip() == "":
+        return default_value
+
+    # Handle common cases where Swagger might send malformed data
+    json_string = json_string.strip()
+
+    # Handle cases where Swagger might double-quote the JSON string
+    if json_string.startswith('"') and json_string.endswith('"'):
+        json_string = json_string[1:-1]
+        # Unescape any escaped quotes
+        json_string = json_string.replace('\\"', '"')
+
+    # Debug logging - print the exact string being parsed
+    print(
+        f"CREATE - Attempting to parse {field_name}: '{json_string}' (length: {len(json_string)})"
+    )
+    print(
+        f"CREATE - Character at position 9: '{json_string[9] if len(json_string) > 9 else 'N/A'}'"
+    )
+
+    try:
+        return json.loads(json_string)
+    except json.JSONDecodeError as e:
+        # Log the actual string that failed to parse for debugging
+        print(
+            f"CREATE - Failed to parse {field_name}: '{json_string}' - Error: {str(e)}"
+        )
+        print(
+            f"CREATE - Error position: {e.pos}, Character at error position: '{json_string[e.pos] if e.pos < len(json_string) else 'EOF'}'"
+        )
+        raise json.JSONDecodeError(
+            f"Invalid JSON in {field_name}: {str(e)}. Received: '{json_string[:50]}{'...' if len(json_string) > 50 else ''}'",
+            json_string,
+            e.pos,
+        )
 
 
 @router.post("/create-with-images", status_code=status.HTTP_201_CREATED)
@@ -89,8 +127,8 @@ async def create_event_with_images(
 
     # Parse JSON fields
     try:
-        extra_data_dict = json.loads(extra_data) if extra_data else {}
-        hash_tags_list = json.loads(hash_tags) if hash_tags else []
+        extra_data_dict = safe_json_parse(extra_data, "extra_data", {})
+        hash_tags_list = safe_json_parse(hash_tags, "hash_tags", [])
     except json.JSONDecodeError as e:
         return api_response(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -373,9 +411,9 @@ async def update_event_with_images(
 
     try:
         if extra_data is not None:
-            extra_data_dict = json.loads(extra_data)
+            extra_data_dict = safe_json_parse(extra_data, "extra_data", {})
         if hash_tags is not None:
-            hash_tags_list = json.loads(hash_tags)
+            hash_tags_list = safe_json_parse(hash_tags, "hash_tags", [])
     except json.JSONDecodeError as e:
         return api_response(
             status_code=status.HTTP_400_BAD_REQUEST,

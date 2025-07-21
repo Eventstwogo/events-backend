@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import List, Optional, Tuple
 
 from sqlalchemy import and_, asc, desc, func, or_, select
@@ -6,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from shared.core.logging_config import get_logger
-from shared.db.models import Category, Event, SubCategory, User
+from shared.db.models import Event
 
 logger = get_logger(__name__)
 

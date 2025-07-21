@@ -2,7 +2,7 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from shared.core.logging_config import get_logger
-from shared.db.models import Category, Event, SubCategory, User
+from shared.db.models import AdminUser, Category, Event, SubCategory
 
 logger = get_logger(__name__)
 
@@ -95,11 +95,11 @@ async def get_event_metrics(db: AsyncSession) -> dict:
     total_organizers_result = await db.execute(total_organizers_query)
     total_organizers = total_organizers_result.scalar() or 0
 
-    # Fetch complete User objects
+    # Fetch complete AdminUser objects
     top_organizers_query = (
-        select(User, func.count(Event.event_id).label("event_count"))
-        .join(Event, Event.organizer_id == User.user_id)
-        .group_by(User.user_id)
+        select(AdminUser, func.count(Event.event_id).label("event_count"))
+        .join(Event, Event.organizer_id == AdminUser.user_id)
+        .group_by(AdminUser.user_id)
         .order_by(func.count(Event.event_id).desc())
         .limit(10)
     )
@@ -107,10 +107,10 @@ async def get_event_metrics(db: AsyncSession) -> dict:
     top_organizers_result = await db.execute(top_organizers_query)
     top_organizers = [
         {
-            "organizer_id": row.User.user_id,
-            "username": row.User.username,  # This uses the property to get decrypted value
-            "first_name": row.User.first_name,  # This uses the property to get decrypted value
-            "last_name": row.User.last_name,  # This uses the property to get decrypted value
+            "organizer_id": row.AdminUser.user_id,
+            "username": row.AdminUser.username,  # This uses the property to get decrypted value
+            "first_name": row.AdminUser.first_name,  # This uses the property to get decrypted value
+            "last_name": row.AdminUser.last_name,  # This uses the property to get decrypted value
             "event_count": row.event_count,
         }
         for row in top_organizers_result

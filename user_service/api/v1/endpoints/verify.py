@@ -242,7 +242,7 @@ async def resend_email_token(
 
     # Create verification link
     verification_link = (
-        f"{settings.FRONTEND_URL}/verify-email?email={user.email}"
+        f"{settings.FRONTEND_URL}/VerifyEmail?email={user.email}"
         f"&token={verification_token}"
     )
 

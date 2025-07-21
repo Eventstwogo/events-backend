@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from shared.core.logging_config import get_logger
-from shared.db.models import Category, Event, SubCategory, User
+from shared.db.models import AdminUser, Category, Event, SubCategory
 
 logger = get_logger(__name__)
 
@@ -49,16 +49,16 @@ async def fetch_event_by_slug(
 
 async def check_organizer_exists(
     db: AsyncSession, organizer_id: str
-) -> User | None:
-    query = select(User).filter(User.user_id == organizer_id)
+) -> AdminUser | None:
+    query = select(AdminUser).filter(AdminUser.user_id == organizer_id)
     result = await db.execute(query)
     return result.scalars().first()
 
 
 async def fetch_organizer_by_id(
     db: AsyncSession, organizer_id: str
-) -> User | None:
-    query = select(User).filter(User.user_id == organizer_id)
+) -> AdminUser | None:
+    query = select(AdminUser).filter(AdminUser.user_id == organizer_id)
     result = await db.execute(query)
     return result.scalars().first()
 
@@ -154,7 +154,7 @@ async def fetch_event_by_id_using_joins(
 ) -> Event | None:
     query = (
         select(Event)
-        .join(User, Event.organizer_id == User.user_id)
+        .join(AdminUser, Event.organizer_id == AdminUser.user_id)
         .join(Category, Event.category_id == Category.category_id)
         .join(SubCategory, Event.subcategory_id == SubCategory.subcategory_id)
         .filter(Event.event_id == event_id)
@@ -331,13 +331,13 @@ async def search_events(
         )
 
     if "organizer" in search_fields:
-        # Join with User table to search organizer name
-        base_query = base_query.join(User, Event.organizer_id == User.user_id)
+        # Join with AdminUser table to search organizer name
+        base_query = base_query.join(
+            AdminUser, Event.organizer_id == AdminUser.user_id
+        )
         search_conditions.extend(
             [
-                User.username_hash.ilike(f"%{search_term}%"),
-                User.first_name_hash.ilike(f"%{search_term}%"),
-                User.last_name_hash.ilike(f"%{search_term}%"),
+                AdminUser.username_hash.ilike(f"%{search_term}%"),
             ]
         )
 

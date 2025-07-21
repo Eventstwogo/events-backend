@@ -2,8 +2,15 @@ import re
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    Field,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 
+from shared.utils.file_uploads import get_media_url
 from shared.utils.security_validators import contains_xss
 from shared.utils.validators import (
     has_excessive_repetition,
@@ -759,6 +766,13 @@ class CategoryInfo(BaseModel):
         None, description="Category thumbnail image"
     )
 
+    @field_serializer("category_img_thumbnail")
+    def serialize_category_img_thumbnail(
+        self, value: Optional[str]
+    ) -> Optional[str]:
+        """Convert relative path to full media URL"""
+        return get_media_url(value)
+
     class Config:
         from_attributes = True
 
@@ -774,6 +788,13 @@ class SubCategoryInfo(BaseModel):
         None, description="Subcategory thumbnail image"
     )
 
+    @field_serializer("subcategory_img_thumbnail")
+    def serialize_subcategory_img_thumbnail(
+        self, value: Optional[str]
+    ) -> Optional[str]:
+        """Convert relative path to full media URL"""
+        return get_media_url(value)
+
     class Config:
         from_attributes = True
 
@@ -783,11 +804,14 @@ class OrganizerInfo(BaseModel):
 
     user_id: str = Field(..., description="User ID")
     username: str = Field(..., description="Username")
-    first_name: str = Field(..., description="First name")
-    last_name: str = Field(..., description="Last name")
     profile_picture: Optional[str] = Field(
         None, description="Profile picture URL"
     )
+
+    @field_serializer("profile_picture")
+    def serialize_profile_picture(self, value: Optional[str]) -> Optional[str]:
+        """Convert relative path to full media URL"""
+        return get_media_url(value)
 
     class Config:
         from_attributes = True
