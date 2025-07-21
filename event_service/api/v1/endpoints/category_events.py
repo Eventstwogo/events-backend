@@ -7,13 +7,18 @@ from event_service.schemas.category_events import (
     CategoryWithEventsResponse,
     PaginatedEventResponse,
     PaginationMeta,
+    SimplifiedCategoryEventsResponse,
+    SimplifiedSlugEventsResponse,
     SlugEventsResponse,
     SubCategoryInfoResponse,
     SubCategoryWithEventsResponse,
+    UnifiedSlugEventsResponse,
 )
 from event_service.services.category_events import (
+    fetch_categories_with_all_events,
     fetch_categories_with_latest_events,
     fetch_events_by_category_or_subcategory_slug,
+    fetch_events_by_category_slug_unified,
     fetch_subcategories_with_latest_events,
 )
 from shared.core.api_response import api_response
@@ -26,19 +31,16 @@ router = APIRouter()
 @router.get(
     "/categories-with-events",
     status_code=status.HTTP_200_OK,
-    response_model=CategoryEventsResponse,
+    response_model=SimplifiedCategoryEventsResponse,
 )
 @exception_handler
 async def get_categories_with_latest_events(
     db: AsyncSession = Depends(get_db),
 ):
-    """Get all categories and subcategories with their latest 5 events each"""
+    """Get all categories with their latest 5 events each (including events from subcategories)"""
 
-    # Fetch categories with their latest events
-    categories_data = await fetch_categories_with_latest_events(db)
-
-    # Fetch subcategories with their latest events
-    subcategories_data = await fetch_subcategories_with_latest_events(db)
+    # Fetch categories with all their events (including subcategory events)
+    categories_data = await fetch_categories_with_all_events(db)
 
     # Convert to response format
     categories_response = [
@@ -46,21 +48,12 @@ async def get_categories_with_latest_events(
         for category_data in categories_data
     ]
 
-    subcategories_response = [
-        SubCategoryWithEventsResponse.model_validate(subcategory_data)
-        for subcategory_data in subcategories_data
-    ]
-
     return api_response(
         status_code=status.HTTP_200_OK,
-        message="Categories and subcategories with latest events retrieved successfully",
+        message="Categories with latest events retrieved successfully",
         data={
             "categories": [cat.model_dump() for cat in categories_response],
-            "subcategories": [
-                subcat.model_dump() for subcat in subcategories_response
-            ],
             "total_categories": len(categories_response),
-            "total_subcategories": len(subcategories_response),
         },
     )
 
@@ -68,7 +61,7 @@ async def get_categories_with_latest_events(
 @router.get(
     "/events-by-slug/{slug}",
     status_code=status.HTTP_200_OK,
-    response_model=SlugEventsResponse,
+    response_model=SimplifiedSlugEventsResponse,
 )
 @exception_handler
 async def get_events_by_category_or_subcategory_slug(
@@ -79,12 +72,13 @@ async def get_events_by_category_or_subcategory_slug(
     ),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get paginated events by category slug or subcategory slug in descending order of creation time
+    """Get paginated events by category slug or subcategory slug, unified under category context
 
     This endpoint accepts either a category slug or subcategory slug and returns:
     - Paginated events in descending order of created_at timestamp
-    - Information about the category or subcategory found
+    - All events grouped under their parent category context
     - Pagination metadata
+    - Response format matching categories-with-events endpoint
 
     Args:
         slug: Category slug or subcategory slug
@@ -93,15 +87,15 @@ async def get_events_by_category_or_subcategory_slug(
         db: Database session
 
     Returns:
-        SlugEventsResponse with events, pagination info, and category/subcategory details
+        Response with events under category context, pagination info, matching format
 
     Raises:
         HTTPException: If slug is not found or no events exist for the slug
     """
 
-    # Fetch events and metadata
-    events_data, total_count, category_data, subcategory_data = (
-        await fetch_events_by_category_or_subcategory_slug(
+    # Fetch events and metadata using unified approach
+    events_data, total_count, category_data = (
+        await fetch_events_by_category_slug_unified(
             db=db,
             slug=slug,
             page=page,
@@ -110,7 +104,7 @@ async def get_events_by_category_or_subcategory_slug(
     )
 
     # Check if slug was found
-    if not category_data and not subcategory_data:
+    if not category_data:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"No category or subcategory found with slug: {slug}",
@@ -118,10 +112,9 @@ async def get_events_by_category_or_subcategory_slug(
 
     # Check if any events exist
     if total_count == 0:
-        slug_type = "category" if category_data else "subcategory"
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No published events found for {slug_type}: {slug}",
+            detail=f"No published events found for slug: {slug}",
         )
 
     # Calculate pagination metadata
@@ -146,30 +139,23 @@ async def get_events_by_category_or_subcategory_slug(
         has_prev=has_prev,
     )
 
-    # Determine slug type and prepare response data
-    if category_data:
-        slug_type = "category"
-        category_response = CategoryInfoResponse.model_validate(category_data)
-        subcategory_response = None
-    else:
-        slug_type = "subcategory"
-        category_response = None
-        subcategory_response = SubCategoryInfoResponse.model_validate(
-            subcategory_data
-        )
-
-    # Create response
-    response_data = SlugEventsResponse(
-        events=events_response,
-        pagination=pagination,
-        category=category_response,
-        subcategory=subcategory_response,
-        slug=slug,
-        slug_type=slug_type,
+    # Determine slug type by checking if slug matches category or subcategory
+    slug_type = (
+        "category" if category_data["category_slug"] == slug else "subcategory"
     )
+
+    # Create category response
+    category_response = CategoryInfoResponse.model_validate(category_data)
 
     return api_response(
         status_code=status.HTTP_200_OK,
-        message=f"Events for {slug_type} '{slug}' retrieved successfully",
-        data=response_data.model_dump(),
+        message=f"Events for {slug_type} '{slug}' retrieved successfully under category context",
+        data={
+            "events": [event.model_dump() for event in events_response],
+            "pagination": pagination.model_dump(),
+            "category": category_response.model_dump(),
+            "total_events": total_count,
+            "slug": slug,
+            "slug_type": slug_type,
+        },
     )
