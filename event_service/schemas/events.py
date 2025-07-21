@@ -781,7 +781,6 @@ class CategoryInfo(BaseModel):
 class SubCategoryInfo(BaseModel):
     """Schema for subcategory information in event response"""
 
-    id: str = Field(..., description="Subcategory primary ID")
     subcategory_id: str = Field(..., description="Subcategory ID")
     subcategory_name: str = Field(..., description="Subcategory name")
     subcategory_slug: str = Field(..., description="Subcategory slug")

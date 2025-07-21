@@ -59,12 +59,7 @@ class EventResponse(BaseModel):
         None, description="List of hashtags for the event"
     )
 
-    # Status and timestamps
-    event_status: bool = Field(
-        ..., description="Event status (active/inactive)"
-    )
-    created_at: datetime = Field(..., description="Creation timestamp")
-    updated_at: datetime = Field(..., description="Last update timestamp")
+    # Status and timestamps - removed as per requirements
 
     @field_serializer("card_image")
     def serialize_card_image(self, value: Optional[str]) -> Optional[str]:
@@ -100,10 +95,7 @@ class LimitedEventResponse(BaseModel):
     # Event content
     card_image: Optional[str] = Field(None, description="Card image URL")
 
-    # Status
-    event_status: bool = Field(
-        ..., description="Event status (active/inactive)"
-    )
+    # Status - removed as per requirements
 
     @field_serializer("card_image")
     def serialize_card_image(self, value: Optional[str]) -> Optional[str]:
@@ -135,11 +127,7 @@ class EventSimpleResponse(BaseModel):
     hash_tags: Optional[List[str]] = Field(
         None, description="List of hashtags for the event"
     )
-    event_status: bool = Field(
-        ..., description="Event status (active/inactive)"
-    )
-    created_at: datetime = Field(..., description="Creation timestamp")
-    updated_at: datetime = Field(..., description="Last update timestamp")
+    # Status and timestamps - removed as per requirements
 
     @field_serializer("card_image")
     def serialize_card_image(self, value: Optional[str]) -> Optional[str]:
@@ -169,6 +157,58 @@ class EventListResponse(BaseModel):
     """Schema for paginated event list response"""
 
     events: List[EventResponse] = Field(..., description="List of events")
+    total: int = Field(..., description="Total number of events")
+    page: int = Field(..., description="Current page number")
+    per_page: int = Field(..., description="Items per page")
+    has_next: bool = Field(..., description="Whether there are more pages")
+    has_prev: bool = Field(..., description="Whether there are previous pages")
+
+
+class EventMinimalResponse(BaseModel):
+    """Schema for minimal event response with only essential fields"""
+
+    event_id: str = Field(..., description="Event ID")
+    event_title: str = Field(..., description="Event title")
+    event_slug: str = Field(..., description="Event slug")
+    card_image: Optional[str] = Field(None, description="Card image URL")
+    # Status and timestamps - removed as per requirements
+
+    @field_serializer("card_image")
+    def serialize_card_image(self, value: Optional[str]) -> Optional[str]:
+        """Convert relative path to full media URL"""
+        return get_media_url(value)
+
+    class Config:
+        from_attributes = True
+        json_encoders = {datetime: lambda v: v.isoformat()}
+
+
+class SubcategoryWithEvents(BaseModel):
+    """Schema for subcategory with its events"""
+    
+    subcategory: SubCategoryInfo = Field(..., description="Subcategory information")
+    events: List[EventMinimalResponse] = Field(..., description="Events in this subcategory")
+    event_count: int = Field(..., description="Number of events in this subcategory")
+
+
+class EventListWithSubcategoriesResponse(BaseModel):
+    """Schema for paginated event list response grouped by subcategories"""
+
+    subcategories_with_events: List[SubcategoryWithEvents] = Field(
+        ..., description="List of subcategories with their events"
+    )
+    total_events: int = Field(..., description="Total number of events across all subcategories")
+    total_subcategories: int = Field(..., description="Total number of subcategories")
+    page: int = Field(..., description="Current page number")
+    per_page: int = Field(..., description="Items per page")
+    has_next: bool = Field(..., description="Whether there are more pages")
+    has_prev: bool = Field(..., description="Whether there are previous pages")
+
+
+class EventListSimpleResponse(BaseModel):
+    """Schema for simple event list response (for subcategory slug)"""
+
+    events: List[EventMinimalResponse] = Field(..., description="List of events")
     total: int = Field(..., description="Total number of events")
     page: int = Field(..., description="Current page number")
     per_page: int = Field(..., description="Items per page")
@@ -379,7 +419,7 @@ class EventSummaryResponse(BaseModel):
 
     event_id: str = Field(..., description="Event ID")
     event_title: str = Field(..., description="Event title")
-    event_status: bool = Field(..., description="Event status")
+    # event_status removed as per requirements
     organizer_id: str = Field(..., description="Organizer ID")
     category_id: str = Field(..., description="Category ID")
     subcategory_id: str = Field(..., description="Subcategory ID")
@@ -401,9 +441,7 @@ class EventSummaryResponse(BaseModel):
         ..., description="Whether event has extra data"
     )
 
-    # Timestamps
-    created_at: datetime = Field(..., description="Creation timestamp")
-    updated_at: datetime = Field(..., description="Last update timestamp")
+    # Timestamps - removed as per requirements
 
     class Config:
         from_attributes = True

@@ -11,6 +11,14 @@ from shared.db.models import AdminUser, Category, Event, SubCategory
 logger = get_logger(__name__)
 
 
+def apply_active_events_filter(query):
+    """
+    Apply filtering to get only active events (event_status = false).
+    Categories and subcategories are not filtered by status.
+    """
+    return query.filter(Event.event_status == False)
+
+
 async def check_event_exists_with_slug(
     db: AsyncSession, event_slug: str
 ) -> bool:
@@ -177,6 +185,8 @@ async def fetch_event_by_slug_with_relations(
         )
         .filter(Event.event_slug == event_slug)
     )
+    # Apply active events filtering
+    query = apply_active_events_filter(query)
     result = await db.execute(query)
     return result.scalars().first()
 
@@ -195,6 +205,8 @@ async def fetch_event_by_id_with_relations(
         )
         .filter(Event.event_id == event_id)
     )
+    # Apply active events filtering
+    query = apply_active_events_filter(query)
     result = await db.execute(query)
     return result.scalars().first()
 
@@ -210,9 +222,13 @@ async def fetch_events_without_filters(
         selectinload(Event.subcategory),
         selectinload(Event.organizer),
     )
+    
+    # Apply active events filtering
+    query = apply_active_events_filter(query)
 
-    # Get total count
+    # Get total count with same filters
     count_query = select(func.count(Event.event_id))
+    count_query = apply_active_events_filter(count_query)
 
     total_result = await db.execute(count_query)
     total = total_result.scalar()
@@ -236,9 +252,13 @@ async def fetch_limited_events_without_filters(
         selectinload(Event.subcategory),
         selectinload(Event.organizer),
     )
+    
+    # Apply active events filtering
+    query = apply_active_events_filter(query)
 
-    # Get total count
+    # Get total count with same filters
     count_query = select(func.count(Event.event_id))
+    count_query = apply_active_events_filter(count_query)
 
     total_result = await db.execute(count_query)
     total = total_result.scalar()
@@ -337,6 +357,9 @@ async def search_events(
         selectinload(Event.subcategory),
         selectinload(Event.organizer),
     )
+    
+    # Apply active events filtering
+    base_query = apply_active_events_filter(base_query)
 
     # Build search conditions
     search_conditions = []
@@ -374,8 +397,9 @@ async def search_events(
     # Apply additional filters
     filters = []
 
-    if status is not None:
-        filters.append(Event.event_status == status)
+    # Note: status filter is now handled by hierarchical filtering
+    # if status is not None:
+    #     filters.append(Event.event_status == status)
 
     if category_id:
         filters.append(Event.category_id == category_id)
@@ -386,8 +410,9 @@ async def search_events(
     if filters:
         base_query = base_query.filter(and_(*filters))
 
-    # Get total count
+    # Get total count with active events filtering
     count_query = select(func.count(Event.event_id))
+    count_query = apply_active_events_filter(count_query)
     if search_conditions:
         count_query = count_query.filter(or_(*search_conditions))
     if filters:
@@ -413,52 +438,70 @@ async def search_events(
 
 async def fetch_events_by_category_or_subcategory_slug(
     db: AsyncSession, slug: str, page: int = 1, per_page: int = 10
-) -> Tuple[List[Event], int]:
-    """Fetch events by category slug or subcategory slug with all related entities loaded"""
+) -> Tuple[List[Event], int, Optional[List[SubCategory]], bool]:
+    """Fetch events by category slug or subcategory slug with all related entities loaded
+    
+    Returns:
+        - events: List of events
+        - total: Total count of events
+        - subcategories: List of subcategories (only for category slug)
+        - is_category: Boolean indicating if the slug is a category slug
+    """
     
     # Calculate offset for pagination
     offset = (page - 1) * per_page
     
-    # First try to find events by category slug
-    category_query = (
-        select(Event)
-        .options(
-            selectinload(Event.category),
-            selectinload(Event.subcategory),
-            selectinload(Event.organizer),
-            selectinload(Event.slots),
-        )
-        .join(Category, Event.category_id == Category.category_id)
-        .filter(Category.category_slug == slug.lower())
-        .order_by(desc(Event.created_at))
-        .offset(offset)
-        .limit(per_page)
-    )
-    
+    # First check if it's a category slug
+    category_query = select(Category).filter(Category.category_slug == slug.lower())
     category_result = await db.execute(category_query)
-    category_events = list(category_result.scalars().all())
+    category = category_result.scalars().first()
     
-    if category_events:
-        # Get total count for category
+    if category:  # Proceed regardless of category status
+        # It's a category slug - get subcategories and events from all subcategories
+        
+        # Get subcategories in this category (all subcategories)
+        subcategories_query = (
+            select(SubCategory)
+            .filter(SubCategory.category_id == category.category_id)
+            .order_by(SubCategory.subcategory_name)
+        )
+        subcategories_result = await db.execute(subcategories_query)
+        subcategories = list(subcategories_result.scalars().all())
+        
+        # Get events from all subcategories in this category with active events filtering
+        events_query = (
+            select(Event)
+            .options(
+                selectinload(Event.category),
+                selectinload(Event.subcategory),
+                selectinload(Event.organizer),
+                selectinload(Event.slots),
+            )
+            .join(Category, Event.category_id == Category.category_id)
+            .filter(Category.category_slug == slug.lower())
+            .order_by(desc(Event.created_at))
+            .offset(offset)
+            .limit(per_page)
+        )
+        # Apply active events filtering
+        events_query = apply_active_events_filter(events_query)
+        
+        events_result = await db.execute(events_query)
+        events = list(events_result.scalars().all())
+        
+        # Get total count for category with active events filtering
         count_query = (
             select(func.count(Event.event_id))
             .join(Category, Event.category_id == Category.category_id)
             .filter(Category.category_slug == slug.lower())
         )
+        count_query = apply_active_events_filter(count_query)
         total_result = await db.execute(count_query)
         total = total_result.scalar() or 0
-        return category_events, total
+        
+        return events, total, subcategories, True
     
-    # If no events found by category slug, check if category exists at all
-    category_exists_query = select(Category).filter(Category.category_slug == slug.lower())
-    category_exists_result = await db.execute(category_exists_query)
-    category_exists = category_exists_result.scalars().first() is not None
-    
-    if category_exists:
-        # Category exists but no events, return empty result
-        return [], 0
-    
-    # If category doesn't exist, try subcategory slug
+    # If not a category slug, try subcategory slug
     subcategory_query = (
         select(Event)
         .options(
@@ -473,20 +516,83 @@ async def fetch_events_by_category_or_subcategory_slug(
         .offset(offset)
         .limit(per_page)
     )
+    # Apply active events filtering
+    subcategory_query = apply_active_events_filter(subcategory_query)
     
     subcategory_result = await db.execute(subcategory_query)
     subcategory_events = list(subcategory_result.scalars().all())
     
-    # Get total count for subcategory
+    # Get total count for subcategory with active events filtering
     count_query = (
         select(func.count(Event.event_id))
         .join(SubCategory, Event.subcategory_id == SubCategory.subcategory_id)
         .filter(SubCategory.subcategory_slug == slug.lower())
     )
+    count_query = apply_active_events_filter(count_query)
     total_result = await db.execute(count_query)
     total = total_result.scalar() or 0
     
-    return subcategory_events, total
+    return subcategory_events, total, None, False
+
+
+async def fetch_events_grouped_by_subcategory(
+    db: AsyncSession, slug: str, page: int = 1, per_page: int = 10
+) -> Tuple[dict, int, int]:
+    """Fetch events grouped by subcategory for a given category slug
+    
+    Returns:
+        - subcategory_events: Dict mapping subcategory to its events
+        - total_events: Total number of events across all subcategories
+        - total_subcategories: Total number of subcategories
+    """
+    
+    # First check if it's a category slug
+    category_query = select(Category).filter(Category.category_slug == slug.lower())
+    category_result = await db.execute(category_query)
+    category = category_result.scalars().first()
+    
+    if not category:  # Return empty if category doesn't exist
+        return {}, 0, 0
+    
+    # Get subcategories in this category (all subcategories)
+    subcategories_query = (
+        select(SubCategory)
+        .filter(SubCategory.category_id == category.category_id)
+        .order_by(SubCategory.subcategory_name)
+    )
+    subcategories_result = await db.execute(subcategories_query)
+    subcategories = list(subcategories_result.scalars().all())
+    
+    if not subcategories:
+        return {}, 0, 0
+    
+    # Get events for each subcategory
+    subcategory_events = {}
+    total_events = 0
+    
+    for subcategory in subcategories:
+        # Get events for this subcategory with active events filtering
+        events_query = (
+            select(Event)
+            .options(
+                selectinload(Event.category),
+                selectinload(Event.subcategory),
+                selectinload(Event.organizer),
+                selectinload(Event.slots),
+            )
+            .filter(Event.subcategory_id == subcategory.subcategory_id)
+            .order_by(desc(Event.created_at))
+        )
+        # Apply active events filtering
+        events_query = apply_active_events_filter(events_query)
+        
+        events_result = await db.execute(events_query)
+        events = list(events_result.scalars().all())
+        
+        subcategory_events[subcategory] = events
+        total_events += len(events)
+    
+    return subcategory_events, total_events, len(subcategories)
 
 
 async def filter_events_advanced(
@@ -514,12 +620,16 @@ async def filter_events_advanced(
         selectinload(Event.organizer),
         selectinload(Event.slots),
     )
+    
+    # Apply active events filtering
+    query = apply_active_events_filter(query)
 
     # Apply filters
     filters = []
 
-    if status is not None:
-        filters.append(Event.event_status == status)
+    # Note: status filter is now handled by hierarchical filtering
+    # if status is not None:
+    #     filters.append(Event.event_status == status)
 
     if category_id:
         filters.append(Event.category_id == category_id)
@@ -561,8 +671,9 @@ async def filter_events_advanced(
     if filters:
         query = query.filter(and_(*filters))
 
-    # Get total count
+    # Get total count with active events filtering
     count_query = select(func.count(Event.event_id))
+    count_query = apply_active_events_filter(count_query)
     if filters:
         count_query = count_query.filter(and_(*filters))
 
@@ -598,7 +709,7 @@ async def get_events_by_organizer(
 ) -> Tuple[List[Event], int, dict]:
     """Get events by organizer with statistics"""
 
-    # Build base query
+    # Build base query with active events filtering
     query = (
         select(Event)
         .options(
@@ -609,29 +720,34 @@ async def get_events_by_organizer(
         )
         .filter(Event.organizer_id == organizer_id)
     )
+    
+    # Apply active events filtering
+    query = apply_active_events_filter(query)
 
-    # Apply status filter if provided
+    # Apply additional filters if provided
     filters = []
-    if status is not None:
-        filters.append(Event.event_status == status)
+    # Note: status filter is now handled by hierarchical filtering
+    # if status is not None:
+    #     filters.append(Event.event_status == status)
 
     if filters:
         query = query.filter(and_(*filters))
 
-    # Get statistics
+    # Get statistics with active events filtering
     total_query = select(func.count(Event.event_id)).filter(
         Event.organizer_id == organizer_id
     )
-    active_query = select(func.count(Event.event_id)).filter(
-        and_(Event.organizer_id == organizer_id, Event.event_status == True)
-    )
+    total_query = apply_active_events_filter(total_query)
+    
+    # For active events, we use the same active events filtering (all returned events are active)
+    active_query = total_query
 
     total_result = await db.execute(total_query)
     active_result = await db.execute(active_query)
 
     total_events = total_result.scalar() or 0
-    active_events = active_result.scalar() or 0
-    inactive_events = total_events - active_events
+    active_events = active_result.scalar() or 0  # Same as total since we only return active events
+    inactive_events = 0  # No inactive events returned due to hierarchical filtering
 
     stats = {
         "total_events": total_events,

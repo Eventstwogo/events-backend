@@ -5,7 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from shared.core.logging_config import get_logger
-from shared.db.models import Event
+from shared.db.models import Category, Event, SubCategory
+from event_service.services.events import apply_active_events_filter
 
 logger = get_logger(__name__)
 
@@ -30,12 +31,16 @@ async def fetch_events_with_filters(
         selectinload(Event.subcategory),
         selectinload(Event.organizer),
     )
+    
+    # Apply active events filtering first
+    query = apply_active_events_filter(query)
 
-    # Apply filters
+    # Apply additional filters
     filters = []
 
-    if status is not None:
-        filters.append(Event.event_status == status)
+    # Note: status filter is now handled by hierarchical filtering
+    # if status is not None:
+    #     filters.append(Event.event_status == status)
 
     if category_id:
         filters.append(Event.category_id == category_id)
@@ -56,8 +61,9 @@ async def fetch_events_with_filters(
     if filters:
         query = query.filter(and_(*filters))
 
-    # Get total count
+    # Get total count with same active events filtering
     count_query = select(func.count(Event.event_id))
+    count_query = apply_active_events_filter(count_query)
     if filters:
         count_query = count_query.filter(and_(*filters))
 
