@@ -22,7 +22,7 @@ async def check_event_exists_with_slug(
 async def check_event_exists_with_title(
     db: AsyncSession, event_title: str
 ) -> bool:
-    query = select(Event).filter(Event.event_title == event_title)
+    query = select(Event).filter(func.lower(Event.event_title) == event_title.lower())
     result = await db.execute(query)
     return result.scalars().first() is not None
 
@@ -301,7 +301,7 @@ async def check_event_title_unique_for_update(
     """Check if event title is unique excluding the current event"""
     query = select(Event).filter(
         and_(
-            Event.event_title == event_title.lower(), Event.event_id != event_id
+            func.lower(Event.event_title) == event_title.lower(), Event.event_id != event_id
         )
     )
     result = await db.execute(query)

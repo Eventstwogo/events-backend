@@ -29,6 +29,7 @@ from shared.db.sessions.database import get_db
 from shared.utils.exception_handlers import exception_handler
 from shared.utils.file_uploads import (
     get_media_url,
+    remove_file_if_exists,
     save_uploaded_file,
 )
 from shared.utils.id_generators import generate_digits_upper_lower_case
@@ -181,16 +182,16 @@ async def create_event_with_images(
             )
 
     # Limit number of extra images
-    if len(extra_images) > 10:
+    if len(extra_images) > 5:
         return api_response(
             status_code=status.HTTP_400_BAD_REQUEST,
-            message="Maximum 10 extra images allowed",
+            message="Maximum 5 extra images allowed",
             log_error=True,
         )
 
     # Check if event title is unique
     existing_title = await check_event_exists_with_title(
-        db, event_title.lower()
+        db, event_title.strip()
     )
     if existing_title:
         return event_title_already_exists_response()
@@ -454,13 +455,38 @@ async def update_event_with_images(
                 log_error=True,
             )
 
+    # Validate extra images limit considering existing images
+    if extra_images:
+        existing_count = len(event.event_extra_images) if event.event_extra_images else 0
+        new_count = len(extra_images)
+        
+        # Check if we're trying to add more than 5 images total
+        if new_count > 5:
+            return api_response(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                message="Maximum 5 extra images allowed",
+                log_error=True,
+            )
+        
+        # Check if the final count would exceed 5
+        # (existing - deleted + new) should not exceed 5
+        remaining_after_deletion = max(0, existing_count - new_count)
+        final_count = remaining_after_deletion + new_count
+        
+        if final_count > 5:
+            return api_response(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                message="Total extra images cannot exceed 5",
+                log_error=True,
+            )
+
     # Prepare update data
     update_data = {}
 
     # Validate and prepare title update
     if event_title is not None:
         if not await check_event_title_unique_for_update(
-            db, event_id, event_title.lower()
+            db, event_id, event_title.strip()
         ):
             return event_title_already_exists_response()
         update_data["event_title"] = event_title.title()
@@ -529,13 +555,38 @@ async def update_event_with_images(
             )
             update_data["banner_image"] = banner_image_url
 
-        # Upload additional extra images (append to existing)
+        # Update extra images with smart management logic
+        # Logic:
+        # - If existing + new ≤ 5: Keep all existing, add new ones
+        # - If existing + new > 5: Delete oldest to make room, then add new ones
+        # Examples:
+        # - 2 existing + 3 new = 5 total → Keep all 2, add 3 new
+        # - 2 existing + 4 new = 6 total → Delete 1 oldest, keep 1, add 4 new = 5 total
+        # - 5 existing + 2 new = 7 total → Delete 2 oldest, keep 3, add 2 new = 5 total
         if extra_images:
+            existing_images = event.event_extra_images or []
+            num_existing = len(existing_images)
+            num_new_images = len(extra_images)
+            total_after_adding = num_existing + num_new_images
+            
+            # Determine how many existing images to keep/delete
+            if total_after_adding <= 5:
+                # Case 1: Total ≤ 5, keep all existing images and add new ones
+                images_to_delete = []
+                remaining_images = existing_images.copy()
+            else:
+                # Case 2: Total > 5, delete oldest images to make room
+                num_to_delete = total_after_adding - 5
+                images_to_delete = existing_images[:num_to_delete]
+                remaining_images = existing_images[num_to_delete:]
+            
+            # Delete the determined images
+            for old_image_url in images_to_delete:
+                remove_file_if_exists(old_image_url)
+            
+            # Upload new extra images
             new_extra_urls = []
-            existing_count = (
-                len(event.event_extra_images) if event.event_extra_images else 0
-            )
-
+            existing_count = len(remaining_images)
             for i, image in enumerate(extra_images):
                 uploaded_url = await save_uploaded_file(
                     image,
@@ -543,13 +594,8 @@ async def update_event_with_images(
                 )
                 new_extra_urls.append(uploaded_url)
 
-            # Append to existing extra images
-            if event.event_extra_images:
-                update_data["event_extra_images"] = (
-                    event.event_extra_images + new_extra_urls
-                )
-            else:
-                update_data["event_extra_images"] = new_extra_urls
+            # Combine remaining existing images with new images
+            update_data["event_extra_images"] = remaining_images + new_extra_urls
 
     except Exception as e:
         return api_response(

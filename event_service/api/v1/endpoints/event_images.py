@@ -143,7 +143,7 @@ async def update_event_banner_image(
     )
 
 
-@router.patch("/{event_id}/extra-images", summary="Add extra images to event")
+@router.patch("/{event_id}/extra-images", summary="Update extra images for event")
 @exception_handler
 async def add_event_extra_images(
     user_id: str,
@@ -152,11 +152,12 @@ async def add_event_extra_images(
     db: AsyncSession = Depends(get_db),
 ) -> JSONResponse:
     """
-    Add extra images to the event.
+    Update extra images for the event. Replaces all existing extra images.
+    Maximum 5 extra images allowed.
 
     Args:
         event_id: The ID of the event
-        extra_images: List of extra image files
+        extra_images: List of extra image files (max 5)
 
     Returns:
         JSONResponse: Success message with uploaded extra image URLs
@@ -169,6 +170,14 @@ async def add_event_extra_images(
                 message=f"Invalid file type for image: {image.filename}",
                 log_error=True,
             )
+
+    # Limit number of extra images
+    if len(extra_images) > 5:
+        return api_response(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message="Maximum 5 extra images allowed",
+            log_error=True,
+        )
 
     # Fetch the event and verify ownership
     event = await fetch_event_by_id(db, event_id)
@@ -184,29 +193,55 @@ async def add_event_extra_images(
             log_error=True,
         )
 
-    # Upload extra images
+    # Validate extra images limit considering existing images
+    existing_count = len(event.event_extra_images) if event.event_extra_images else 0
+    new_count = len(extra_images)
+    
+    # Check if the final count would exceed 5
+    # (existing - deleted + new) should not exceed 5
+    remaining_after_deletion = max(0, existing_count - new_count)
+    final_count = remaining_after_deletion + new_count
+    
+    if final_count > 5:
+        return api_response(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message="Total extra images cannot exceed 5",
+            log_error=True,
+        )
+
+    # Update extra images (delete first N existing images and add new ones at the end)
+    existing_images = event.event_extra_images or []
+    num_new_images = len(extra_images)
+    
+    # Delete the first N existing images (where N = number of new images)
+    images_to_delete = existing_images[:num_new_images]
+    for old_image_url in images_to_delete:
+        remove_file_if_exists(old_image_url)
+    
+    # Keep the remaining existing images
+    remaining_images = existing_images[num_new_images:]
+    
+    # Upload new extra images
     uploaded_urls = []
+    existing_count = len(remaining_images)
     for i, image in enumerate(extra_images):
         uploaded_url = await save_uploaded_file(
             image,
-            f"{settings.EVENT_EXTRA_IMAGES_UPLOAD_PATH.format(event_id=event_id)}/image_{i+1}",
+            f"{settings.EVENT_EXTRA_IMAGES_UPLOAD_PATH.format(event_id=event_id)}/image_{existing_count + i + 1}",
         )
         uploaded_urls.append(uploaded_url)
 
-    # Update event extra images (append to existing list)
-    if event.event_extra_images:
-        event.event_extra_images.extend(uploaded_urls)
-    else:
-        event.event_extra_images = uploaded_urls
+    # Combine remaining existing images with new images
+    event.event_extra_images = remaining_images + uploaded_urls
 
     await db.commit()
     await db.refresh(event)
 
     return api_response(
         status_code=status.HTTP_200_OK,
-        message="Extra images added successfully.",
+        message="Extra images updated successfully.",
         data={
-            "extra_images": [get_media_url(url) for url in uploaded_urls],
+            "extra_images": [get_media_url(url) for url in event.event_extra_images] if event.event_extra_images else [],
             "total_extra_images": (
                 len(event.event_extra_images) if event.event_extra_images else 0
             ),
@@ -266,7 +301,11 @@ async def remove_event_extra_image(
     # Remove the image file and update the list
     image_to_remove = event.event_extra_images[image_index]
     remove_file_if_exists(image_to_remove)
-    event.event_extra_images.pop(image_index)
+    
+    # Create a new list without the image at the specified index
+    updated_images = event.event_extra_images.copy()
+    updated_images.pop(image_index)
+    event.event_extra_images = updated_images
 
     await db.commit()
     await db.refresh(event)

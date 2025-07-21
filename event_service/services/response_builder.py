@@ -17,7 +17,7 @@ def event_alreay_exists_with_slug_response() -> JSONResponse:
 def event_title_already_exists_response() -> JSONResponse:
     return api_response(
         status_code=status.HTTP_400_BAD_REQUEST,
-        message="Event with this title already exists",
+        message="Event title already existed",
         log_error=True,
     )
 
