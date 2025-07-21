@@ -5,16 +5,22 @@ from event_service.schemas.advanced_events import (
     CategoryEventListResponse,
     CategoryEventResponse,
     EventListResponse,
+    EventListSimpleResponse,
+    EventListWithSubcategoriesResponse,
+    EventMinimalResponse,
     EventResponse,
     EventStatusUpdateRequest,
     LimitedEventListResponse,
     LimitedEventResponse,
+    SubcategoryWithEvents,
 )
+from event_service.schemas.events import SubCategoryInfo
 from event_service.services.events import (
     delete_event,
     fetch_event_by_id_with_relations,
     fetch_event_by_slug_with_relations,
     fetch_events_by_category_or_subcategory_slug,
+    fetch_events_grouped_by_subcategory,
     fetch_events_without_filters,
     fetch_latest_event_from_each_category,
     fetch_limited_events_without_filters,
@@ -140,7 +146,6 @@ async def get_event_by_slug(
 @router.get(
     "/category-or-subcategory/{slug}",
     status_code=status.HTTP_200_OK,
-    response_model=EventListResponse,
 )
 @exception_handler
 async def get_events_by_category_or_subcategory_slug(
@@ -151,13 +156,65 @@ async def get_events_by_category_or_subcategory_slug(
     ),
     db: AsyncSession = Depends(get_db),
 ):
-    """Retrieve events by category slug or subcategory slug with pagination"""
+    """
+    Retrieve events by category slug or subcategory slug with pagination.
+    
+    - Category slug: Returns events grouped by subcategories (EventListWithSubcategoriesResponse)
+    - Subcategory slug: Returns simple list of events (EventListSimpleResponse)
+    - Only returns active events (event_status = false)
+    """
 
-    # Fetch events by category or subcategory slug with pagination
-    events, total = await fetch_events_by_category_or_subcategory_slug(
+    # First check if it's a category slug by trying to fetch grouped events
+    subcategory_events_list, total_events, total_subcategories = await fetch_events_grouped_by_subcategory(
         db, slug.lower(), page, per_page
     )
 
+    # If we found events grouped by subcategories, it's a category slug
+    if subcategory_events_list:
+        # Calculate pagination metadata for category response
+        total_pages = (total_events + per_page - 1) // per_page if total_events > 0 else 0
+        has_next = page < total_pages
+        has_prev = page > 1
+
+        # Convert to response format
+        subcategories_with_events = []
+        for subcategory, events_list in subcategory_events_list:
+            # Convert events to response format
+            event_responses = [EventMinimalResponse.model_validate(event) for event in events_list]
+            
+            # Create subcategory info
+            subcategory_info = SubCategoryInfo.model_validate(subcategory)
+            
+            # Create SubcategoryWithEvents object
+            subcategory_with_events = SubcategoryWithEvents(
+                subcategory=subcategory_info,
+                events=event_responses,
+                event_count=len(event_responses)
+            )
+            subcategories_with_events.append(subcategory_with_events)
+
+        response_data = {
+            "subcategories_with_events": subcategories_with_events,
+            "total_events": total_events,
+            "total_subcategories": total_subcategories,
+            "page": page,
+            "per_page": per_page,
+            "total_pages": total_pages,
+            "has_next": has_next,
+            "has_prev": has_prev,
+        }
+
+        return api_response(
+            status_code=status.HTTP_200_OK,
+            message=f"Events grouped by subcategories retrieved successfully for category '{slug}'",
+            data=response_data,
+        )
+    
+    # If not a category slug, try subcategory slug
+    events, total, matched_slug, is_category = await fetch_events_by_category_or_subcategory_slug(
+        db, slug.lower(), page, per_page
+    )
+    
     # Calculate pagination metadata
     total_pages = (total + per_page - 1) // per_page if total > 0 else 0
     has_next = page < total_pages
@@ -166,7 +223,7 @@ async def get_events_by_category_or_subcategory_slug(
     if not events:
         return api_response(
             status_code=status.HTTP_200_OK,
-            message="No events found for this category or subcategory",
+            message=f"No active events found for '{slug}'",
             data={
                 "events": [],
                 "total": 0,
@@ -178,21 +235,23 @@ async def get_events_by_category_or_subcategory_slug(
             },
         )
 
-    # Convert to response format
-    event_responses = [EventResponse.model_validate(event) for event in events]
+    # Convert to minimal response format for subcategory
+    event_responses = [EventMinimalResponse.model_validate(event) for event in events]
+
+    response_data = {
+        "events": event_responses,
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "total_pages": total_pages,
+        "has_next": has_next,
+        "has_prev": has_prev,
+    }
 
     return api_response(
         status_code=status.HTTP_200_OK,
-        message="Events retrieved successfully",
-        data={
-            "events": event_responses,
-            "total": total,
-            "page": page,
-            "per_page": per_page,
-            "total_pages": total_pages,
-            "has_next": has_next,
-            "has_prev": has_prev,
-        },
+        message=f"Active events retrieved successfully for subcategory",
+        data=response_data,
     )
 
 

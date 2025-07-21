@@ -6,7 +6,6 @@ from sqlalchemy.orm import selectinload
 
 from shared.core.logging_config import get_logger
 from shared.db.models import Category, Event, SubCategory
-from event_service.services.events import apply_active_events_filter
 
 logger = get_logger(__name__)
 
