@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from event_service.schemas.advanced_events import (
@@ -12,6 +12,7 @@ from event_service.services.events import (
     delete_event,
     fetch_event_by_id_with_relations,
     fetch_event_by_slug_with_relations,
+    fetch_events_by_category_or_subcategory_slug,
     fetch_events_without_filters,
     fetch_limited_events_without_filters,
     update_event_status,
@@ -130,6 +131,63 @@ async def get_event_by_slug(
         status_code=status.HTTP_200_OK,
         message="Event retrieved successfully",
         data=event_response.model_dump(),
+    )
+
+
+@router.get(
+    "/category-or-subcategory/{slug}",
+    status_code=status.HTTP_200_OK,
+    response_model=EventListResponse,
+)
+@exception_handler
+async def get_events_by_category_or_subcategory_slug(
+    slug: str,
+    page: int = Query(1, ge=1, description="Page number (starts from 1)"),
+    per_page: int = Query(10, ge=1, le=100, description="Number of events per page (max 100)"),
+    db: AsyncSession = Depends(get_db),
+):
+    """Retrieve events by category slug or subcategory slug with pagination"""
+
+    # Fetch events by category or subcategory slug with pagination
+    events, total = await fetch_events_by_category_or_subcategory_slug(
+        db, slug.lower(), page, per_page
+    )
+    
+    # Calculate pagination metadata
+    total_pages = (total + per_page - 1) // per_page if total > 0 else 0
+    has_next = page < total_pages
+    has_prev = page > 1
+    
+    if not events:
+        return api_response(
+            status_code=status.HTTP_200_OK,
+            message="No events found for this category or subcategory",
+            data={
+                "events": [],
+                "total": 0,
+                "page": page,
+                "per_page": per_page,
+                "total_pages": 0,
+                "has_next": False,
+                "has_prev": False,
+            },
+        )
+
+    # Convert to response format
+    event_responses = [EventResponse.model_validate(event) for event in events]
+
+    return api_response(
+        status_code=status.HTTP_200_OK,
+        message="Events retrieved successfully",
+        data={
+            "events": event_responses,
+            "total": total,
+            "page": page,
+            "per_page": per_page,
+            "total_pages": total_pages,
+            "has_next": has_next,
+            "has_prev": has_prev,
+        },
     )
 
 
