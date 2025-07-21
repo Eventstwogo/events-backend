@@ -1,4 +1,4 @@
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from shared.core.logging_config import get_logger
@@ -26,10 +26,10 @@ async def get_event_metrics(db: AsyncSession) -> dict:
     # Basic event counts
     total_events_query = select(func.count(Event.event_id))
     published_events_query = select(func.count(Event.event_id)).filter(
-        Event.event_status == True
+        Event.event_status == False
     )
     draft_events_query = select(func.count(Event.event_id)).filter(
-        Event.event_status == False
+        Event.event_status == True
     )
 
     total_events_result = await db.execute(total_events_query)
@@ -109,8 +109,6 @@ async def get_event_metrics(db: AsyncSession) -> dict:
         {
             "organizer_id": row.AdminUser.user_id,
             "username": row.AdminUser.username,  # This uses the property to get decrypted value
-            "first_name": row.AdminUser.first_name,  # This uses the property to get decrypted value
-            "last_name": row.AdminUser.last_name,  # This uses the property to get decrypted value
             "event_count": row.event_count,
         }
         for row in top_organizers_result
@@ -146,10 +144,18 @@ async def get_event_metrics(db: AsyncSession) -> dict:
     events_created_this_month = month_result.scalar() or 0
 
     # Engagement metrics
+    # Use CASE to safely check array length only for actual arrays
     hashtags_query = select(func.count(Event.event_id)).filter(
         and_(
             Event.hash_tags.isnot(None),
-            func.jsonb_array_length(Event.hash_tags) > 0,
+            case(
+                (
+                    func.jsonb_typeof(Event.hash_tags) == "array",
+                    func.jsonb_array_length(Event.hash_tags) > 0,
+                ),
+                else_=False,
+            )
+            == True,
         )
     )
     hashtags_result = await db.execute(hashtags_query)
