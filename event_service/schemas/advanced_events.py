@@ -29,11 +29,15 @@ class EventResponse(BaseModel):
     event_id: str = Field(..., description="Event ID")
     event_title: str = Field(..., description="Event title")
     event_slug: str = Field(..., description="Event slug")
-
-    # # Foreign key IDs
-    # category_id: str = Field(..., description="Category ID")
-    # subcategory_id: str = Field(..., description="Subcategory ID")
-    # organizer_id: str = Field(..., description="Organizer ID")
+    start_date: datetime = Field(..., description="Event start date and time")
+    end_date: datetime = Field(..., description="Event end date and time")
+    location: Optional[str] = Field(
+        None, description="Event location (if applicable)"
+    )
+    is_online: bool = Field(
+        ..., description="Whether the event is online or in-person"
+    )
+    slot_id: str = Field(..., description="Unique slot ID for the event")
 
     # Related entity information
     category: Optional[CategoryInfo] = Field(
@@ -94,8 +98,6 @@ class LimitedEventResponse(BaseModel):
 
     # Event content
     card_image: Optional[str] = Field(None, description="Card image URL")
-
-    # Status - removed as per requirements
 
     @field_serializer("card_image")
     def serialize_card_image(self, value: Optional[str]) -> Optional[str]:
@@ -185,10 +187,16 @@ class EventMinimalResponse(BaseModel):
 
 class SubcategoryWithEvents(BaseModel):
     """Schema for subcategory with its events"""
-    
-    subcategory: SubCategoryInfo = Field(..., description="Subcategory information")
-    events: List[EventMinimalResponse] = Field(..., description="Events in this subcategory")
-    event_count: int = Field(..., description="Number of events in this subcategory")
+
+    subcategory: SubCategoryInfo = Field(
+        ..., description="Subcategory information"
+    )
+    events: List[EventMinimalResponse] = Field(
+        ..., description="Events in this subcategory"
+    )
+    event_count: int = Field(
+        ..., description="Number of events in this subcategory"
+    )
 
 
 class EventListWithSubcategoriesResponse(BaseModel):
@@ -197,8 +205,12 @@ class EventListWithSubcategoriesResponse(BaseModel):
     subcategories_with_events: List[SubcategoryWithEvents] = Field(
         ..., description="List of subcategories with their events"
     )
-    total_events: int = Field(..., description="Total number of events across all subcategories")
-    total_subcategories: int = Field(..., description="Total number of subcategories")
+    total_events: int = Field(
+        ..., description="Total number of events across all subcategories"
+    )
+    total_subcategories: int = Field(
+        ..., description="Total number of subcategories"
+    )
     page: int = Field(..., description="Current page number")
     per_page: int = Field(..., description="Items per page")
     has_next: bool = Field(..., description="Whether there are more pages")
@@ -208,7 +220,9 @@ class EventListWithSubcategoriesResponse(BaseModel):
 class EventListSimpleResponse(BaseModel):
     """Schema for simple event list response (for subcategory slug)"""
 
-    events: List[EventMinimalResponse] = Field(..., description="List of events")
+    events: List[EventMinimalResponse] = Field(
+        ..., description="List of events"
+    )
     total: int = Field(..., description="Total number of events")
     page: int = Field(..., description="Current page number")
     per_page: int = Field(..., description="Items per page")

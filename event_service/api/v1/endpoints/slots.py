@@ -1,3 +1,6 @@
+from datetime import datetime
+from typing import Tuple
+
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
@@ -6,19 +9,21 @@ from event_service.schemas.slots import (
     EventSlotCreateRequest,
     EventSlotCreateResponse,
     EventSlotResponse,
+    SlotStatusToggleResponse,
 )
 from event_service.services.response_builder import (
     event_not_found_response,
     invalid_slot_data_response,
     slot_already_exists_response,
-    slot_created_successfully_response,
+    slot_not_found_response,
 )
 from event_service.services.slots import (
     check_event_exists_by_slot_id,
     check_slot_exists_for_event,
-    count_event_slots,
     create_event_slot,
+    delete_event_slot,
     get_event_slot,
+    toggle_slot_status,
     update_event_slot,
 )
 from shared.core.api_response import api_response
@@ -26,6 +31,72 @@ from shared.db.sessions.database import get_db
 from shared.utils.exception_handlers import exception_handler
 
 router = APIRouter()
+
+
+def parse_slot_date(date_string: str) -> datetime:
+    """
+    Parse slot date string (YYYY-MM-DD format) to datetime object.
+
+    Args:
+        date_string: Date string in YYYY-MM-DD format
+
+    Returns:
+        datetime: Parsed datetime object
+
+    Raises:
+        ValueError: If date format is invalid
+    """
+    try:
+        return datetime.strptime(date_string, "%Y-%m-%d")
+    except ValueError as e:
+        raise ValueError(
+            f"Invalid date format '{date_string}'. Expected YYYY-MM-DD format: {str(e)}"
+        )
+
+
+def validate_slot_dates_against_event(
+    slot_data: dict, event_start_date: datetime, event_end_date: datetime
+) -> Tuple[bool, str]:
+    """
+    Validate that all slot dates fall within the event's date range.
+
+    Args:
+        slot_data: Dictionary containing slot data with date keys
+        event_start_date: Event's start date
+        event_end_date: Event's end date
+
+    Returns:
+        tuple: (is_valid, error_message)
+    """
+    try:
+        # Extract only the date part from event datetime objects for comparison
+        event_start_date_only = event_start_date.date()
+        event_end_date_only = event_end_date.date()
+
+        for date_key in slot_data.keys():
+            try:
+                slot_date = parse_slot_date(date_key).date()
+
+                # Check if slot date is within event date range
+                if slot_date < event_start_date_only:
+                    return (
+                        False,
+                        f"Slot date '{date_key}' is before event start date ({event_start_date_only})",
+                    )
+
+                if slot_date > event_end_date_only:
+                    return (
+                        False,
+                        f"Slot date '{date_key}' is after event end date ({event_end_date_only})",
+                    )
+
+            except ValueError as e:
+                return False, str(e)
+
+        return True, ""
+
+    except Exception as e:
+        return False, f"Error validating slot dates: {str(e)}"
 
 
 @router.post("/create", status_code=status.HTTP_201_CREATED)
@@ -83,6 +154,13 @@ async def create_event_slot_endpoint(
             message="Maximum number of individual slots (100) exceeded across all dates",
             log_error=True,
         )
+
+    # Validate slot dates against event date range
+    is_valid, error_message = validate_slot_dates_against_event(
+        slot_request.slot_data, event.start_date, event.end_date
+    )
+    if not is_valid:
+        return invalid_slot_data_response(error_message)
 
     # Create the event slot
     new_slot = await create_event_slot(
@@ -164,6 +242,13 @@ async def update_event_slot_endpoint(
             message="Maximum number of individual slots (100) exceeded across all dates",
             log_error=True,
         )
+
+    # Validate slot dates against event date range
+    is_valid, error_message = validate_slot_dates_against_event(
+        slot_request.slot_data, event.start_date, event.end_date
+    )
+    if not is_valid:
+        return invalid_slot_data_response(error_message)
 
     # Update the event slot
     updated_slot = await update_event_slot(
@@ -248,4 +333,121 @@ async def get_event_slot_endpoint(
         status_code=status.HTTP_200_OK,
         message="Event slot retrieved successfully",
         data=slot_response.model_dump(),
+    )
+
+
+@router.delete("/delete/{slot_id}", status_code=status.HTTP_200_OK)
+@exception_handler
+async def delete_event_slot_endpoint(
+    slot_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> JSONResponse:
+    """
+    Delete an existing event slot.
+
+    This endpoint deletes an event slot and all its associated data.
+    This action is irreversible.
+
+    Args:
+        slot_id: The event's slot ID
+        db: Database session
+
+    Returns:
+        JSONResponse: Success message confirming deletion
+
+    Raises:
+        404: If the referenced event or slot doesn't exist
+        500: If slot deletion fails
+    """
+
+    # Validate that the event exists
+    event = await check_event_exists_by_slot_id(db, slot_id)
+    if not event:
+        return event_not_found_response()
+
+    # Check if slot exists
+    existing_slot = await check_slot_exists_for_event(db, slot_id)
+    if not existing_slot:
+        return slot_not_found_response()
+
+    # Delete the event slot
+    deleted = await delete_event_slot(db, slot_id)
+    if not deleted:
+        return api_response(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            message="Failed to delete event slot",
+            log_error=True,
+        )
+
+    return api_response(
+        status_code=status.HTTP_200_OK,
+        message="Event slot deleted successfully",
+    )
+
+
+@router.patch("/toggle-status/{slot_id}", status_code=status.HTTP_200_OK)
+@exception_handler
+async def toggle_slot_status_endpoint(
+    slot_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> JSONResponse:
+    """
+    Toggle the status of an event slot (activate/deactivate).
+
+    This endpoint toggles the slot_status field between True and False.
+    Active slots are available for booking, inactive slots are not.
+
+    Args:
+        slot_id: The event's slot ID
+        db: Database session
+
+    Returns:
+        JSONResponse: Success message with updated slot data
+
+    Raises:
+        404: If the referenced event or slot doesn't exist
+        500: If status update fails
+    """
+
+    # Validate that the event exists
+    event = await check_event_exists_by_slot_id(db, slot_id)
+    if not event:
+        return event_not_found_response()
+
+    # Get current slot to check previous status
+    current_slot = await get_event_slot(db, slot_id)
+    if not current_slot:
+        return slot_not_found_response()
+
+    previous_status = current_slot.slot_status
+
+    # Toggle the slot status
+    updated_slot = await toggle_slot_status(db, slot_id)
+    if not updated_slot:
+        return api_response(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            message="Failed to toggle slot status",
+            log_error=True,
+        )
+
+    # Prepare response data
+    slot_response = EventSlotResponse(
+        id=updated_slot.id,
+        slot_id=updated_slot.slot_id,
+        slot_data=updated_slot.slot_data,
+        slot_status=updated_slot.slot_status,
+        created_at=updated_slot.created_at,
+        updated_at=updated_slot.updated_at,
+    )
+
+    response_data = SlotStatusToggleResponse(
+        slot=slot_response,
+        message=f"Slot status changed from {'active' if previous_status else 'inactive'} to {'active' if updated_slot.slot_status else 'inactive'}",
+        previous_status=previous_status,
+    )
+
+    return api_response(
+        status_code=status.HTTP_200_OK,
+        message="Slot status updated successfully",
+        data=response_data.model_dump(),
     )

@@ -42,9 +42,33 @@ class SlotCountResponse(BaseModel):
     """Schema for slot count response"""
 
     event_id: str = Field(..., description="Event ID")
-    total_slots: int = Field(..., description="Total number of slots")
-    active_slots: int = Field(..., description="Number of active slots")
-    inactive_slots: int = Field(..., description="Number of inactive slots")
+    total_slots: int = Field(
+        ..., description="Total number of EventSlot records"
+    )
+    active_slots: int = Field(
+        ..., description="Number of active EventSlot records"
+    )
+    inactive_slots: int = Field(
+        ..., description="Number of inactive EventSlot records"
+    )
+    total_dates: int = Field(
+        ..., description="Total number of dates across all slots"
+    )
+    total_individual_slots: int = Field(
+        ..., description="Total individual time slots across all dates"
+    )
+    total_capacity: int = Field(
+        ..., description="Total capacity across all individual slots"
+    )
+    total_revenue_potential: float = Field(
+        ..., description="Total potential revenue"
+    )
+    average_capacity_per_slot: float = Field(
+        ..., description="Average capacity per individual slot"
+    )
+    average_price_per_slot: float = Field(
+        ..., description="Average price per individual slot"
+    )
 
 
 class EventMetricsResponse(BaseModel):
@@ -57,11 +81,22 @@ class EventMetricsResponse(BaseModel):
 
     # Slot metrics
     total_slots: int = Field(
-        ..., description="Total number of slots across all events"
+        ..., description="Total number of EventSlot records across all events"
     )
-    active_slots: int = Field(..., description="Total number of active slots")
+    active_slots: int = Field(
+        ..., description="Total number of active EventSlot records"
+    )
     inactive_slots: int = Field(
-        ..., description="Total number of inactive slots"
+        ..., description="Total number of inactive EventSlot records"
+    )
+    total_individual_slots: int = Field(
+        ..., description="Total individual time slots across all events"
+    )
+    total_capacity: int = Field(
+        ..., description="Total capacity across all individual slots"
+    )
+    total_revenue_potential: float = Field(
+        ..., description="Total potential revenue across all slots"
     )
 
     # Category distribution

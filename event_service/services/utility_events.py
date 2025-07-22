@@ -40,14 +40,15 @@ async def get_event_metrics(db: AsyncSession) -> dict:
     published_events = published_events_result.scalar() or 0
     draft_events = draft_events_result.scalar() or 0
 
-    # Slot metrics
+    # Slot metrics - Updated for new EventSlot structure
     from shared.db.models import EventSlot
 
-    total_slots_query = select(func.count(EventSlot.slot_ids))
-    active_slots_query = select(func.count(EventSlot.slot_ids)).filter(
+    # Count total EventSlot records (not slot_id which is now a foreign key)
+    total_slots_query = select(func.count(EventSlot.id))
+    active_slots_query = select(func.count(EventSlot.id)).filter(
         EventSlot.slot_status == True
     )
-    inactive_slots_query = select(func.count(EventSlot.slot_ids)).filter(
+    inactive_slots_query = select(func.count(EventSlot.id)).filter(
         EventSlot.slot_status == False
     )
 
@@ -58,6 +59,47 @@ async def get_event_metrics(db: AsyncSession) -> dict:
     total_slots = total_slots_result.scalar() or 0
     active_slots = active_slots_result.scalar() or 0
     inactive_slots = inactive_slots_result.scalar() or 0
+
+    # Additional slot analytics - calculate individual slots and capacity from JSONB data
+    # Only fetch active slots to avoid processing inactive ones
+    all_slots_query = select(EventSlot.slot_data).filter(
+        EventSlot.slot_status == True
+    )
+    all_slots_result = await db.execute(all_slots_query)
+    all_active_slot_data = [row[0] for row in all_slots_result.fetchall()]
+
+    total_individual_slots = 0
+    total_capacity = 0
+    total_revenue_potential = 0.0
+
+    for slot_data in all_active_slot_data:
+        if slot_data and isinstance(slot_data, dict):
+            try:
+                for date_key, date_slots in slot_data.items():
+                    if isinstance(date_slots, dict):
+                        total_individual_slots += len(date_slots)
+
+                        for slot_key, slot_details in date_slots.items():
+                            if isinstance(slot_details, dict):
+                                try:
+                                    capacity = (
+                                        int(slot_details.get("capacity", 0))
+                                        if slot_details.get("capacity")
+                                        else 0
+                                    )
+                                    price = (
+                                        float(slot_details.get("price", 0.0))
+                                        if slot_details.get("price")
+                                        else 0.0
+                                    )
+                                    total_capacity += capacity
+                                    total_revenue_potential += capacity * price
+                                except (ValueError, TypeError, AttributeError):
+                                    # Skip invalid slot data
+                                    continue
+            except (AttributeError, TypeError):
+                # Skip invalid slot_data structure
+                continue
 
     # Category distribution
     category_query = (
@@ -180,6 +222,9 @@ async def get_event_metrics(db: AsyncSession) -> dict:
         "total_slots": total_slots,
         "active_slots": active_slots,
         "inactive_slots": inactive_slots,
+        "total_individual_slots": total_individual_slots,
+        "total_capacity": total_capacity,
+        "total_revenue_potential": round(total_revenue_potential, 2),
         "events_by_category": events_by_category,
         "events_by_subcategory": events_by_subcategory,
         "total_organizers": total_organizers,

@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from shared.core.logging_config import get_logger
-from shared.db.models import AdminUser, Category, Event, SubCategory
+from shared.db.models import AdminUser, Category, Event, EventSlot, SubCategory
 
 logger = get_logger(__name__)
 
@@ -420,21 +420,23 @@ async def fetch_events_grouped_by_subcategory(
     """
     Fetch events grouped by subcategories for a given category slug.
     Returns only active events (event_status = false).
-    
+
     Returns:
         - List[Tuple[SubCategory, List[Event]]]: List of (subcategory, events) tuples
         - int: total_events
         - int: total_subcategories
     """
-    
+
     # First check if category exists
-    category_query = select(Category).filter(Category.category_slug == category_slug.lower())
+    category_query = select(Category).filter(
+        Category.category_slug == category_slug.lower()
+    )
     category_result = await db.execute(category_query)
     category = category_result.scalars().first()
-    
+
     if not category:
         return [], 0, 0
-    
+
     # Get all subcategories for this category
     subcategories_query = (
         select(SubCategory)
@@ -443,14 +445,14 @@ async def fetch_events_grouped_by_subcategory(
     )
     subcategories_result = await db.execute(subcategories_query)
     subcategories = list(subcategories_result.scalars().all())
-    
+
     if not subcategories:
         return [], 0, 0
-    
+
     # Get active events for each subcategory
     subcategory_events_list = []
     total_events = 0
-    
+
     for subcategory in subcategories:
         # Query active events for this subcategory
         events_query = (
@@ -464,19 +466,19 @@ async def fetch_events_grouped_by_subcategory(
             .filter(Event.subcategory_id == subcategory.subcategory_id)
             .order_by(desc(Event.created_at))
         )
-        
+
         # Apply active events filter (event_status = false)
         events_query = events_query.filter(Event.event_status == False)
-        
+
         events_result = await db.execute(events_query)
         events = list(events_result.scalars().all())
-        
+
         if events:  # Only include subcategories that have active events
             subcategory_events_list.append((subcategory, events))
             total_events += len(events)
-    
+
     total_subcategories = len(subcategory_events_list)
-    
+
     return subcategory_events_list, total_events, total_subcategories
 
 
@@ -613,11 +615,10 @@ async def filter_events_advanced(
 
     # Slot-based filters require subqueries
     if has_slots is not None or min_slots is not None or max_slots is not None:
-        from shared.db.models import EventSlot
 
         slot_count_subquery = (
-            select(func.count(EventSlot.slot_ids))
-            .filter(EventSlot.event_id == Event.event_id)
+            select(func.count(EventSlot.slot_id))
+            .filter(EventSlot.slot_id == Event.slot_id)
             .scalar_subquery()
         )
 

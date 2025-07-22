@@ -702,7 +702,9 @@ async def update_event_details(
     location: Optional[str] = Form(
         None, description="Event location (optional)"
     ),
-    is_online: Optional[bool] = Form(None, description="Is the event online?"),
+    is_online: Optional[bool] = Form(
+        default=False, description="Is the event online?"
+    ),
     # Dependencies
     db: AsyncSession = Depends(get_db),
 ) -> JSONResponse:

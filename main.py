@@ -25,6 +25,17 @@ def create_app() -> FastAPI:
         description="Events Service API",
         lifespan=lifespan,
         debug=settings.ENVIRONMENT == "development",
+        swagger_ui_parameters={
+            "filter": True,  # Enable filter
+            "persistAuthorization": True,  # Persist auth tokens
+            "tryItOutEnabled": True,  # Enable try-it-out (in Swagger UI 4.x)
+            "docExpansion": "none",  # Collapse all tags by default
+            "displayRequestDuration": True,  # Show request duration
+            "showExtensions": True,  # Show extensions in Swagger UI
+            "syntaxHighlight.theme": "github",  # Use GitHub theme for syntax highlighting
+            "syntaxHighlight.activate": True,  # Enable syntax highlighting
+            "deepLinking": True,  # Enable deep linking for operations
+        },
     )
 
     @fastapi_app.get(path="/", tags=["System"])
@@ -120,4 +131,5 @@ if __name__ == "__main__":
         port=settings.APP_PORT,
         reload=True,
         reload_delay=15,
+        use_colors=True,
     )

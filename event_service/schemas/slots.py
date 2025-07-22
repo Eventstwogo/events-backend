@@ -260,3 +260,97 @@ class EventSlotCreateResponse(BaseModel):
 
     slot: EventSlotResponse = Field(..., description="Created slot details")
     message: str = Field(default="Event slot created successfully")
+
+
+class EventSlotListRequest(BaseModel):
+    """Schema for slot list request with pagination and filtering"""
+
+    page: int = Field(default=1, ge=1, description="Page number (1-based)")
+    limit: int = Field(
+        default=10, ge=1, le=100, description="Number of items per page"
+    )
+    status: Optional[bool] = Field(
+        default=None, description="Filter by slot status (active/inactive)"
+    )
+    event_id: Optional[str] = Field(
+        default=None, description="Filter by event ID"
+    )
+
+
+class EventSlotListResponse(BaseModel):
+    """Schema for slot list response with pagination"""
+
+    slots: list[EventSlotResponse] = Field(..., description="List of slots")
+    pagination: dict = Field(..., description="Pagination information")
+    total_count: int = Field(..., description="Total number of slots")
+
+
+class SlotStatisticsResponse(BaseModel):
+    """Schema for slot statistics response"""
+
+    total_slots: int = Field(..., description="Total number of slots")
+    active_slots: int = Field(..., description="Number of active slots")
+    inactive_slots: int = Field(..., description="Number of inactive slots")
+    total_dates: int = Field(
+        ..., description="Total number of dates across all slots"
+    )
+    total_individual_slots: int = Field(
+        ..., description="Total number of individual time slots"
+    )
+    total_capacity: int = Field(
+        ..., description="Total capacity across all slots"
+    )
+    total_revenue_potential: float = Field(
+        ..., description="Total potential revenue"
+    )
+    average_capacity_per_slot: float = Field(
+        ..., description="Average capacity per individual slot"
+    )
+    average_price_per_slot: float = Field(
+        ..., description="Average price per slot"
+    )
+
+
+class SlotAvailabilityResponse(BaseModel):
+    """Schema for slot availability response"""
+
+    available: bool = Field(..., description="Whether the slot is available")
+    reason: Optional[str] = Field(
+        default=None, description="Reason if not available"
+    )
+    slot_status: Optional[bool] = Field(
+        default=None, description="Current slot status"
+    )
+    total_dates: Optional[int] = Field(
+        default=None, description="Total number of dates"
+    )
+    total_capacity: Optional[int] = Field(
+        default=None, description="Total capacity"
+    )
+    total_individual_slots: Optional[int] = Field(
+        default=None, description="Total individual slots"
+    )
+    dates_info: Optional[Dict[str, Any]] = Field(
+        default=None, description="Detailed date information"
+    )
+
+
+class SlotAnalyticsResponse(BaseModel):
+    """Schema for detailed slot analytics response"""
+
+    slot_id: str = Field(..., description="Slot ID")
+    slot_status: bool = Field(..., description="Slot status")
+    created_at: datetime = Field(..., description="Creation timestamp")
+    updated_at: datetime = Field(..., description="Last update timestamp")
+    dates_analysis: Dict[str, Any] = Field(..., description="Analysis by date")
+    summary: Dict[str, Any] = Field(..., description="Summary statistics")
+
+
+class SlotStatusToggleResponse(BaseModel):
+    """Schema for slot status toggle response"""
+
+    slot: EventSlotResponse = Field(..., description="Updated slot details")
+    message: str = Field(..., description="Success message")
+    previous_status: bool = Field(
+        ..., description="Previous status before toggle"
+    )

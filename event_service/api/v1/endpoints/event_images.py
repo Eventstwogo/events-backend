@@ -143,7 +143,9 @@ async def update_event_banner_image(
     )
 
 
-@router.patch("/{event_id}/extra-images", summary="Update extra images for event")
+@router.patch(
+    "/{event_id}/extra-images", summary="Update extra images for event"
+)
 @exception_handler
 async def add_event_extra_images(
     user_id: str,
@@ -194,14 +196,16 @@ async def add_event_extra_images(
         )
 
     # Validate extra images limit considering existing images
-    existing_count = len(event.event_extra_images) if event.event_extra_images else 0
+    existing_count = (
+        len(event.event_extra_images) if event.event_extra_images else 0
+    )
     new_count = len(extra_images)
-    
+
     # Check if the final count would exceed 5
     # (existing - deleted + new) should not exceed 5
     remaining_after_deletion = max(0, existing_count - new_count)
     final_count = remaining_after_deletion + new_count
-    
+
     if final_count > 5:
         return api_response(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -212,15 +216,15 @@ async def add_event_extra_images(
     # Update extra images (delete first N existing images and add new ones at the end)
     existing_images = event.event_extra_images or []
     num_new_images = len(extra_images)
-    
+
     # Delete the first N existing images (where N = number of new images)
     images_to_delete = existing_images[:num_new_images]
     for old_image_url in images_to_delete:
         remove_file_if_exists(old_image_url)
-    
+
     # Keep the remaining existing images
     remaining_images = existing_images[num_new_images:]
-    
+
     # Upload new extra images
     uploaded_urls = []
     existing_count = len(remaining_images)
@@ -241,9 +245,13 @@ async def add_event_extra_images(
         status_code=status.HTTP_200_OK,
         message="Extra images updated successfully.",
         data={
-            "extra_images": [get_media_url(url) for url in event.event_extra_images] if event.event_extra_images else [],
+            "extra_images": [
+                get_media_url(url) for url in (event.event_extra_images or [])
+            ],
             "total_extra_images": (
-                len(event.event_extra_images) if event.event_extra_images else 0
+                len(event.event_extra_images or [])
+                if event.event_extra_images is not None
+                else 0
             ),
         },
     )
@@ -301,7 +309,7 @@ async def remove_event_extra_image(
     # Remove the image file and update the list
     image_to_remove = event.event_extra_images[image_index]
     remove_file_if_exists(image_to_remove)
-    
+
     # Create a new list without the image at the specified index
     updated_images = event.event_extra_images.copy()
     updated_images.pop(image_index)
@@ -315,7 +323,9 @@ async def remove_event_extra_image(
         message="Extra image removed successfully.",
         data={
             "remaining_extra_images": (
-                len(event.event_extra_images) if event.event_extra_images else 0
+                len(event.event_extra_images or [])
+                if event.event_extra_images
+                else 0
             ),
         },
     )
