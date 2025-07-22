@@ -326,6 +326,7 @@ async def create_event_with_images(
     # Prepare response data
     response_data = {
         "event_id": new_event.event_id,
+        "slot_id": new_event.slot_id,
         "event_title": new_event.event_title,
         "event_slug": new_event.event_slug,
         "organizer_id": new_event.organizer_id,
@@ -653,6 +654,7 @@ async def update_event_with_images(
     # Prepare response data
     response_data = {
         "event_id": updated_event.event_id,
+        "slot_id": updated_event.slot_id,
         "updated_fields": list(update_data.keys()),
         "images": {
             "card_image": (
