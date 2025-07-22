@@ -30,7 +30,7 @@ async def fetch_events_with_filters(
         selectinload(Event.subcategory),
         selectinload(Event.organizer),
     )
-    
+
     # Apply active events filtering first
     query = apply_active_events_filter(query)
 
