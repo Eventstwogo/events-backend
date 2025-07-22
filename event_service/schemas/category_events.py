@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import List, Optional
 
 from pydantic import BaseModel, Field, field_serializer
@@ -10,8 +10,17 @@ class CategoryEventResponse(BaseModel):
     """Schema for limited event response with category/subcategory context"""
 
     event_id: str = Field(..., description="Event ID")
+    slot_id: str = Field(..., description="Slot ID")
     event_title: str = Field(..., description="Event title")
     event_slug: str = Field(..., description="Event slug")
+    start_date: date = Field(..., description="Event start date")
+    end_date: date = Field(..., description="Event end date")
+    location: Optional[str] = Field(
+        None, description="Event location (if applicable)"
+    )
+    is_online: bool = Field(
+        ..., description="Whether the event is online or in-person"
+    )
     card_image: Optional[str] = Field(None, description="Card image URL")
     event_status: bool = Field(
         ..., description="Event status (active/inactive)"
@@ -88,8 +97,17 @@ class PaginatedEventResponse(BaseModel):
     """Schema for paginated event response"""
 
     event_id: str = Field(..., description="Event ID")
+    slot_id: str = Field(..., description="Slot ID")
     event_title: str = Field(..., description="Event title")
     event_slug: str = Field(..., description="Event slug")
+    start_date: date = Field(..., description="Event start date")
+    end_date: date = Field(..., description="Event end date")
+    location: Optional[str] = Field(
+        None, description="Event location (if applicable)"
+    )
+    is_online: bool = Field(
+        ..., description="Whether the event is online or in-person"
+    )
     card_image: Optional[str] = Field(None, description="Card image URL")
     event_status: bool = Field(
         ..., description="Event status (active/inactive)"

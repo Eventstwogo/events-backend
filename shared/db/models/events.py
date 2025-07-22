@@ -1,8 +1,9 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from sqlalchemy import (
     Boolean,
+    Date,
     DateTime,
     ForeignKey,
     Index,
@@ -48,15 +49,11 @@ class Event(EventsBase):
         nullable=False,
         index=True,
     )
-    start_date: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        server_default=func.now(),
+    start_date: Mapped[date] = mapped_column(
+        Date(), nullable=False, server_default=func.current_date()
     )
-    end_date: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        server_default=func.now(),
+    end_date: Mapped[date] = mapped_column(
+        Date(), nullable=False, server_default=func.current_date()
     )
     location: Mapped[str] = mapped_column(Text, nullable=True)
     is_online: Mapped[bool] = mapped_column(

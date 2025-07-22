@@ -6,7 +6,7 @@ from starlette.responses import JSONResponse
 from shared.core.api_response import api_response
 
 
-def event_alreay_exists_with_slug_response() -> JSONResponse:
+def event_already_exists_with_slug_response() -> JSONResponse:
     return api_response(
         status_code=status.HTTP_400_BAD_REQUEST,
         message="Event with this slug already exists",
@@ -58,6 +58,14 @@ def event_not_found_response() -> JSONResponse:
     return api_response(
         status_code=status.HTTP_404_NOT_FOUND,
         message="Event not found",
+        log_error=True,
+    )
+
+
+def unauthorized_to_update_event_response() -> JSONResponse:
+    return api_response(
+        status_code=status.HTTP_403_FORBIDDEN,
+        message="You are not authorized to update this event.",
         log_error=True,
     )
 
@@ -153,4 +161,44 @@ def slot_deleted_successfully_response() -> JSONResponse:
     return api_response(
         status_code=status.HTTP_200_OK,
         message="Slot deleted successfully",
+    )
+
+
+def invalid_json_format_response(e: Exception) -> JSONResponse:
+    return api_response(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        message=f"Invalid JSON format: {str(e)}",
+        log_error=True,
+    )
+
+
+def event_title_cannot_be_empty_response() -> JSONResponse:
+    return api_response(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        message="Event title cannot be empty",
+        log_error=True,
+    )
+
+
+def event_slug_cannot_be_empty_response() -> JSONResponse:
+    return api_response(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        message="Event slug cannot be empty",
+        log_error=True,
+    )
+
+
+def invalid_file_type_for_card_image_response() -> JSONResponse:
+    return api_response(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        message="Invalid file type for card image.",
+        log_error=True,
+    )
+
+
+def invalid_file_type_for_banner_image_response() -> JSONResponse:
+    return api_response(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        message="Invalid file type for banner image.",
+        log_error=True,
     )

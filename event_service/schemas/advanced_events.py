@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, field_serializer, field_validator
@@ -36,7 +36,10 @@ class SlotInfo(BaseModel):
 
     class Config:
         from_attributes = True
-        json_encoders = {datetime: lambda v: v.isoformat()}
+        json_encoders = {
+            datetime: lambda v: v.isoformat(),
+            date: lambda v: v.isoformat(),
+        }
 
 
 class EventResponse(BaseModel):
@@ -45,8 +48,8 @@ class EventResponse(BaseModel):
     event_id: str = Field(..., description="Event ID")
     event_title: str = Field(..., description="Event title")
     event_slug: str = Field(..., description="Event slug")
-    start_date: datetime = Field(..., description="Event start date and time")
-    end_date: datetime = Field(..., description="Event end date and time")
+    start_date: date = Field(..., description="Event start date")
+    end_date: date = Field(..., description="Event end date")
     location: Optional[str] = Field(
         None, description="Event location (if applicable)"
     )
@@ -82,8 +85,6 @@ class EventResponse(BaseModel):
         None, description="List of hashtags for the event"
     )
 
-    # Status and timestamps - removed as per requirements
-
     @field_serializer("card_image")
     def serialize_card_image(self, value: Optional[str]) -> Optional[str]:
         """Convert relative path to full media URL"""
@@ -105,7 +106,10 @@ class EventResponse(BaseModel):
 
     class Config:
         from_attributes = True
-        json_encoders = {datetime: lambda v: v.isoformat()}
+        json_encoders = {
+            datetime: lambda v: v.isoformat(),
+            date: lambda v: v.isoformat(),
+        }
 
 
 class LimitedEventResponse(BaseModel):
@@ -114,6 +118,14 @@ class LimitedEventResponse(BaseModel):
     event_id: str = Field(..., description="Event ID")
     event_title: str = Field(..., description="Event title")
     event_slug: str = Field(..., description="Event slug")
+    start_date: date = Field(..., description="Event start date")
+    end_date: date = Field(..., description="Event end date")
+    location: Optional[str] = Field(
+        None, description="Event location (if applicable)"
+    )
+    is_online: bool = Field(
+        ..., description="Whether the event is online or in-person"
+    )
 
     # Event content
     card_image: Optional[str] = Field(None, description="Card image URL")
@@ -191,8 +203,15 @@ class EventMinimalResponse(BaseModel):
     event_id: str = Field(..., description="Event ID")
     event_title: str = Field(..., description="Event title")
     event_slug: str = Field(..., description="Event slug")
+    start_date: date = Field(..., description="Event start date")
+    end_date: date = Field(..., description="Event end date")
+    location: Optional[str] = Field(
+        None, description="Event location (if applicable)"
+    )
+    is_online: bool = Field(
+        ..., description="Whether the event is online or in-person"
+    )
     card_image: Optional[str] = Field(None, description="Card image URL")
-    # Status and timestamps - removed as per requirements
 
     @field_serializer("card_image")
     def serialize_card_image(self, value: Optional[str]) -> Optional[str]:
@@ -267,14 +286,6 @@ class EventSimpleListResponse(BaseModel):
     per_page: int = Field(..., description="Items per page")
     has_next: bool = Field(..., description="Whether there are more pages")
     has_prev: bool = Field(..., description="Whether there are previous pages")
-
-
-class EventStatusUpdateRequest(BaseModel):
-    """Schema for updating event status"""
-
-    event_status: bool = Field(
-        ..., description="Event status (true for published, false for draft)"
-    )
 
 
 class EventFilters(BaseModel):
@@ -451,11 +462,21 @@ class CategoryEventResponse(BaseModel):
     """Schema for category event response - latest event from each category"""
 
     event_id: str = Field(..., description="Event ID")
+    slot_id: str = Field(..., description="Slot ID associated with the event")
     event_slug: str = Field(..., description="Event slug")
     event_title: str = Field(..., description="Event title")
     banner_image: Optional[str] = Field(None, description="Banner image URL")
     description: Optional[str] = Field(
         None, description="Event description from extra_data"
+    )
+
+    start_date: date = Field(..., description="Event start date")
+    end_date: date = Field(..., description="Event end date")
+    location: Optional[str] = Field(
+        None, description="Event location (if applicable)"
+    )
+    is_online: bool = Field(
+        ..., description="Whether the event is online or in-person"
     )
 
     @field_serializer("banner_image")

@@ -2,24 +2,16 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from event_service.schemas.category_events import (
-    CategoryEventsResponse,
     CategoryInfoResponse,
     CategoryWithEventsResponse,
     PaginatedEventResponse,
     PaginationMeta,
     SimplifiedCategoryEventsResponse,
     SimplifiedSlugEventsResponse,
-    SlugEventsResponse,
-    SubCategoryInfoResponse,
-    SubCategoryWithEventsResponse,
-    UnifiedSlugEventsResponse,
 )
 from event_service.services.category_events import (
     fetch_categories_with_all_events,
-    fetch_categories_with_latest_events,
-    fetch_events_by_category_or_subcategory_slug,
     fetch_events_by_category_slug_unified,
-    fetch_subcategories_with_latest_events,
 )
 from shared.core.api_response import api_response
 from shared.db.sessions.database import get_db

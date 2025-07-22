@@ -355,8 +355,13 @@ async def fetch_categories_with_all_events(
             events_data.append(
                 {
                     "event_id": event.event_id,
+                    "slot_id": event.slot_id,
                     "event_title": event.event_title,
                     "event_slug": event.event_slug,
+                    "start_date": event.start_date,
+                    "end_date": event.end_date,
+                    "location": event.location,
+                    "is_online": event.is_online,
                     "card_image": event.card_image,
                     "event_status": event.event_status,
                 }
@@ -499,9 +504,14 @@ async def fetch_events_by_category_slug_unified(
         events_data.append(
             {
                 "event_id": event.event_id,
+                "slot_id": event.slot_id,
                 "event_title": event.event_title,
                 "event_slug": event.event_slug,
                 "card_image": event.card_image,
+                "start_date": event.start_date,
+                "end_date": event.end_date,
+                "location": event.location,
+                "is_online": event.is_online,
                 "event_status": event.event_status,
                 "created_at": event.created_at,
                 "updated_at": event.updated_at,

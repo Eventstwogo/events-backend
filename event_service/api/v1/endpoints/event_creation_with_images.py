@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import date
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, Form, Path, UploadFile, status
@@ -12,6 +12,8 @@ from event_service.services.events import (
     check_category_exists,
     check_event_exists_with_slug,
     check_event_exists_with_title,
+    check_event_slug_unique_for_update,
+    check_event_title_unique_for_update,
     check_organizer_exists,
     check_subcategory_exists,
     fetch_event_by_id,
@@ -20,12 +22,19 @@ from event_service.services.events import (
 from event_service.services.response_builder import (
     category_and_subcategory_not_found_response,
     category_not_found_response,
-    event_alreay_exists_with_slug_response,
+    event_already_exists_with_slug_response,
     event_not_found_response,
+    event_slug_cannot_be_empty_response,
     event_title_already_exists_response,
+    event_title_cannot_be_empty_response,
+    invalid_file_type_for_banner_image_response,
+    invalid_file_type_for_card_image_response,
+    invalid_json_format_response,
     organizer_not_found_response,
     subcategory_not_found_response,
+    unauthorized_to_update_event_response,
 )
+from event_service.utils.location_validator import validate_location_input
 from shared.core.api_response import api_response
 from shared.core.config import settings
 from shared.db.models import Event
@@ -41,21 +50,12 @@ from shared.utils.id_generators import generate_digits_upper_lower_case
 router = APIRouter()
 
 
-# Helper function for date parsing
-def parse_iso_datetime(date_string: str, field_name: str) -> datetime:
-    """Parse ISO format datetime string with validation"""
-    try:
-        # Try parsing with timezone info first
-        if date_string.endswith("Z"):
-            date_string = date_string[:-1] + "+00:00"
-
-        # Parse ISO format datetime
-        parsed_date = datetime.fromisoformat(date_string)
-        return parsed_date
-    except ValueError as e:
-        raise ValueError(
-            f"Invalid {field_name} format. Expected ISO format (YYYY-MM-DDTHH:MM:SS): {str(e)}"
-        )
+def process_location_input(location):
+    """Process and validate location input consistently"""
+    if location is None:
+        return None
+    cleaned_location = validate_location_input(location)
+    return cleaned_location if cleaned_location else None
 
 
 def safe_json_parse(json_string, field_name, default_value=None):
@@ -72,24 +72,9 @@ def safe_json_parse(json_string, field_name, default_value=None):
         # Unescape any escaped quotes
         json_string = json_string.replace('\\"', '"')
 
-    # Debug logging - print the exact string being parsed
-    print(
-        f"CREATE - Attempting to parse {field_name}: '{json_string}' (length: {len(json_string)})"
-    )
-    print(
-        f"CREATE - Character at position 9: '{json_string[9] if len(json_string) > 9 else 'N/A'}'"
-    )
-
     try:
         return json.loads(json_string)
     except json.JSONDecodeError as e:
-        # Log the actual string that failed to parse for debugging
-        print(
-            f"CREATE - Failed to parse {field_name}: '{json_string}' - Error: {str(e)}"
-        )
-        print(
-            f"CREATE - Error position: {e.pos}, Character at error position: '{json_string[e.pos] if e.pos < len(json_string) else 'EOF'}'"
-        )
         raise json.JSONDecodeError(
             f"Invalid JSON in {field_name}: {str(e)}. Received: '{json_string[:50]}{'...' if len(json_string) > 50 else ''}'",
             json_string,
@@ -106,6 +91,9 @@ async def create_event_with_images(
     event_slug: str = Form(..., description="Event slug"),
     category_id: str = Form(..., description="Category ID"),
     subcategory_id: Optional[str] = Form(None, description="Subcategory ID"),
+    location: Optional[str] = Form(
+        None, description="Event location (optional)"
+    ),
     extra_data: str = Form(
         "{}", description="Additional event data as JSON string"
     ),
@@ -152,47 +140,30 @@ async def create_event_with_images(
         extra_data_dict = safe_json_parse(extra_data, "extra_data", {})
         hash_tags_list = safe_json_parse(hash_tags, "hash_tags", [])
     except json.JSONDecodeError as e:
-        return api_response(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            message=f"Invalid JSON format: {str(e)}",
-            log_error=True,
-        )
+        return invalid_json_format_response(e)
 
     # Validate basic required fields
     if not event_title or not event_title.strip():
-        return api_response(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            message="Event title cannot be empty",
-            log_error=True,
-        )
+        return event_title_cannot_be_empty_response()
 
     if not event_slug or not event_slug.strip():
-        return api_response(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            message="Event slug cannot be empty",
-            log_error=True,
-        )
+        return event_slug_cannot_be_empty_response()
+
+    # Validate location
+    cleaned_location = process_location_input(location)
 
     # Validate image file types if provided
     if (
         card_image
         and card_image.content_type not in settings.ALLOWED_MEDIA_TYPES
     ):
-        return api_response(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            message="Invalid file type for card image.",
-            log_error=True,
-        )
+        return invalid_file_type_for_card_image_response()
 
     if (
         banner_image
         and banner_image.content_type not in settings.ALLOWED_MEDIA_TYPES
     ):
-        return api_response(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            message="Invalid file type for banner image.",
-            log_error=True,
-        )
+        return invalid_file_type_for_banner_image_response()
 
     for i, image in enumerate(extra_images):
         if image.content_type not in settings.ALLOWED_MEDIA_TYPES:
@@ -210,6 +181,9 @@ async def create_event_with_images(
             log_error=True,
         )
 
+    # Normalize and slugify the event slug first
+    event_slug = slugify(event_slug.lower() or event_title.lower())
+
     # Check if event title is unique
     existing_title = await check_event_exists_with_title(
         db, event_title.strip()
@@ -217,13 +191,10 @@ async def create_event_with_images(
     if existing_title:
         return event_title_already_exists_response()
 
-    # Normalize and slugify the event slug
-    event_slug = slugify(event_slug.lower())
-
     # Check if an event with the same slug already exists
     existing_event = await check_event_exists_with_slug(db, event_slug)
     if existing_event:
-        return event_alreay_exists_with_slug_response()
+        return event_already_exists_with_slug_response()
 
     # Check if the organizer exists (should always pass since we have current_user)
     organizer = await check_organizer_exists(db, user_id)
@@ -259,6 +230,7 @@ async def create_event_with_images(
     card_image_url = None
     banner_image_url = None
     extra_image_urls = []
+    uploaded_files = []  # Track uploaded files for cleanup
 
     try:
         # Upload card image
@@ -269,6 +241,7 @@ async def create_event_with_images(
                     event_id=new_event_id
                 ),
             )
+            uploaded_files.append(card_image_url)
 
         # Upload banner image
         if banner_image:
@@ -278,6 +251,7 @@ async def create_event_with_images(
                     event_id=new_event_id
                 ),
             )
+            uploaded_files.append(banner_image_url)
 
         # Upload extra images
         for i, image in enumerate(extra_images):
@@ -286,8 +260,12 @@ async def create_event_with_images(
                 f"{settings.EVENT_EXTRA_IMAGES_UPLOAD_PATH.format(event_id=new_event_id)}/image_{i+1}",
             )
             extra_image_urls.append(uploaded_url)
+            uploaded_files.append(uploaded_url)
 
     except Exception as e:
+        # Clean up any uploaded files on failure
+        for file_url in uploaded_files:
+            remove_file_if_exists(file_url)
         return api_response(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             message=f"Failed to upload images: {str(e)}",
@@ -301,6 +279,7 @@ async def create_event_with_images(
         event_slug=event_slug.lower(),
         category_id=category_id,
         subcategory_id=subcategory_id,
+        location=cleaned_location if location else None,
         organizer_id=user_id,
         card_image=card_image_url,
         banner_image=banner_image_url,
@@ -311,17 +290,9 @@ async def create_event_with_images(
     )
 
     # Add to database
-    try:
-        db.add(new_event)
-        await db.commit()
-        await db.refresh(new_event)
-    except Exception as e:
-        await db.rollback()
-        return api_response(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            message=f"Failed to create event: {str(e)}",
-            log_error=True,
-        )
+    db.add(new_event)
+    await db.commit()
+    await db.refresh(new_event)
 
     # Prepare response data
     response_data = {
@@ -366,6 +337,9 @@ async def update_event_with_images(
     event_slug: Optional[str] = Form(None, description="Event slug"),
     category_id: Optional[str] = Form(None, description="Category ID"),
     subcategory_id: Optional[str] = Form(None, description="Subcategory ID"),
+    location: Optional[str] = Form(
+        None, description="Event location (optional)"
+    ),
     extra_data: Optional[str] = Form(
         None, description="Additional event data as JSON string"
     ),
@@ -409,17 +383,6 @@ async def update_event_with_images(
     Returns:
         JSONResponse: Success message with updated event data
     """
-
-    # Import here to avoid circular imports
-    from event_service.services.events import (
-        check_event_slug_unique_for_update,
-        check_event_title_unique_for_update,
-        fetch_event_by_id,
-        update_event,
-    )
-    from event_service.services.response_builder import event_not_found_response
-    from shared.utils.file_uploads import remove_file_if_exists
-
     # Fetch the event and verify ownership
     event = await fetch_event_by_id(db, event_id)
     if not event:
@@ -427,11 +390,7 @@ async def update_event_with_images(
 
     # Check if current user is the organizer
     if event.organizer_id != user_id:
-        return api_response(
-            status_code=status.HTTP_403_FORBIDDEN,
-            message="You are not authorized to update this event.",
-            log_error=True,
-        )
+        return unauthorized_to_update_event_response()
 
     # Parse JSON fields if provided
     extra_data_dict = None
@@ -443,32 +402,20 @@ async def update_event_with_images(
         if hash_tags is not None:
             hash_tags_list = safe_json_parse(hash_tags, "hash_tags", [])
     except json.JSONDecodeError as e:
-        return api_response(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            message=f"Invalid JSON format: {str(e)}",
-            log_error=True,
-        )
+        return invalid_json_format_response(e)
 
     # Validate image file types if provided
     if (
         card_image
         and card_image.content_type not in settings.ALLOWED_MEDIA_TYPES
     ):
-        return api_response(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            message="Invalid file type for card image.",
-            log_error=True,
-        )
+        return invalid_file_type_for_card_image_response()
 
     if (
         banner_image
         and banner_image.content_type not in settings.ALLOWED_MEDIA_TYPES
     ):
-        return api_response(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            message="Invalid file type for banner image.",
-            log_error=True,
-        )
+        return invalid_file_type_for_banner_image_response()
 
     for i, image in enumerate(extra_images):
         if image.content_type not in settings.ALLOWED_MEDIA_TYPES:
@@ -485,29 +432,28 @@ async def update_event_with_images(
         )
         new_count = len(extra_images)
 
-        # Check if we're trying to add more than 5 images total
+        # Check if we're trying to add more than 5 images at once
         if new_count > 5:
             return api_response(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                message="Maximum 5 extra images allowed",
+                message="Maximum 5 extra images allowed per request",
                 log_error=True,
             )
 
         # Check if the final count would exceed 5
-        # (existing - deleted + new) should not exceed 5
-        remaining_after_deletion = max(0, existing_count - new_count)
-        final_count = remaining_after_deletion + new_count
-
-        if final_count > 5:
-            return api_response(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                message="Total extra images cannot exceed 5",
-                log_error=True,
-            )
+        # We'll keep existing images and add new ones, removing oldest if needed
+        total_after_adding = existing_count + new_count
+        if total_after_adding > 5:
+            # This is acceptable - we'll handle it by removing oldest images
+            pass
 
     # Prepare update data
     update_data = {}
 
+    # Validate location
+    if location is not None:
+        cleaned_location = process_location_input(location)
+        update_data["location"] = cleaned_location
     # Validate and prepare title update
     if event_title is not None:
         if not await check_event_title_unique_for_update(
@@ -516,13 +462,16 @@ async def update_event_with_images(
             return event_title_already_exists_response()
         update_data["event_title"] = event_title.title()
 
+    if event_slug is None and event_title is not None:
+        event_slug = event_title.lower()
+
     # Validate and prepare slug update
     if event_slug is not None:
         event_slug = slugify(event_slug.lower())
         if not await check_event_slug_unique_for_update(
             db, event_id, event_slug
         ):
-            return event_alreay_exists_with_slug_response()
+            return event_already_exists_with_slug_response()
         update_data["event_slug"] = event_slug
 
     # Validate category if provided
@@ -544,6 +493,21 @@ async def update_event_with_images(
                 return subcategory_not_found_response()
 
         update_data["subcategory_id"] = subcategory_id
+
+    # Validate category-subcategory relationship if both are being updated
+    final_category_id = update_data.get("category_id", event.category_id)
+    final_subcategory_id = update_data.get(
+        "subcategory_id", event.subcategory_id
+    )
+
+    if final_category_id and final_subcategory_id:
+        existing_category_subcategory = (
+            await check_category_and_subcategory_exists_using_joins(
+                db, final_category_id, final_subcategory_id
+            )
+        )
+        if not existing_category_subcategory:
+            return category_and_subcategory_not_found_response()
 
     # Add other fields
     if extra_data_dict is not None:
@@ -580,14 +544,6 @@ async def update_event_with_images(
             )
             update_data["banner_image"] = banner_image_url
 
-        # Update extra images with smart management logic
-        # Logic:
-        # - If existing + new ≤ 5: Keep all existing, add new ones
-        # - If existing + new > 5: Delete oldest to make room, then add new ones
-        # Examples:
-        # - 2 existing + 3 new = 5 total → Keep all 2, add 3 new
-        # - 2 existing + 4 new = 6 total → Delete 1 oldest, keep 1, add 4 new = 5 total
-        # - 5 existing + 2 new = 7 total → Delete 2 oldest, keep 3, add 2 new = 5 total
         if extra_images:
             existing_images = event.event_extra_images or []
             num_existing = len(existing_images)
@@ -695,11 +651,11 @@ async def update_event_details(
     user_id: str = Form(..., description="User ID of the organizer"),
     event_id: str = Path(..., description="Event ID"),
     # Event details fields
-    start_date: Optional[str] = Form(
-        None, description="Event start date in ISO format (YYYY-MM-DDTHH:MM:SS)"
+    start_date: Optional[date] = Form(
+        None, description="Event start date in ISO format (YYYY-MM-DD)"
     ),
-    end_date: Optional[str] = Form(
-        None, description="Event end date in ISO format (YYYY-MM-DDTHH:MM:SS)"
+    end_date: Optional[date] = Form(
+        None, description="Event end date in ISO format (YYYY-MM-DD)"
     ),
     location: Optional[str] = Form(
         None, description="Event location (optional)"
@@ -719,8 +675,8 @@ async def update_event_details(
     Args:
         user_id: User ID of the organizer
         event_id: ID of the event to update
-        start_date: Optional new start date in ISO format
-        end_date: Optional new end date in ISO format
+        start_date: Optional new start date in ISO date format (YYYY-MM-DD)
+        end_date: Optional new end date in ISO date format (YYYY-MM-DD)
         location: Optional new location
         is_online: Optional online status
         db: Database session
@@ -735,69 +691,49 @@ async def update_event_details(
 
     # Check if current user is the organizer
     if event.organizer_id != user_id:
-        return api_response(
-            status_code=status.HTTP_403_FORBIDDEN,
-            message="You are not authorized to update this event.",
-            log_error=True,
-        )
+        return unauthorized_to_update_event_response()
 
-    # Prepare update data
+    ## Prepare update data
     update_data = {}
 
-    # Validate and parse dates
-    try:
-        parsed_start_date = None
-        parsed_end_date = None
+    # Validation
+    if start_date is not None:
+        update_data["start_date"] = start_date
 
-        if start_date is not None:
-            parsed_start_date = parse_iso_datetime(start_date, "start_date")
-            update_data["start_date"] = parsed_start_date
+    if end_date is not None:
+        update_data["end_date"] = end_date
 
-        if end_date is not None:
-            parsed_end_date = parse_iso_datetime(end_date, "end_date")
-            update_data["end_date"] = parsed_end_date
+    # Validate both dates if provided
+    if start_date and end_date:
+        if end_date <= start_date:
+            return api_response(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                message="End date must be after start date.",
+                log_error=True,
+            )
 
-        # Validate that end_date is after start_date if both are provided
-        if start_date is not None and end_date is not None:
-            if parsed_start_date is not None and parsed_end_date is not None:
-                if parsed_end_date <= parsed_start_date:
-                    return api_response(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        message="End date must be after start date.",
-                        log_error=True,
-                    )
-        # Validate against existing dates if only one is provided
-        elif start_date is not None and event.end_date is not None:
-            if parsed_start_date is not None and event.end_date is not None:
-                if parsed_start_date >= event.end_date:
-                    return api_response(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        message="Start date must be before the existing end date.",
-                        log_error=True,
-                    )
-        elif end_date is not None and event.start_date is not None:
-            if parsed_end_date is not None and event.start_date is not None:
-                if parsed_end_date <= event.start_date:
-                    return api_response(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        message="End date must be after the existing start date.",
-                        log_error=True,
-                    )
+    # Validate start_date against existing end_date
+    elif start_date and event.end_date:
+        if start_date >= event.end_date:
+            return api_response(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                message="Start date must be before the existing end date.",
+                log_error=True,
+            )
 
-    except ValueError as e:
-        return api_response(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            message=str(e),
-            log_error=True,
-        )
+    # Validate end_date against existing start_date
+    elif end_date and event.start_date:
+        if end_date <= event.start_date:
+            return api_response(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                message="End date must be after the existing start date.",
+                log_error=True,
+            )
 
     # Validate location
     if location is not None:
-        if location.strip() == "":
-            location = None  # Convert empty string to None
-        else:
-            location = location.strip()
-        update_data["location"] = location
+        cleaned_location = process_location_input(location)
+        update_data["location"] = cleaned_location
 
     # Validate is_online
     if is_online is not None:
@@ -831,6 +767,7 @@ async def update_event_details(
     # Prepare response data
     response_data = {
         "event_id": updated_event.event_id,
+        "slot_id": updated_event.slot_id,
         "event_title": updated_event.event_title,
         "updated_fields": list(update_data.keys()),
         "event_details": {

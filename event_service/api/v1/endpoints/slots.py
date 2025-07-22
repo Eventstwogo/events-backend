@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Tuple
 
 from fastapi import APIRouter, Depends, status
@@ -56,7 +56,7 @@ def parse_slot_date(date_string: str) -> datetime:
 
 
 def validate_slot_dates_against_event(
-    slot_data: dict, event_start_date: datetime, event_end_date: datetime
+    slot_data: dict, event_start_date: date, event_end_date: date
 ) -> Tuple[bool, str]:
     """
     Validate that all slot dates fall within the event's date range.
@@ -70,25 +70,22 @@ def validate_slot_dates_against_event(
         tuple: (is_valid, error_message)
     """
     try:
-        # Extract only the date part from event datetime objects for comparison
-        event_start_date_only = event_start_date.date()
-        event_end_date_only = event_end_date.date()
-
+        # event_start_date and event_end_date are already date objects, no need to call .date()
         for date_key in slot_data.keys():
             try:
                 slot_date = parse_slot_date(date_key).date()
 
                 # Check if slot date is within event date range
-                if slot_date < event_start_date_only:
+                if slot_date < event_start_date:
                     return (
                         False,
-                        f"Slot date '{date_key}' is before event start date ({event_start_date_only})",
+                        f"Slot date '{date_key}' is before event start date ({event_start_date})",
                     )
 
-                if slot_date > event_end_date_only:
+                if slot_date > event_end_date:
                     return (
                         False,
-                        f"Slot date '{date_key}' is after event end date ({event_end_date_only})",
+                        f"Slot date '{date_key}' is after event end date ({event_end_date})",
                     )
 
             except ValueError as e:
