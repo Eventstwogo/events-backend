@@ -10,6 +10,7 @@ from event_service.schemas.slots import (
     EventSlotCreateResponse,
     EventSlotResponse,
     EventSlotUpdateRequest,
+    SlotDateDetailsResponse,
     SlotStatusToggleResponse,
 )
 from event_service.services.response_builder import (
@@ -24,6 +25,7 @@ from event_service.services.slots import (
     create_event_slot,
     delete_event_slot,
     get_event_slot,
+    get_slot_date_details,
     toggle_slot_status,
     update_event_slot,
 )
@@ -447,5 +449,90 @@ async def toggle_slot_status_endpoint(
     return api_response(
         status_code=status.HTTP_200_OK,
         message="Slot status updated successfully",
+        data=response_data.model_dump(),
+    )
+
+
+@router.get("/date-details/{slot_id}/{date}", status_code=status.HTTP_200_OK)
+@exception_handler
+async def get_slot_date_details_endpoint(
+    slot_id: str,
+    date: str,
+    db: AsyncSession = Depends(get_db),
+) -> JSONResponse:
+    """
+    Get detailed information for a specific slot and date.
+
+    This endpoint returns comprehensive information about slots for a specific date,
+    including event details, slot count, capacity, and revenue potential.
+
+    Args:
+        slot_id: The event's slot ID
+        date: Date in YYYY-MM-DD format
+        db: Database session
+
+    Returns:
+        JSONResponse: Detailed slot and event information for the specified date
+
+    Raises:
+        400: If date format is invalid
+        404: If the event, slot, or date is not found
+        500: If retrieval fails
+
+    Example:
+        GET /slots/date-details/ABC123/2024-01-15
+
+        Response:
+        {
+            "slot_id": "ABC123",
+            "date": "2024-01-15",
+            "slots_count": 2,
+            "slots_data": {
+                "slot_1": {
+                    "start_time": "10:00",
+                    "end_time": "12:00",
+                    "capacity": 50,
+                    "price": 25.00
+                },
+                "slot_2": {
+                    "start_time": "14:00",
+                    "end_time": "16:00",
+                    "capacity": 30,
+                    "price": 30.00
+                }
+            },
+            "event_title": "Sample Event",
+            "event_id": "EVT001",
+            "total_capacity": 80,
+            "total_revenue_potential": 2150.00
+        }
+    """
+
+    # Validate date format
+    try:
+        parsed_date = parse_slot_date(date)
+    except ValueError as e:
+        return api_response(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message=f"Invalid date format: {str(e)}",
+            log_error=True,
+        )
+
+    # Get slot date details
+    slot_details = await get_slot_date_details(db, slot_id, date)
+
+    if not slot_details:
+        return api_response(
+            status_code=status.HTTP_404_NOT_FOUND,
+            message=f"No slot data found for slot_id '{slot_id}' and date '{date}'",
+            log_error=True,
+        )
+
+    # Prepare response data
+    response_data = SlotDateDetailsResponse(**slot_details)
+
+    return api_response(
+        status_code=status.HTTP_200_OK,
+        message="Slot date details retrieved successfully",
         data=response_data.model_dump(),
     )

@@ -423,6 +423,42 @@ def is_valid_subcategory_name(name: str) -> bool:
     return bool(re.fullmatch(r"^[A-Za-z0-9 &/()-]{3,60}$", name.strip()))
 
 
+def is_valid_cat_subcat_name(name: str) -> bool:
+    """
+    Validates subcategory names for platforms like e-commerce or ticketing apps.
+
+    Supports:
+        - Letters, numbers
+        - Special characters: space, &, /, -, :, ., (), and digits
+        - Prevents leading/trailing/consecutive special characters
+        - Length: 3–60 characters
+
+    Args:
+        name (str): Subcategory name to validate
+
+    Returns:
+        bool: True if valid, False otherwise
+    """
+    name = name.strip()
+
+    if not 3 <= len(name) <= 60:
+        return False
+
+    # Allow: A-Z, a-z, 0-9, space, &, /, -, :, ., (, )
+    if not re.fullmatch(r"[A-Za-z0-9 &/().:\-]+", name):
+        return False
+
+    # Disallow consecutive special characters (like "--", "..", "&&", "::", etc.)
+    if re.search(r"([&/().:\-\s])\1+", name):
+        return False
+
+    # Disallow special characters at start or end
+    if re.match(r"^[&/().:\-\s]|[&/().:\-\s]$", name):
+        return False
+
+    return True
+
+
 def is_valid_username(
     value: str, allow_spaces: bool = True, allow_hyphens: bool = True
 ) -> bool:
