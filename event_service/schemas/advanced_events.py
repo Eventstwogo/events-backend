@@ -23,6 +23,22 @@ def extra_images_media_urls(value: Optional[List[str]]) -> Optional[List[str]]:
     return result if result else None
 
 
+class SlotInfo(BaseModel):
+    """Schema for slot information in event response"""
+
+    slot_id: str = Field(..., description="Event slot ID reference")
+    slot_data: Dict[str, Any] = Field(
+        ..., description="Slot data with nested slots per date"
+    )
+    slot_status: bool = Field(..., description="Slot status")
+    created_at: datetime = Field(..., description="Creation timestamp")
+    updated_at: datetime = Field(..., description="Last update timestamp")
+
+    class Config:
+        from_attributes = True
+        json_encoders = {datetime: lambda v: v.isoformat()}
+
+
 class EventResponse(BaseModel):
     """Schema for event response"""
 
@@ -48,6 +64,9 @@ class EventResponse(BaseModel):
     )
     organizer: Optional[OrganizerInfo] = Field(
         None, description="Organizer information"
+    )
+    slots: Optional[List[SlotInfo]] = Field(
+        default_factory=list, description="Event slot information"
     )
 
     # Event content

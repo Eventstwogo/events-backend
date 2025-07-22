@@ -9,6 +9,7 @@ from event_service.schemas.slots import (
     EventSlotCreateRequest,
     EventSlotCreateResponse,
     EventSlotResponse,
+    EventSlotUpdateRequest,
     SlotStatusToggleResponse,
 )
 from event_service.services.response_builder import (
@@ -194,7 +195,7 @@ async def create_event_slot_endpoint(
 @exception_handler
 async def update_event_slot_endpoint(
     slot_id: str,
-    slot_request: EventSlotCreateRequest,
+    slot_request: EventSlotUpdateRequest,
     db: AsyncSession = Depends(get_db),
 ) -> JSONResponse:
     """
