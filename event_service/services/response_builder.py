@@ -110,10 +110,10 @@ def slot_not_found_response() -> JSONResponse:
     )
 
 
-def slot_order_already_exists_response() -> JSONResponse:
+def slot_already_exists_response() -> JSONResponse:
     return api_response(
         status_code=status.HTTP_400_BAD_REQUEST,
-        message="Slot order already exists for this event",
+        message="Slot already exists for this event",
         log_error=True,
     )
 

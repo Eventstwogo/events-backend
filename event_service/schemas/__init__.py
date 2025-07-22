@@ -17,13 +17,9 @@ from .events import (
 
 # Slot schemas
 from .slots import (
-    SlotCreateRequest,
-    SlotFilters,
-    SlotListResponse,
-    SlotResponse,
-    SlotSimpleResponse,
-    SlotStatusUpdateRequest,
-    SlotUpdateRequest,
+    EventSlotCreateRequest,
+    EventSlotCreateResponse,
+    EventSlotResponse,
 )
 
 __all__ = [
@@ -33,11 +29,7 @@ __all__ = [
     "EventResponse",
     "EventListResponse",
     # Slot schemas
-    "SlotCreateRequest",
-    "SlotUpdateRequest",
-    "SlotStatusUpdateRequest",
-    "SlotResponse",
-    "SlotSimpleResponse",
-    "SlotListResponse",
-    "SlotFilters",
+    "EventSlotCreateRequest",
+    "EventSlotCreateResponse",
+    "EventSlotResponse",
 ]

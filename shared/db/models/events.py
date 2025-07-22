@@ -48,6 +48,20 @@ class Event(EventsBase):
         nullable=False,
         index=True,
     )
+    start_date: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    end_date: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    location: Mapped[str] = mapped_column(Text, nullable=True)
+    is_online: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
     card_image: Mapped[Optional[str]] = mapped_column(
         Text,
         nullable=True,
@@ -72,6 +86,12 @@ class Event(EventsBase):
     )
     event_status: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False
+    )
+    slot_id: Mapped[str] = mapped_column(
+        String(8),
+        nullable=False,
+        index=True,
+        unique=True,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -103,7 +123,6 @@ class Event(EventsBase):
         back_populates="event",
         cascade="all, delete-orphan",
         lazy="selectin",
-        order_by="EventSlot.slot_order",
     )
 
     # Table indexes for better performance
@@ -116,24 +135,18 @@ class Event(EventsBase):
 class EventSlot(EventsBase):
     __tablename__ = "e2geventslots"
 
-    slot_ids: Mapped[int] = mapped_column(
-        Integer,
-        primary_key=True,
-        autoincrement=True,
+    id: Mapped[int] = mapped_column(
+        Integer, primary_key=True, autoincrement=True
     )
-    event_id: Mapped[str] = mapped_column(
-        String(6),
-        ForeignKey("e2gevents.event_id", ondelete="CASCADE"),
+    slot_id: Mapped[str] = mapped_column(
+        String(8),
+        ForeignKey("e2gevents.slot_id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
-    slot_order: Mapped[int] = mapped_column(
-        Integer,
-        nullable=False,
-        default=0,
-    )
+
     slot_data: Mapped[Dict[str, Any]] = mapped_column(
-        JSONB,
+        JSONB,  # Contains json data for the slot like date, slots, price, members etc like that
         nullable=False,
     )
     slot_status: Mapped[bool] = mapped_column(
@@ -159,6 +172,6 @@ class EventSlot(EventsBase):
 
     # Table indexes and constraints
     __table_args__ = (
-        Index("ix_eventslots_event_order", "event_id", "slot_order"),
+        Index("ix_eventslots_slot_id", "slot_id"),
         Index("ix_eventslots_created", "created_at"),
     )
