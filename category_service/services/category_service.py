@@ -1,4 +1,5 @@
 import re
+import unicodedata
 from dataclasses import dataclass
 from typing import Optional
 
@@ -14,8 +15,7 @@ from shared.utils.security_validators import (
 )
 from shared.utils.validators import (
     is_single_reserved_word,
-    is_valid_category_name,
-    is_valid_subcategory_name,
+    is_valid_cat_subcat_name,
     normalize_whitespace,
     validate_length,
 )
@@ -58,10 +58,15 @@ class SubcategoryConflictData:
 
 def _validate_name(name: str, is_subcategory: bool) -> str:
     """Validate and sanitize category/subcategory name."""
-    name = sanitize_input(name)
+    sanitized = sanitize_input(name)
+    if not isinstance(sanitized, str):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, detail="Invalid input detected."
+        )
+    name = sanitized
     name = normalize_whitespace(name)
     if is_subcategory:
-        if not is_valid_subcategory_name(name):
+        if not is_valid_cat_subcat_name(name):
             raise HTTPException(
                 status.HTTP_400_BAD_REQUEST, detail="Invalid subcategory name."
             )
@@ -69,7 +74,7 @@ def _validate_name(name: str, is_subcategory: bool) -> str:
             "Python reserved words are not allowed in subcategory names."
         )
     else:
-        if not is_valid_category_name(name):
+        if not is_valid_cat_subcat_name(name):
             raise HTTPException(
                 status.HTTP_400_BAD_REQUEST, detail="Invalid category name."
             )
@@ -81,7 +86,12 @@ def _validate_name(name: str, is_subcategory: bool) -> str:
 
 def _validate_slug(slug: str) -> str:
     """Validate and sanitize slug."""
-    slug = sanitize_input(slug)
+    sanitized = sanitize_input(slug)
+    if not isinstance(sanitized, str):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, detail="Invalid input detected."
+        )
+    slug = sanitized
     if contains_xss(slug) or contains_sql_injection(slug):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Invalid slug.")
     if is_single_reserved_word(slug):
@@ -93,47 +103,89 @@ def _validate_slug(slug: str) -> str:
 
 
 def _validate_text_field(text: str, field_name: str, max_length: int) -> str:
-    """Validate and sanitize text fields (description, meta_title, meta_description)."""
-    text = sanitize_input(text).strip()
-    text = normalize_whitespace(text)
-    if not re.fullmatch(r"[A-Za-z\s]+", text):
+    """
+    Validate and sanitize text fields such as description, meta_title, meta_description.
+
+    - Allows letters, numbers, spaces, and common punctuation
+    - Disallows HTML tags, Python keywords, and dangerous symbols
+    - Enforces length and formatting rules
+    """
+    sanitized = sanitize_input(text)
+    if not isinstance(sanitized, str):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, detail="Invalid input detected."
+        )
+
+    text = normalize_whitespace(sanitized)
+
+    # Normalize unicode for international characters (e.g., é, ñ)
+    text = unicodedata.normalize("NFC", text)
+
+    # Disallow HTML tags
+    if re.search(r"<[^>]+>", text):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
-            detail=f"{field_name} must contain only letters and spaces.",
+            detail=f"{field_name} contains disallowed HTML tags.",
         )
+
+    # Accept realistic metadata content (letters, numbers, basic punctuation, accents)
+    if not re.fullmatch(r"[A-Za-z0-9À-ÿ\s.,:;!?()&%#@+\-\"'\/–—|]*", text):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail=f"{field_name} contains unsupported characters.",
+        )
+
+    # Disallow single Python reserved words
     if is_single_reserved_word(text):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
             detail=f"Python reserved words are not allowed in {field_name.lower()}s.",
         )
+
+    # Length validation
     if not validate_length(text, 0, max_length):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
             detail=f"{field_name} too long. Max {max_length} characters allowed.",
         )
+
     return text
 
 
 def validate_category_data(
     data: CategoryData,
 ) -> tuple[str, str, Optional[str], Optional[str], Optional[str]]:
-    """Validate category data with reduced complexity."""
-    # Validate name
+    """
+    Validate and normalize category data.
+    Ensures valid name, slug, description, and metadata fields.
+    """
+    # Required fields
     name = _validate_name(data.name, data.is_subcategory)
-    # Validate slug
     slug = _validate_slug(data.slug or data.name)
-    # Validate optional fields
-    description = None
-    if data.description:
-        description = _validate_text_field(data.description, "Description", 500)
-    meta_title = None
-    if data.meta_title:
-        meta_title = _validate_text_field(data.meta_title, "Meta title", 70)
-    meta_description = None
-    if data.meta_description:
-        meta_description = _validate_text_field(
-            data.meta_description, "Meta description", 160
-        )
+
+    # Optional metadata
+    description = (
+        _validate_text_field(data.description, "Description", 500)
+        if data.description
+        else None
+    )
+    meta_title = (
+        _validate_text_field(data.meta_title, "Meta title", 70)
+        if data.meta_title
+        else None
+    )
+    meta_description = (
+        _validate_text_field(data.meta_description, "Meta description", 160)
+        if data.meta_description
+        else None
+    )
+
+    # Optional: log SEO warnings (not raise)
+    if meta_title and len(meta_title) > 60:
+        print("SEO tip: Meta title exceeds 60 characters.")
+    if meta_description and len(meta_description) > 150:
+        print("SEO tip: Meta description exceeds 150 characters.")
+
     return name.upper(), slug.lower(), description, meta_title, meta_description
 
 
@@ -480,7 +532,7 @@ async def _check_subcategory_existence(
 
 def _validate_subcategory_name(name: str) -> None:
     """Validate subcategory name."""
-    if not is_valid_subcategory_name(name):
+    if not is_valid_cat_subcat_name(name):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail="Invalid subcategory name."
         )
@@ -562,21 +614,37 @@ def _clean_subcategory_inputs(
             status.HTTP_400_BAD_REQUEST, detail="Name and slug are required."
         )
 
+    def ensure_str(value, field_name):
+        if not isinstance(value, str):
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid input detected for {field_name}.",
+            )
+        return value
+
     return (
-        normalize_whitespace(sanitize_input(raw_name)),
-        normalize_whitespace(sanitize_input(raw_slug)),
+        normalize_whitespace(ensure_str(sanitize_input(raw_name), "name")),
+        normalize_whitespace(ensure_str(sanitize_input(raw_slug), "slug")),
         (
-            normalize_whitespace(sanitize_input(raw_description))
+            normalize_whitespace(
+                ensure_str(sanitize_input(raw_description), "description")
+            )
             if raw_description
             else ""
         ),
         (
-            normalize_whitespace(sanitize_input(raw_meta_title))
+            normalize_whitespace(
+                ensure_str(sanitize_input(raw_meta_title), "meta_title")
+            )
             if raw_meta_title
             else ""
         ),
         (
-            normalize_whitespace(sanitize_input(raw_meta_description))
+            normalize_whitespace(
+                ensure_str(
+                    sanitize_input(raw_meta_description), "meta_description"
+                )
+            )
             if raw_meta_description
             else ""
         ),

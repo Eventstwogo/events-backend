@@ -428,6 +428,76 @@ async def get_slot_statistics(db: AsyncSession, event_id: str) -> dict:
     }
 
 
+async def get_slot_date_details(
+    db: AsyncSession, slot_id: str, date_str: str
+) -> Optional[dict]:
+    """
+    Get detailed information for a specific slot and date.
+
+    Args:
+        db: Database session
+        slot_id: The event's slot ID
+        date_str: Date string in YYYY-MM-DD format
+
+    Returns:
+        Dictionary containing slot date details or None if not found
+    """
+    # Get the event and slot information
+    event = await check_event_exists_by_slot_id(db, slot_id)
+    if not event:
+        return None
+
+    slot = await get_event_slot(db, slot_id)
+    if not slot:
+        return None
+
+    # Check if the date exists in slot_data
+    if not slot.slot_data or date_str not in slot.slot_data:
+        return None
+
+    date_slots = slot.slot_data[date_str]
+    if not isinstance(date_slots, dict):
+        return None
+
+    # Calculate statistics for this date
+    slots_count = len(date_slots)
+    total_capacity = 0
+    total_revenue_potential = 0.0
+
+    for slot_key, slot_details in date_slots.items():
+        if isinstance(slot_details, dict):
+            capacity = slot_details.get("capacity", 0)
+            price = slot_details.get("price", 0.0)
+
+            # Ensure capacity and price are numeric
+            try:
+                capacity = int(capacity) if capacity else 0
+                price = float(price) if price else 0.0
+            except (ValueError, TypeError):
+                capacity = 0
+                price = 0.0
+
+            total_capacity += capacity
+            total_revenue_potential += capacity * price
+
+    return {
+        "slot_id": slot_id,
+        "event_date": date_str,
+        "slots_count": slots_count,
+        "slots_data": date_slots,
+        "event_title": event.event_title,
+        "event_id": event.event_id,
+        "event_status": event.event_status,
+        "slot_status": slot.slot_status,
+        "total_capacity": total_capacity,
+        "total_revenue_potential": round(total_revenue_potential, 2),
+        "event_location": event.location,
+        "is_online": event.is_online,
+        "start_date": event.start_date,
+        "end_date": event.end_date,
+    }
+
+
 async def get_detailed_slot_analytics(db: AsyncSession, slot_id: str) -> dict:
     """
     Get detailed analytics for a specific slot.

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, Field, field_validator
@@ -560,3 +560,31 @@ class SlotStatusToggleResponse(BaseModel):
     previous_status: bool = Field(
         ..., description="Previous status before toggle"
     )
+
+
+class SlotDateDetailsResponse(BaseModel):
+    """Schema for slot date details response"""
+
+    slot_id: str = Field(..., description="Event slot ID")
+    event_date: str = Field(..., description="Date in YYYY-MM-DD format")
+    event_title: str = Field(..., description="Event title")
+    event_id: str = Field(..., description="Event ID")
+    slots_count: int = Field(..., description="Number of slots for this date")
+    slots_data: Dict[str, Any] = Field(
+        ..., description="Detailed slot data for the date"
+    )
+    event_status: bool = Field(..., description="Event status")
+    slot_status: bool = Field(..., description="Slot status")
+    total_capacity: int = Field(
+        ..., description="Total capacity for all slots on this date"
+    )
+    total_revenue_potential: float = Field(
+        ..., description="Total potential revenue for this date"
+    )
+    event_location: Optional[str] = Field(None, description="Event location")
+    is_online: bool = Field(..., description="Whether the event is online")
+    start_date: date = Field(..., description="Event start date")
+    end_date: date = Field(..., description="Event end date")
+
+    class Config:
+        from_attributes = True
