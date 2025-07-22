@@ -381,37 +381,15 @@ async def get_latest_5_events_by_category_or_subcategory_slug(
     
     # Prepare response data based on whether it's category or subcategory
     if is_category:
-        # Category slug provided - group events by subcategories
-        from collections import defaultdict
-        subcategory_groups = defaultdict(list)
-        
-        # Group events by subcategory
-        for i, event in enumerate(events):
-            subcategory_key = event.subcategory.subcategory_id if event.subcategory else "no_subcategory"
-            subcategory_groups[subcategory_key].append(event_responses[i])
-        
-        # Build subcategories array
-        subcategories = []
-        for event in events:
-            if event.subcategory:
-                subcategory_id = event.subcategory.subcategory_id
-                # Check if we already added this subcategory
-                if not any(sub.get('subcategory_id') == subcategory_id for sub in subcategories):
-                    subcategories.append({
-                        "subcategory_id": event.subcategory.subcategory_id,
-                        "subcategory_slug": event.subcategory.subcategory_slug,
-                        "events": subcategory_groups[subcategory_id],
-                        "total": len(subcategory_groups[subcategory_id])
-                    })
-        
+        # Category slug provided - show category info and events without subcategory details
         response_data = {
             "category_id": events[0].category.category_id if events[0].category else None,
             "category_slug": events[0].category.category_slug if events[0].category else None,
-            "subcategories": subcategories,
+            "events": event_responses,
             "total": len(events),
         }
     else:
-        # Subcategory slug provided - show only subcategory info + events
+        # Subcategory slug provided - show subcategory info and events
         response_data = {
             "subcategory_id": events[0].subcategory.subcategory_id if events[0].subcategory else None,
             "subcategory_slug": events[0].subcategory.subcategory_slug if events[0].subcategory else None,
