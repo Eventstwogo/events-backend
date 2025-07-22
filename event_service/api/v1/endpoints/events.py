@@ -174,27 +174,36 @@ async def get_events_by_category_or_subcategory_slug(
         has_next = page < total_pages
         has_prev = page > 1
 
-        # Convert to response format
-        subcategories_with_events = []
+        # Convert to response format - clean events without nested details
+        subcategories = []
+        category_info = None
+        
         for subcategory, events_list in subcategory_events_list:
-            # Convert events to response format
-            event_responses = [EventMinimalResponse.model_validate(event) for event in events_list]
+            # Convert events to clean format (removing any nested category/subcategory details)
+            clean_events = []
+            for event in events_list:
+                event_data = EventMinimalResponse.model_validate(event)
+                clean_events.append(event_data.model_dump())
+                
+                # Get category info from first event if not already set
+                if category_info is None and hasattr(event, 'category') and event.category:
+                    category_info = {
+                        "category_id": event.category.category_id,
+                        "category_slug": event.category.category_slug
+                    }
             
-            # Create subcategory info
-            subcategory_info = SubCategoryInfo.model_validate(subcategory)
-            
-            # Create SubcategoryWithEvents object
-            subcategory_with_events = SubcategoryWithEvents(
-                subcategory=subcategory_info,
-                events=event_responses,
-                event_count=len(event_responses)
-            )
-            subcategories_with_events.append(subcategory_with_events)
+            subcategories.append({
+                "subcategory_id": subcategory.subcategory_id,
+                "subcategory_slug": subcategory.subcategory_slug,
+                "events": clean_events,
+                "total": len(clean_events)
+            })
 
         response_data = {
-            "subcategories_with_events": subcategories_with_events,
-            "total_events": total_events,
-            "total_subcategories": total_subcategories,
+            "category_id": category_info["category_id"] if category_info else None,
+            "category_slug": category_info["category_slug"] if category_info else None,
+            "subcategories": subcategories,
+            "total": total_events,
             "page": page,
             "per_page": per_page,
             "total_pages": total_pages,
@@ -223,6 +232,8 @@ async def get_events_by_category_or_subcategory_slug(
             status_code=status.HTTP_200_OK,
             message=f"No active events found for '{slug}'",
             data={
+                "subcategory_id": None,
+                "subcategory_slug": None,
                 "events": [],
                 "total": 0,
                 "page": page,
@@ -233,11 +244,25 @@ async def get_events_by_category_or_subcategory_slug(
             },
         )
 
-    # Convert to minimal response format for subcategory
-    event_responses = [EventMinimalResponse.model_validate(event) for event in events]
+    # Convert to clean response format for subcategory
+    clean_events = []
+    subcategory_info = None
+    
+    for event in events:
+        event_data = EventMinimalResponse.model_validate(event)
+        clean_events.append(event_data.model_dump())
+        
+        # Get subcategory info from first event if not already set
+        if subcategory_info is None and hasattr(event, 'subcategory') and event.subcategory:
+            subcategory_info = {
+                "subcategory_id": event.subcategory.subcategory_id,
+                "subcategory_slug": event.subcategory.subcategory_slug
+            }
 
     response_data = {
-        "events": event_responses,
+        "subcategory_id": subcategory_info["subcategory_id"] if subcategory_info else None,
+        "subcategory_slug": subcategory_info["subcategory_slug"] if subcategory_info else None,
+        "events": clean_events,
         "total": total,
         "page": page,
         "per_page": per_page,
@@ -248,7 +273,7 @@ async def get_events_by_category_or_subcategory_slug(
 
     return api_response(
         status_code=status.HTTP_200_OK,
-        message=f"Active events retrieved successfully for subcategory.",
+        message=f"Active events retrieved successfully for subcategory '{matched_slug}'",
         data=response_data,
     )
 
