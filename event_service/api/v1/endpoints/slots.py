@@ -23,6 +23,7 @@ from event_service.services.slots import (
     check_event_exists_by_slot_id,
     check_slot_exists_for_event,
     create_event_slot,
+    deep_merge_slot_data,
     delete_event_slot,
     get_event_slot,
     get_slot_date_details,
@@ -198,14 +199,20 @@ async def update_event_slot_endpoint(
     db: AsyncSession = Depends(get_db),
 ) -> JSONResponse:
     """
-    Update an existing event slot with new nested date/slot structure.
+    Update an existing event slot with proper JSONB merge logic.
 
-    This endpoint updates an existing slot for an event. The slot contains
-    scheduling and configuration data organized by dates and individual slots.
+    This endpoint performs a smart merge of the new slot data with existing data:
+    - Merges new dates with existing dates (preserves untouched dates)
+    - Merges slots within each date (preserves existing slots, adds new ones)
+    - Merges slot properties when there are conflicts (combines old and new properties)
+
+    Example: If existing data has date "2024-01-15" with "slot_1", and you send
+    "2024-01-15" with "slot_2", the result will have both "slot_1" and "slot_2".
+    If you send updates to "slot_1", only the specified properties will be updated.
 
     Args:
         slot_id: The event's slot ID
-        slot_request: Event slot update request data
+        slot_request: Event slot update request data (will be merged with existing data)
         db: Database session
 
     Returns:
@@ -250,7 +257,41 @@ async def update_event_slot_endpoint(
     if not is_valid:
         return invalid_slot_data_response(error_message)
 
-    # Update the event slot
+    # Get existing slot to preview the merge result
+    existing_slot = await get_event_slot(db, slot_id)
+    if not existing_slot:
+        return api_response(
+            status_code=status.HTTP_404_NOT_FOUND,
+            message="Event slot not found",
+            log_error=True,
+        )
+
+    # Preview the merged data to validate total slot count
+    merged_data = deep_merge_slot_data(
+        existing_slot.slot_data or {}, slot_request.slot_data
+    )
+
+    # Validate merged data doesn't exceed slot limits
+    total_merged_slots = 0
+    for date_key, date_slots in merged_data.items():
+        if isinstance(date_slots, dict):
+            total_merged_slots += len(date_slots)
+
+    if total_merged_slots > 100:
+        return api_response(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message=f"After merging, total number of individual slots ({total_merged_slots}) would exceed maximum limit (100)",
+            log_error=True,
+        )
+
+    # Validate all dates in merged data are within event date range
+    is_merged_valid, merged_error = validate_slot_dates_against_event(
+        merged_data, event.start_date, event.end_date
+    )
+    if not is_merged_valid:
+        return invalid_slot_data_response(f"After merging: {merged_error}")
+
+    # Update the event slot with proper JSONB merge logic
     updated_slot = await update_event_slot(
         db=db,
         slot_id=slot_id,

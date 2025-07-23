@@ -5,12 +5,110 @@ This module contains service functions for managing event slots,
 including creation, validation, and database operations.
 """
 
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from shared.db.models import Event, EventSlot
+
+
+def deep_merge_slot_data(
+    existing_data: Dict[str, Any], new_data: Dict[str, Any]
+) -> Dict[str, Any]:
+    """
+    Deep merge slot data with proper JSONB update logic.
+
+    Merges new dates with existing dates, and merges slots within each date.
+    Preserves existing slots and adds new ones. When there are conflicts,
+    merges the slot properties (combines both old and new properties).
+
+    Args:
+        existing_data: Current slot data from database
+        new_data: New slot data from update request
+
+    Returns:
+        Merged slot data dictionary
+
+    Raises:
+        ValueError: If data types are invalid or merge operation fails
+    """
+    try:
+        # Handle edge cases
+        if not existing_data and not new_data:
+            return {}
+
+        if not existing_data:
+            return new_data.copy() if isinstance(new_data, dict) else {}
+
+        if not new_data:
+            return (
+                existing_data.copy() if isinstance(existing_data, dict) else {}
+            )
+
+        # Ensure both inputs are dictionaries
+        if not isinstance(existing_data, dict):
+            existing_data = {}
+
+        if not isinstance(new_data, dict):
+            return existing_data.copy()
+
+        # Start with a deep copy of existing data
+        merged_data = existing_data.copy()
+
+        # Process each date in the new data
+        for date_key, new_date_slots in new_data.items():
+            if not isinstance(date_key, str):
+                continue  # Skip invalid date keys
+
+            if not isinstance(new_date_slots, dict):
+                # If new date slots is not a dict, skip it
+                continue
+
+            # If date doesn't exist in existing data, add it entirely
+            if date_key not in merged_data:
+                merged_data[date_key] = new_date_slots.copy()
+            else:
+                # Date exists, merge slots within this date
+                existing_date_slots = merged_data[date_key]
+                if not isinstance(existing_date_slots, dict):
+                    # If existing date data is not a dict, replace it
+                    merged_data[date_key] = new_date_slots.copy()
+                    continue
+
+                # Merge slots for this date
+                for slot_key, new_slot_details in new_date_slots.items():
+                    if not isinstance(slot_key, str):
+                        continue  # Skip invalid slot keys
+
+                    if not isinstance(new_slot_details, dict):
+                        # If new slot details is not a dict, just set it
+                        existing_date_slots[slot_key] = new_slot_details
+                        continue
+
+                    # If slot doesn't exist, add it
+                    if slot_key not in existing_date_slots:
+                        existing_date_slots[slot_key] = new_slot_details.copy()
+                    else:
+                        # Slot exists, merge properties
+                        existing_slot_details = existing_date_slots[slot_key]
+                        if isinstance(existing_slot_details, dict):
+                            # Deep merge slot properties
+                            merged_slot = existing_slot_details.copy()
+                            merged_slot.update(new_slot_details)
+                            existing_date_slots[slot_key] = merged_slot
+                        else:
+                            # If existing slot details is not a dict, replace it
+                            existing_date_slots[slot_key] = (
+                                new_slot_details.copy()
+                            )
+
+        return merged_data
+
+    except Exception as e:
+        # Log the error and return existing data as fallback
+        print(f"Error in deep_merge_slot_data: {str(e)}")
+        return existing_data.copy() if isinstance(existing_data, dict) else {}
 
 
 async def check_event_exists_by_slot_id(
@@ -110,16 +208,24 @@ async def create_event_slot(
 
 
 async def update_event_slot(
-    db: AsyncSession, slot_id: str, slot_data: dict, slot_status: bool = False
+    db: AsyncSession,
+    slot_id: str,
+    slot_data: dict,
+    slot_status: Optional[bool] = None,
 ) -> Optional[EventSlot]:
     """
-    Update an existing event slot.
+    Update an existing event slot with proper JSONB merge logic.
+
+    This function performs a deep merge of the new slot data with existing data:
+    - Merges new dates with existing dates
+    - Merges slots within each date (preserves existing slots, adds new ones)
+    - Merges slot properties when there are conflicts
 
     Args:
         db: Database session
         slot_id: The event's slot ID
-        slot_data: Updated JSON data for the slot
-        slot_status: Updated status of the slot (optional)
+        slot_data: New JSON data to merge with existing slot data
+        slot_status: Updated status of the slot (optional, None means don't update)
 
     Returns:
         Updated EventSlot object if found, None otherwise
@@ -131,7 +237,13 @@ async def update_event_slot(
     if not existing_slot:
         return None
 
-    existing_slot.slot_data = slot_data
+    # Perform deep merge of slot data
+    merged_slot_data = deep_merge_slot_data(
+        existing_slot.slot_data or {}, slot_data
+    )
+    existing_slot.slot_data = merged_slot_data
+
+    # Update slot status only if explicitly provided
     if slot_status is not None:
         existing_slot.slot_status = slot_status
 

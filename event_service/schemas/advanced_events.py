@@ -8,6 +8,7 @@ from event_service.schemas.events import (
     OrganizerInfo,
     SubCategoryInfo,
 )
+from event_service.utils.utils import filter_slot_data
 from shared.utils.file_uploads import get_media_url
 from shared.utils.security_validators import contains_xss
 from shared.utils.validators import (
@@ -27,12 +28,19 @@ class SlotInfo(BaseModel):
     """Schema for slot information in event response"""
 
     slot_id: str = Field(..., description="Event slot ID reference")
-    slot_data: Dict[str, Any] = Field(
-        ..., description="Slot data with nested slots per date"
+    slot_data: Optional[Dict[str, Any]] = Field(
+        None, description="Slot data with nested slots per date"
     )
     slot_status: bool = Field(..., description="Slot status")
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
+
+    @field_serializer("slot_data")
+    def serialize_slot_data(
+        self, value: Optional[Dict[str, Any]]
+    ) -> Optional[Dict[str, Any]]:
+        """Filter out past slot dates from slot_data during serialization"""
+        return filter_slot_data(value)
 
     class Config:
         from_attributes = True
