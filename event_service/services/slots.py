@@ -392,6 +392,36 @@ async def get_slots_with_pagination(
     return slots, total_count
 
 
+async def get_slot_by_event_slug(
+    db: AsyncSession, event_slug: str
+) -> Optional[EventSlot]:
+    """
+    Get slot details by event slug.
+
+    This function fetches an event by its slug, retrieves the event's slot_id,
+    and then fetches the corresponding slot details from the EventSlot table.
+
+    Args:
+        db: Database session
+        event_slug: The event's slug identifier
+
+    Returns:
+        EventSlot object if found, None otherwise
+    """
+    # First, get the event by slug to retrieve the slot_id
+    event_query = select(Event.slot_id).filter(Event.event_slug == event_slug)
+    event_result = await db.execute(event_query)
+    slot_id = event_result.scalar_one_or_none()
+
+    if not slot_id:
+        return None
+
+    # Now get the slot details using the slot_id
+    slot_query = select(EventSlot).filter(EventSlot.slot_id == slot_id)
+    slot_result = await db.execute(slot_query)
+    return slot_result.scalar_one_or_none()
+
+
 async def get_slot_availability_info(db: AsyncSession, slot_id: str) -> dict:
     """
     Get availability information for a slot.

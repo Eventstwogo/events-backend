@@ -82,13 +82,13 @@ def validate_slot_dates_against_event(
                 if slot_date < event_start_date:
                     return (
                         False,
-                        f"Slot date '{date_key}' is before event start date ({event_start_date})",
+                        f"Slot date '{date_key}' is before event start date ({event_start_date}). All slot dates must be within the event's date range.",
                     )
 
                 if slot_date > event_end_date:
                     return (
                         False,
-                        f"Slot date '{date_key}' is after event end date ({event_end_date})",
+                        f"Slot date '{date_key}' is after event end date ({event_end_date}). All slot dates must be within the event's date range.",
                     )
 
             except ValueError as e:
@@ -154,9 +154,13 @@ async def create_event_slot_endpoint(
     This endpoint creates a new slot for an existing event. The slot contains
     scheduling and configuration data organized by dates and individual slots.
 
+    The system validates that:
+    - All provided slot dates are within the event's date range
+    - Slot data structure is valid
+    - Slot limits are not exceeded
+
     The system automatically:
     - Populates all dates between event start and end dates with empty dictionaries if not provided
-    - Filters out any dates outside the event's date range
     - Ensures all event dates are present in the final slot_data
 
     Args:
@@ -167,7 +171,7 @@ async def create_event_slot_endpoint(
         JSONResponse: Success message with created slot data
 
     Raises:
-        400: If validation fails or slot already exists
+        400: If validation fails, slot already exists, or dates are outside event range
         404: If the referenced event doesn't exist
         500: If slot creation fails
     """
@@ -192,6 +196,13 @@ async def create_event_slot_endpoint(
             return invalid_slot_data_response(
                 f"Invalid slot structure for date {date_key}"
             )
+
+    # Validate slot dates against event date range BEFORE processing
+    is_valid, error_message = validate_slot_dates_against_event(
+        slot_request.slot_data, event.start_date, event.end_date
+    )
+    if not is_valid:
+        return invalid_slot_data_response(error_message)
 
     # Populate missing dates and filter out dates outside event range
     slot_request.slot_data = populate_missing_dates_and_filter(

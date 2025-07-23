@@ -50,10 +50,15 @@ from shared.utils.id_generators import generate_digits_upper_lower_case
 router = APIRouter()
 
 
-def process_location_input(location):
+def process_location_input(location, allow_empty=False):
     """Process and validate location input consistently"""
     if location is None:
         return None
+
+    # For updates, allow empty string to clear the location
+    if allow_empty and location.strip() == "":
+        return None
+
     cleaned_location = validate_location_input(location)
     return cleaned_location if cleaned_location else None
 
@@ -452,7 +457,7 @@ async def update_event_with_images(
 
     # Validate location
     if location is not None:
-        cleaned_location = process_location_input(location)
+        cleaned_location = process_location_input(location, allow_empty=True)
         update_data["location"] = cleaned_location
     # Validate and prepare title update
     if event_title is not None:
@@ -705,7 +710,7 @@ async def update_event_details(
 
     # Validate both dates if provided
     if start_date and end_date:
-        if end_date <= start_date:
+        if end_date < start_date:
             return api_response(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 message="End date must be after start date.",
@@ -732,7 +737,7 @@ async def update_event_details(
 
     # Validate location
     if location is not None:
-        cleaned_location = process_location_input(location)
+        cleaned_location = process_location_input(location, allow_empty=True)
         update_data["location"] = cleaned_location
 
     # Validate is_online
