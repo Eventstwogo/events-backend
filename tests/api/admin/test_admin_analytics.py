@@ -165,3 +165,160 @@ async def test_user_analytics_failure(test_client: AsyncClient, test_app):
     finally:
         # Clean up the override
         test_app.dependency_overrides.pop(get_current_active_user, None)
+
+
+@pytest.mark.asyncio
+async def test_dashboard_analytics_success(test_client: AsyncClient, test_app):
+    """
+    Test successful retrieval of dashboard analytics data.
+    """
+    # Mock the authentication dependency
+    mock_admin_user = AdminUser(
+        user_id="admin123",
+        username="testadmin",
+        email="admin@test.com",
+        role_id="role123",
+        is_deleted=False,
+    )
+
+    async def mock_get_current_active_user():
+        return mock_admin_user
+
+    # Override the dependency
+    from shared.dependencies.admin import get_current_active_user
+
+    test_app.dependency_overrides[get_current_active_user] = (
+        mock_get_current_active_user
+    )
+
+    # Mock dashboard analytics data
+    mock_dashboard_data = {
+        "categories": {
+            "total": 12,
+            "added_this_month": 2,
+            "percentage_change": 16.7,
+            "trend": "up",
+        },
+        "users": {
+            "total": 1234,
+            "added_this_week": 48,
+            "percentage_change": 4.1,
+            "trend": "up",
+        },
+        "revenue": {
+            "current_month": 45678.0,
+            "last_month": 39000.0,
+            "difference": 6678.0,
+            "percentage_change": 17.1,
+            "trend": "up",
+            "note": "Estimated revenue based on events. Implement actual payment tracking for accurate data.",
+        },
+        "settings": {
+            "total": 28,
+            "changes_this_week": 3,
+            "percentage_change": 50.0,
+            "trend": "up",
+        },
+        "generated_at": "2024-01-15T10:30:00+00:00",
+    }
+
+    try:
+        with patch(
+            "admin_service.api.v1.endpoints.analytics.get_dashboard_analytics",
+            new=AsyncMock(return_value=mock_dashboard_data),
+        ):
+            response = await test_client.get("/api/v1/admin/dashboard")
+            body = response.json()
+
+            assert response.status_code == 200
+            assert (
+                body["message"] == "Dashboard analytics fetched successfully."
+            )
+            assert body["statusCode"] == 200
+            assert isinstance(body.get("timestamp"), str)
+
+            # Validate dashboard data structure
+            data = body["data"]
+            assert "categories" in data
+            assert "users" in data
+            assert "revenue" in data
+            assert "settings" in data
+            assert "generated_at" in data
+
+            # Validate categories data
+            categories = data["categories"]
+            assert categories["total"] == 12
+            assert categories["added_this_month"] == 2
+            assert categories["percentage_change"] == 16.7
+            assert categories["trend"] == "up"
+
+            # Validate users data
+            users = data["users"]
+            assert users["total"] == 1234
+            assert users["added_this_week"] == 48
+            assert users["percentage_change"] == 4.1
+            assert users["trend"] == "up"
+
+            # Validate revenue data
+            revenue = data["revenue"]
+            assert revenue["current_month"] == 45678.0
+            assert revenue["last_month"] == 39000.0
+            assert revenue["difference"] == 6678.0
+            assert revenue["percentage_change"] == 17.1
+            assert revenue["trend"] == "up"
+            assert "note" in revenue
+
+            # Validate settings data
+            settings = data["settings"]
+            assert settings["total"] == 28
+            assert settings["changes_this_week"] == 3
+            assert settings["percentage_change"] == 50.0
+            assert settings["trend"] == "up"
+
+    finally:
+        # Clean up the override
+        test_app.dependency_overrides.pop(get_current_active_user, None)
+
+
+@pytest.mark.asyncio
+async def test_dashboard_analytics_failure(test_client: AsyncClient, test_app):
+    """
+    Test dashboard analytics endpoint when unexpected server error occurs.
+    """
+    # Mock the authentication dependency
+    mock_admin_user = AdminUser(
+        user_id="admin123",
+        username="testadmin",
+        email="admin@test.com",
+        role_id="role123",
+        is_deleted=False,
+    )
+
+    async def mock_get_current_active_user():
+        return mock_admin_user
+
+    # Override the dependency
+    from shared.dependencies.admin import get_current_active_user
+
+    test_app.dependency_overrides[get_current_active_user] = (
+        mock_get_current_active_user
+    )
+
+    async def failing_dashboard_analytics(db=None):
+        raise Exception("DB Connection Failed")
+
+    try:
+        with patch(
+            "admin_service.api.v1.endpoints.analytics.get_dashboard_analytics",
+            new=AsyncMock(return_value=failing_dashboard_analytics),
+        ):
+            response = await test_client.get("/api/v1/admin/dashboard")
+            body = response.json()
+
+            assert response.status_code == 500
+            error_message = body.get("detail") or body.get("message")
+            assert error_message is not None
+            assert "Something went wrong" in error_message
+    finally:
+        # Clean up the override
+        test_app.dependency_overrides.pop(get_current_active_user, None)
