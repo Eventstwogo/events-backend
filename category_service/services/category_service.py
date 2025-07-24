@@ -558,25 +558,56 @@ def _validate_subcategory_slug(slug: str) -> None:
 
 def _validate_subcategory_optional_field(
     field_value: str, field_name: str, max_length: int
-) -> None:
-    """Validate optional subcategory fields."""
+) -> str:
+    """
+    Validate optional subcategory fields using enhanced rules:
+
+    - Sanitizes and normalizes input
+    - Allows letters, numbers, spaces, and common punctuation
+    - Disallows HTML tags, Python keywords, and unsupported characters
+    - Enforces max length
+    """
     if not field_value:
-        return
-    if not validate_length(field_value, 0, max_length):
+        return ""
+
+    sanitized = sanitize_input(field_value)
+    if not isinstance(sanitized, str):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, detail="Invalid input detected."
+        )
+
+    text = normalize_whitespace(sanitized)
+    text = unicodedata.normalize("NFC", text)
+
+    # Disallow HTML tags
+    if re.search(r"<[^>]+>", text):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
-            detail=f"{field_name} too long. Max {max_length} characters.",
+            detail=f"{field_name} contains disallowed HTML tags.",
         )
-    if not re.fullmatch(r"[A-Za-z\s]+", field_value):
+
+    # Accept letters, numbers, punctuation, spaces (including accents)
+    if not re.fullmatch(r"[A-Za-z0-9À-ÿ\s.,:;!?()&%#@+\-\"'\/–—|]*", text):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
-            detail=f"{field_name} must contain only letters and spaces.",
+            detail=f"{field_name} contains unsupported characters.",
         )
-    if is_single_reserved_word(field_value):
+
+    # Disallow single Python reserved words
+    if is_single_reserved_word(text):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
             detail=f"Python reserved words are not allowed in {field_name.lower()}s.",
         )
+
+    # Length validation
+    if not validate_length(text, 0, max_length):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail=f"{field_name} too long. Max {max_length} characters allowed.",
+        )
+
+    return text
 
 
 def _extract_subcategory_inputs(

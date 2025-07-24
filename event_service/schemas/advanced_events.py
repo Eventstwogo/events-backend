@@ -92,6 +92,7 @@ class EventResponse(BaseModel):
     hash_tags: Optional[List[str]] = Field(
         None, description="List of hashtags for the event"
     )
+    created_at: datetime = Field(..., description="Creation timestamp")
 
     @field_serializer("card_image")
     def serialize_card_image(self, value: Optional[str]) -> Optional[str]:

@@ -85,6 +85,8 @@ class Settings(BaseSettings):
         "image/gif",
         "image/webp",
         "image/svg+xml",
+        "image/avif",
+        "image/jxl",
     ]
 
     CATEGORY_IMAGE_PATH: str = "categories/{slug_name}/"
