@@ -68,6 +68,7 @@ class TestForgotPassword:
         reset_record = result.scalar_one_or_none()
         assert reset_record is not None
         assert reset_record.reset_password_token is not None
+        assert reset_record.reset_token_expires_at is not None
         assert reset_record.reset_token_expires_at > datetime.now(timezone.utc)
 
     @pytest.mark.asyncio
@@ -243,6 +244,7 @@ class TestResetPasswordWithToken:
         stmt = select(User).where(User.user_id == "USR001")
         result = await test_db_session.execute(stmt)
         updated_user = result.scalar_one_or_none()
+        assert updated_user is not None
         assert verify_password("NewPass123!", updated_user.password_hash)
         assert not verify_password(
             "OldPassword123!", updated_user.password_hash
@@ -254,6 +256,7 @@ class TestResetPasswordWithToken:
         )
         result = await test_db_session.execute(stmt)
         updated_reset = result.scalar_one_or_none()
+        assert updated_reset is not None
         assert updated_reset.reset_password_token is None
 
     @pytest.mark.asyncio
@@ -570,6 +573,7 @@ class TestChangePassword:
         stmt = select(User).where(User.user_id == "USR001")
         result = await test_db_session.execute(stmt)
         updated_user = result.scalar_one_or_none()
+        assert updated_user is not None
         assert verify_password("NewPass123!", updated_user.password_hash)
         assert not verify_password(
             "OldPassword123!", updated_user.password_hash

@@ -229,10 +229,11 @@ async def add_event_extra_images(
     uploaded_urls = []
     existing_count = len(remaining_images)
     for i, image in enumerate(extra_images):
-        uploaded_url = await save_uploaded_file(
-            image,
-            f"{settings.EVENT_EXTRA_IMAGES_UPLOAD_PATH.format(event_id=event_id)}/image_{existing_count + i + 1}",
+        upload_path = (
+            f"{settings.EVENT_EXTRA_IMAGES_UPLOAD_PATH.format(event_id=event_id)}"
+            f"/image_{existing_count + i + 1}"
         )
+        uploaded_url = await save_uploaded_file(image, upload_path)
         uploaded_urls.append(uploaded_url)
 
     # Combine remaining existing images with new images

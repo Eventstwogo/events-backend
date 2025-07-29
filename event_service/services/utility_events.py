@@ -26,10 +26,10 @@ async def get_event_metrics(db: AsyncSession) -> dict:
     # Basic event counts
     total_events_query = select(func.count(Event.event_id))
     published_events_query = select(func.count(Event.event_id)).filter(
-        Event.event_status == False
+        Event.event_status.is_(False)
     )
     draft_events_query = select(func.count(Event.event_id)).filter(
-        Event.event_status == True
+        Event.event_status.is_(True)
     )
 
     total_events_result = await db.execute(total_events_query)
@@ -46,10 +46,10 @@ async def get_event_metrics(db: AsyncSession) -> dict:
     # Count total EventSlot records (not slot_id which is now a foreign key)
     total_slots_query = select(func.count(EventSlot.id))
     active_slots_query = select(func.count(EventSlot.id)).filter(
-        EventSlot.slot_status == True
+        EventSlot.slot_status.is_(True)
     )
     inactive_slots_query = select(func.count(EventSlot.id)).filter(
-        EventSlot.slot_status == False
+        EventSlot.slot_status.is_(False)
     )
 
     total_slots_result = await db.execute(total_slots_query)
@@ -63,7 +63,7 @@ async def get_event_metrics(db: AsyncSession) -> dict:
     # Additional slot analytics - calculate individual slots and capacity from JSONB data
     # Only fetch active slots to avoid processing inactive ones
     all_slots_query = select(EventSlot.slot_data).filter(
-        EventSlot.slot_status == True
+        EventSlot.slot_status.is_(True)
     )
     all_slots_result = await db.execute(all_slots_query)
     all_active_slot_data = [row[0] for row in all_slots_result.fetchall()]
@@ -196,8 +196,7 @@ async def get_event_metrics(db: AsyncSession) -> dict:
                     func.jsonb_array_length(Event.hash_tags) > 0,
                 ),
                 else_=False,
-            )
-            == True,
+            ).is_(True),
         )
     )
     hashtags_result = await db.execute(hashtags_query)

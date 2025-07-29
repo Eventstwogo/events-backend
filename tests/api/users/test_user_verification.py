@@ -68,6 +68,7 @@ class TestEmailVerification:
         )
         result = await test_db_session.execute(stmt)
         updated_verification = result.scalar_one_or_none()
+        assert updated_verification is not None
         assert updated_verification.email_verified is True
         assert updated_verification.email_verification_token is None
         assert updated_verification.email_token_expires_at is None

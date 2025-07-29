@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import TYPE_CHECKING, List, Optional
+from typing import List, Optional
 
 from sqlalchemy import (
     Boolean,
@@ -15,6 +15,7 @@ from sqlalchemy.orm import (
     mapped_column,
     relationship,
 )
+from sqlalchemy.sql.selectable import Select
 
 from shared.core.security import generate_searchable_hash
 from shared.db.models.base import EventsBase

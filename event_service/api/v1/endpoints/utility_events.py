@@ -106,7 +106,7 @@ async def check_event_exists(
 
     return api_response(
         status_code=status.HTTP_200_OK,
-        message=f"Event existence check completed",
+        message="Event existence check completed",
         data=response_data,
     )
 

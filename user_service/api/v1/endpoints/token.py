@@ -24,6 +24,10 @@ from user_service.utils.auth import create_jwt_token, verify_jwt_token
 
 logger = get_logger(__name__)
 
+# Token type constants to avoid hardcoded strings
+TOKEN_TYPE_ACCESS = "access"  # nosec B105
+TOKEN_TYPE_REFRESH = "refresh"  # nosec B105
+
 router = APIRouter()
 
 
@@ -81,7 +85,7 @@ async def refresh_token(
 
         # Check token type
         token_type = payload.get("token_type")
-        if token_type != "refresh":
+        if token_type != TOKEN_TYPE_REFRESH:
             return api_response(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 message="Invalid token type. Expected refresh token.",
@@ -148,17 +152,17 @@ async def refresh_token(
 
             # Generate tokens with session information
             new_access_token = TokenSessionManager.create_token_with_session(
-                user, session, "access"
+                user, session, TOKEN_TYPE_ACCESS
             )
             new_refresh_token = TokenSessionManager.create_token_with_session(
-                user, session, "refresh"
+                user, session, TOKEN_TYPE_REFRESH
             )
         else:
             # Generate tokens without session (legacy support)
             new_access_token = create_jwt_token(
                 data={
                     "uid": user.user_id,
-                    "token_type": "access",
+                    "token_type": TOKEN_TYPE_ACCESS,
                 },
                 private_key=PRIVATE_KEY.get_secret_value(),
                 expires_in=settings.JWT_ACCESS_TOKEN_EXPIRE_SECONDS,
@@ -166,7 +170,7 @@ async def refresh_token(
             new_refresh_token = create_jwt_token(
                 data={
                     "uid": user.user_id,
-                    "token_type": "refresh",
+                    "token_type": TOKEN_TYPE_REFRESH,
                 },
                 private_key=PRIVATE_KEY.get_secret_value(),
                 expires_in=settings.REFRESH_TOKEN_EXPIRE_DAYS_IN_SECONDS,
@@ -263,9 +267,9 @@ async def revoke_token(
                     message="Token revoked and session terminated successfully.",
                 )
 
-    except Exception:
+    except Exception as e:
         # If token verification fails, we still want to acknowledge the revocation
-        pass
+        logger.warning(f"Token verification failed during revocation: {e}")
 
     # Return success even if we couldn't find/deactivate a session
     return api_response(

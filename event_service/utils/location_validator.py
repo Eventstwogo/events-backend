@@ -52,7 +52,8 @@ def validate_location_input(
     if len(re.findall(r"[A-Za-z]", location)) < 2:
         raise ValueError("Location must contain at least two letters.")
 
-    # Address character pattern: letters, digits, space, comma, slash, dash, dot, hash, colon, parens
+    # Address character pattern: letters, digits, space, comma, slash, dash, dot,
+    # hash, colon, parens
     address_pattern = re.compile(r"^[\w\s.,#/\-():]+$", re.UNICODE)
     if not address_pattern.match(location):
         raise ValueError("Location contains invalid characters.")

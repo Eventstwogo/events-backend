@@ -52,7 +52,12 @@ class EventSlotCreateRequest(BaseModel):
     )
     slot_data: Dict[str, Any] = Field(
         ...,
-        description="JSON data with date as key and slots as nested objects. Format: {'2024-01-15': {'slot_1': {'start_time': '10:00', 'end_time': '12:00', 'duration': 120, 'capacity': 50, 'price': 25.00}, 'slot_2': {...}}}",
+        description=(
+            "JSON data with date as key and slots as nested objects. "
+            "Format: {'2024-01-15': {'slot_1': {'start_time': '10:00', "
+            "'end_time': '12:00', 'duration': 120, 'capacity': 50, "
+            "'price': 25.00}, 'slot_2': {...}}}"
+        ),
     )
 
     @field_validator("slot_id")
@@ -146,24 +151,28 @@ class EventSlotCreateRequest(BaseModel):
 
             if contains_xss(slot_key):
                 raise ValueError(
-                    f"Slot key '{slot_key}' for date '{date_key}' contains potentially malicious content"
+                    f"Slot key '{slot_key}' for date '{date_key}' contains "
+                    f"potentially malicious content"
                 )
 
             # Validate slot key format (slot_1, slot_2, etc.)
             if not slot_key.startswith("slot_"):
                 raise ValueError(
-                    f"Slot key '{slot_key}' for date '{date_key}' must start with 'slot_' (e.g., slot_1, slot_2)"
+                    f"Slot key '{slot_key}' for date '{date_key}' must start with "
+                    f"'slot_' (e.g., slot_1, slot_2)"
                 )
 
             try:
                 slot_number = int(slot_key.split("_")[1])
                 if slot_number < 1 or slot_number > 10:
                     raise ValueError(
-                        f"Slot key '{slot_key}' for date '{date_key}' must be between slot_1 and slot_10"
+                        f"Slot key '{slot_key}' for date '{date_key}' must be "
+                        f"between slot_1 and slot_10"
                     )
             except (IndexError, ValueError):
                 raise ValueError(
-                    f"Invalid slot key format '{slot_key}' for date '{date_key}'. Use format: slot_1, slot_2, etc."
+                    f"Invalid slot key format '{slot_key}' for date '{date_key}'. "
+                    f"Use format: slot_1, slot_2, etc."
                 )
 
             # Validate slot details
@@ -184,29 +193,33 @@ class EventSlotCreateRequest(BaseModel):
         date_key: str, slot_key: str, slot_details: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Validate slot details for a specific slot"""
-        validated_slot = {}
+        validated_slot: Dict[str, Any] = {}
 
         for field_name, field_value in slot_details.items():
             # Security check for field names
             if contains_xss(field_name):
                 raise ValueError(
-                    f"Slot detail field name '{field_name}' for '{slot_key}' on date '{date_key}' contains potentially malicious content"
+                    f"Slot detail field name '{field_name}' for '{slot_key}' "
+                    f"on date '{date_key}' contains potentially malicious content"
                 )
 
             if len(field_name) > 50:
                 raise ValueError(
-                    f"Slot detail field name '{field_name}' for '{slot_key}' on date '{date_key}' is too long (max 50 characters)"
+                    f"Slot detail field name '{field_name}' for '{slot_key}' "
+                    f"on date '{date_key}' is too long (max 50 characters)"
                 )
 
             # Validate field values based on type
             if isinstance(field_value, str):
                 if contains_xss(field_value):
                     raise ValueError(
-                        f"Slot detail '{field_name}' for '{slot_key}' on date '{date_key}' contains potentially malicious content"
+                        f"Slot detail '{field_name}' for '{slot_key}' "
+                        f"on date '{date_key}' contains potentially malicious content"
                     )
                 if len(field_value) > 1000:
                     raise ValueError(
-                        f"Slot detail '{field_name}' for '{slot_key}' on date '{date_key}' is too long (max 1000 characters)"
+                        f"Slot detail '{field_name}' for '{slot_key}' "
+                        f"on date '{date_key}' is too long (max 1000 characters)"
                     )
                 validated_slot[field_name] = field_value.strip()
 
@@ -214,15 +227,18 @@ class EventSlotCreateRequest(BaseModel):
                 # Validate essential numeric fields
                 if field_name in ["capacity"] and field_value < 0:
                     raise ValueError(
-                        f"Slot detail '{field_name}' for '{slot_key}' on date '{date_key}' cannot be negative"
+                        f"Slot detail '{field_name}' for '{slot_key}' "
+                        f"on date '{date_key}' cannot be negative"
                     )
                 if field_name in ["price"] and field_value < 0:
                     raise ValueError(
-                        f"Slot detail '{field_name}' for '{slot_key}' on date '{date_key}' cannot be negative"
+                        f"Slot detail '{field_name}' for '{slot_key}' "
+                        f"on date '{date_key}' cannot be negative"
                     )
                 if field_name in ["duration"] and field_value <= 0:
                     raise ValueError(
-                        f"Slot detail '{field_name}' for '{slot_key}' on date '{date_key}' must be positive"
+                        f"Slot detail '{field_name}' for '{slot_key}' "
+                        f"on date '{date_key}' must be positive"
                     )
                 validated_slot[field_name] = field_value
 
@@ -277,7 +293,12 @@ class EventSlotUpdateRequest(BaseModel):
 
     slot_data: Dict[str, Any] = Field(
         ...,
-        description="JSON data with date as key and slots as nested objects. Format: {'2024-01-15': {'slot_1': {'start_time': '10:00', 'end_time': '12:00', 'duration': 120, 'capacity': 50, 'price': 25.00}, 'slot_2': {...}}}",
+        description=(
+            "JSON data with date as key and slots as nested objects. "
+            "Format: {'2024-01-15': {'slot_1': {'start_time': '10:00', "
+            "'end_time': '12:00', 'duration': 120, 'capacity': 50, "
+            "'price': 25.00}, 'slot_2': {...}}}"
+        ),
     )
 
     @field_validator("slot_data")
@@ -352,24 +373,28 @@ class EventSlotUpdateRequest(BaseModel):
 
             if contains_xss(slot_key):
                 raise ValueError(
-                    f"Slot key '{slot_key}' for date '{date_key}' contains potentially malicious content"
+                    f"Slot key '{slot_key}' for date '{date_key}' contains "
+                    f"potentially malicious content"
                 )
 
             # Validate slot key format (slot_1, slot_2, etc.)
             if not slot_key.startswith("slot_"):
                 raise ValueError(
-                    f"Slot key '{slot_key}' for date '{date_key}' must start with 'slot_' (e.g., slot_1, slot_2)"
+                    f"Slot key '{slot_key}' for date '{date_key}' must start with "
+                    f"'slot_' (e.g., slot_1, slot_2)"
                 )
 
             try:
                 slot_number = int(slot_key.split("_")[1])
                 if slot_number < 1 or slot_number > 10:
                     raise ValueError(
-                        f"Slot key '{slot_key}' for date '{date_key}' must be between slot_1 and slot_10"
+                        f"Slot key '{slot_key}' for date '{date_key}' must be "
+                        f"between slot_1 and slot_10"
                     )
             except (IndexError, ValueError):
                 raise ValueError(
-                    f"Invalid slot key format '{slot_key}' for date '{date_key}'. Use format: slot_1, slot_2, etc."
+                    f"Invalid slot key format '{slot_key}' for date '{date_key}'. "
+                    f"Use format: slot_1, slot_2, etc."
                 )
 
             # Validate slot details
@@ -396,23 +421,27 @@ class EventSlotUpdateRequest(BaseModel):
             # Security check for field names
             if contains_xss(field_name):
                 raise ValueError(
-                    f"Slot detail field name '{field_name}' for '{slot_key}' on date '{date_key}' contains potentially malicious content"
+                    f"Slot detail field name '{field_name}' for '{slot_key}' "
+                    f"on date '{date_key}' contains potentially malicious content"
                 )
 
             if len(field_name) > 50:
                 raise ValueError(
-                    f"Slot detail field name '{field_name}' for '{slot_key}' on date '{date_key}' is too long (max 50 characters)"
+                    f"Slot detail field name '{field_name}' for '{slot_key}' "
+                    f"on date '{date_key}' is too long (max 50 characters)"
                 )
 
             # Validate field values based on type
             if isinstance(field_value, str):
                 if contains_xss(field_value):
                     raise ValueError(
-                        f"Slot detail '{field_name}' for '{slot_key}' on date '{date_key}' contains potentially malicious content"
+                        f"Slot detail '{field_name}' for '{slot_key}' "
+                        f"on date '{date_key}' contains potentially malicious content"
                     )
                 if len(field_value) > 1000:
                     raise ValueError(
-                        f"Slot detail '{field_name}' for '{slot_key}' on date '{date_key}' is too long (max 1000 characters)"
+                        f"Slot detail '{field_name}' for '{slot_key}' "
+                        f"on date '{date_key}' is too long (max 1000 characters)"
                     )
                 validated_slot[field_name] = field_value.strip()
 
@@ -420,15 +449,18 @@ class EventSlotUpdateRequest(BaseModel):
                 # Validate essential numeric fields
                 if field_name in ["capacity"] and field_value < 0:
                     raise ValueError(
-                        f"Slot detail '{field_name}' for '{slot_key}' on date '{date_key}' cannot be negative"
+                        f"Slot detail '{field_name}' for '{slot_key}' "
+                        f"on date '{date_key}' cannot be negative"
                     )
                 if field_name in ["price"] and field_value < 0:
                     raise ValueError(
-                        f"Slot detail '{field_name}' for '{slot_key}' on date '{date_key}' cannot be negative"
+                        f"Slot detail '{field_name}' for '{slot_key}' "
+                        f"on date '{date_key}' cannot be negative"
                     )
                 if field_name in ["duration"] and field_value <= 0:
                     raise ValueError(
-                        f"Slot detail '{field_name}' for '{slot_key}' on date '{date_key}' must be positive"
+                        f"Slot detail '{field_name}' for '{slot_key}' "
+                        f"on date '{date_key}' must be positive"
                     )
                 validated_slot[field_name] = field_value
 

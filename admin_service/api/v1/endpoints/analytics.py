@@ -4,7 +4,6 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
 
-from admin_service.schemas.analytics import DashboardAnalytics
 from admin_service.services.analytics import (
     get_admin_user_analytics,
     get_daily_registrations,

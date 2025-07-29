@@ -468,7 +468,7 @@ async def fetch_events_grouped_by_subcategory(
         )
 
         # Apply active events filter (event_status = false)
-        events_query = events_query.filter(Event.event_status == False)
+        events_query = events_query.filter(Event.event_status.is_(False))
 
         events_result = await db.execute(events_query)
         events = list(events_result.scalars().all())
@@ -501,7 +501,7 @@ async def fetch_events_by_category_or_subcategory_slug(
         )
         .join(Category, Event.category_id == Category.category_id)
         .filter(Category.category_slug == slug.lower())
-        .filter(Event.event_status == False)  # Only active events
+        .filter(Event.event_status.is_(False))  # Only active events
         .order_by(desc(Event.created_at))
         .offset(offset)
         .limit(per_page)
@@ -516,7 +516,7 @@ async def fetch_events_by_category_or_subcategory_slug(
             select(func.count(Event.event_id))
             .join(Category, Event.category_id == Category.category_id)
             .filter(Category.category_slug == slug.lower())
-            .filter(Event.event_status == False)  # Only active events
+            .filter(Event.event_status.is_(False))  # Only active events
         )
         total_result = await db.execute(count_query)
         total = total_result.scalar() or 0
@@ -544,7 +544,7 @@ async def fetch_events_by_category_or_subcategory_slug(
         )
         .join(SubCategory, Event.subcategory_id == SubCategory.subcategory_id)
         .filter(SubCategory.subcategory_slug == slug.lower())
-        .filter(Event.event_status == False)  # Only active events
+        .filter(Event.event_status.is_(False))  # Only active events
         .order_by(desc(Event.created_at))
         .offset(offset)
         .limit(per_page)
@@ -558,7 +558,7 @@ async def fetch_events_by_category_or_subcategory_slug(
         select(func.count(Event.event_id))
         .join(SubCategory, Event.subcategory_id == SubCategory.subcategory_id)
         .filter(SubCategory.subcategory_slug == slug.lower())
-        .filter(Event.event_status == False)  # Only active events
+        .filter(Event.event_status.is_(False))  # Only active events
     )
     total_result = await db.execute(count_query)
     total = total_result.scalar() or 0
@@ -699,7 +699,7 @@ async def get_events_by_organizer(
         Event.organizer_id == organizer_id
     )
     active_query = select(func.count(Event.event_id)).filter(
-        and_(Event.organizer_id == organizer_id, Event.event_status == True)
+        and_(Event.organizer_id == organizer_id, Event.event_status.is_(True))
     )
 
     total_result = await db.execute(total_query)
@@ -798,7 +798,7 @@ async def get_upcoming_events(
             selectinload(Event.subcategory),
             selectinload(Event.organizer),
         )
-        .filter(Event.event_status == True)
+        .filter(Event.event_status.is_(True))
     )
 
     # Apply additional filters
@@ -815,7 +815,7 @@ async def get_upcoming_events(
 
     # Get total count
     count_query = select(func.count(Event.event_id)).filter(
-        Event.event_status == True
+        Event.event_status.is_(True)
     )
     if filters:
         count_query = count_query.filter(and_(*filters))
@@ -902,7 +902,7 @@ async def fetch_latest_event_from_each_category(
             Event.category_id,
             func.max(Event.created_at).label("max_created_at"),
         )
-        .where(Event.event_status == False)  # Only published events
+        .where(Event.event_status.is_(False))  # Only published events
         .group_by(Event.category_id)
         .subquery()
     )

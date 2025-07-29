@@ -81,7 +81,8 @@ def safe_json_parse(json_string, field_name, default_value=None):
         return json.loads(json_string)
     except json.JSONDecodeError as e:
         raise json.JSONDecodeError(
-            f"Invalid JSON in {field_name}: {str(e)}. Received: '{json_string[:50]}{'...' if len(json_string) > 50 else ''}'",
+            f"Invalid JSON in {field_name}: {str(e)}. Received: '{json_string[:50]}"
+            f"{'...' if len(json_string) > 50 else ''}'",
             json_string,
             e.pos,
         )
@@ -260,10 +261,11 @@ async def create_event_with_images(
 
         # Upload extra images
         for i, image in enumerate(extra_images):
-            uploaded_url = await save_uploaded_file(
-                image,
-                f"{settings.EVENT_EXTRA_IMAGES_UPLOAD_PATH.format(event_id=new_event_id)}/image_{i+1}",
+            upload_path = (
+                f"{settings.EVENT_EXTRA_IMAGES_UPLOAD_PATH.format(event_id=new_event_id)}"
+                f"/image_{i+1}"
             )
+            uploaded_url = await save_uploaded_file(image, upload_path)
             extra_image_urls.append(uploaded_url)
             uploaded_files.append(uploaded_url)
 
@@ -574,10 +576,11 @@ async def update_event_with_images(
             new_extra_urls = []
             existing_count = len(remaining_images)
             for i, image in enumerate(extra_images):
-                uploaded_url = await save_uploaded_file(
-                    image,
-                    f"{settings.EVENT_EXTRA_IMAGES_UPLOAD_PATH.format(event_id=event_id)}/image_{existing_count + i + 1}",
+                upload_path = (
+                    f"{settings.EVENT_EXTRA_IMAGES_UPLOAD_PATH.format(event_id=event_id)}"
+                    f"/image_{existing_count + i + 1}"
                 )
+                uploaded_url = await save_uploaded_file(image, upload_path)
                 new_extra_urls.append(uploaded_url)
 
             # Combine remaining existing images with new images
@@ -698,7 +701,7 @@ async def update_event_details(
     if event.organizer_id != user_id:
         return unauthorized_to_update_event_response()
 
-    ## Prepare update data
+    # Prepare update data
     update_data = {}
 
     # Validation

@@ -17,6 +17,9 @@ from user_service.utils.auth import create_jwt_token
 
 logger = get_logger(__name__)
 
+# Token type constants to avoid hardcoded strings
+TOKEN_TYPE_ACCESS = "access"  # nosec B105
+
 
 class SessionManager:
     """Comprehensive session management service"""
@@ -495,7 +498,7 @@ class TokenSessionManager:
     def create_token_with_session(
         user: User,
         session: UserDeviceSession,
-        token_type: str = "access",
+        token_type: str = TOKEN_TYPE_ACCESS,
     ) -> str:
         """
         Create a JWT token that includes session information.
@@ -518,7 +521,7 @@ class TokenSessionManager:
         }
 
         # Set expiration based on token type
-        if token_type == "access":
+        if token_type == TOKEN_TYPE_ACCESS:
             expires_in = settings.JWT_ACCESS_TOKEN_EXPIRE_SECONDS
         else:  # refresh
             expires_in = settings.REFRESH_TOKEN_EXPIRE_DAYS_IN_SECONDS

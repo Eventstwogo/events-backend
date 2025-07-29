@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date
 from typing import List, Optional
 
 from pydantic import BaseModel, Field, field_serializer
@@ -179,7 +179,10 @@ class SlugEventsResponse(BaseModel):
 
 
 class UnifiedSlugEventsResponse(BaseModel):
-    """Schema for unified events response by category or subcategory slug (always under category context)"""
+    """
+    Schema for unified events response by category or
+    subcategory slug (always under category context)
+    """
 
     events: List[PaginatedEventResponse] = Field(
         ..., description="List of events"

@@ -6,11 +6,14 @@ Note: MAC addresses cannot be captured from web requests for security reasons.
 """
 
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 import httpx
 from fastapi import Request
 from user_agents import parse
+from user_agents.parsers import UserAgent
+
+from shared.db.models import AdminUserDeviceSession, UserDeviceSession
 
 
 class DeviceInfoExtractor:
@@ -95,7 +98,7 @@ class DeviceInfoExtractor:
         return "unknown"
 
     @staticmethod
-    def _determine_device_type(user_agent) -> str:
+    def _determine_device_type(user_agent: UserAgent) -> str:
         """Determine device type based on user agent object"""
         if not user_agent:
             return "Unknown Device"
@@ -157,7 +160,9 @@ class DeviceInfoExtractor:
         return "unknown"
 
     @staticmethod
-    def _generate_device_fingerprint(request: Request, user_agent) -> str:
+    def _generate_device_fingerprint(
+        request: Request, user_agent: UserAgent
+    ) -> str:
         """Generate a device fingerprint for identification"""
         import hashlib
 
@@ -282,7 +287,10 @@ class DeviceSessionManager:
 
     @staticmethod
     def should_create_new_session(
-        existing_sessions: list, device_info: Dict[str, Any]
+        existing_sessions: list[
+            Union[UserDeviceSession, AdminUserDeviceSession]
+        ],
+        device_info: Dict[str, Any],
     ) -> bool:
         """
         Determine if a new session should be created based on device fingerprint.

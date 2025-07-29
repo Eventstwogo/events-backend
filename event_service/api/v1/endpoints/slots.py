@@ -26,7 +26,6 @@ from event_service.services.slots import (
     deep_merge_slot_data,
     delete_event_slot,
     get_event_slot,
-    get_slot_date_details,
     toggle_slot_status,
     update_event_slot,
 )
@@ -80,16 +79,20 @@ def validate_slot_dates_against_event(
 
                 # Check if slot date is within event date range
                 if slot_date < event_start_date:
-                    return (
-                        False,
-                        f"Slot date '{date_key}' is before event start date ({event_start_date}). All slot dates must be within the event's date range.",
+                    error_msg = (
+                        f"Slot date '{date_key}' is before event start date "
+                        f"({event_start_date}). All slot dates must be within "
+                        f"the event's date range."
                     )
+                    return (False, error_msg)
 
                 if slot_date > event_end_date:
-                    return (
-                        False,
-                        f"Slot date '{date_key}' is after event end date ({event_end_date}). All slot dates must be within the event's date range.",
+                    error_msg = (
+                        f"Slot date '{date_key}' is after event end date "
+                        f"({event_end_date}). All slot dates must be within "
+                        f"the event's date range."
                     )
+                    return (False, error_msg)
 
             except ValueError as e:
                 return False, str(e)
@@ -337,9 +340,13 @@ async def update_event_slot_endpoint(
             total_merged_slots += len(date_slots)
 
     if total_merged_slots > 100:
+        error_msg = (
+            f"After merging, total number of individual slots "
+            f"({total_merged_slots}) would exceed maximum limit (100)"
+        )
         return api_response(
             status_code=status.HTTP_400_BAD_REQUEST,
-            message=f"After merging, total number of individual slots ({total_merged_slots}) would exceed maximum limit (100)",
+            message=error_msg,
             log_error=True,
         )
 
@@ -557,9 +564,13 @@ async def toggle_slot_status_endpoint(
         updated_at=updated_slot.updated_at,
     )
 
+    status_message = (
+        f"Slot status changed from {'active' if previous_status else 'inactive'} "
+        f"to {'active' if updated_slot.slot_status else 'inactive'}"
+    )
     response_data = SlotStatusToggleResponse(
         slot=slot_response,
-        message=f"Slot status changed from {'active' if previous_status else 'inactive'} to {'active' if updated_slot.slot_status else 'inactive'}",
+        message=status_message,
         previous_status=previous_status,
     )
 
@@ -631,9 +642,13 @@ async def get_slot_date_details_endpoint(
 
     # Check if the requested date is within event date range
     if requested_date < event.start_date or requested_date > event.end_date:
+        error_msg = (
+            f"Date '{date}' is outside event date range "
+            f"({event.start_date} to {event.end_date})"
+        )
         return api_response(
             status_code=status.HTTP_400_BAD_REQUEST,
-            message=f"Date '{date}' is outside event date range ({event.start_date} to {event.end_date})",
+            message=error_msg,
             log_error=True,
         )
 

@@ -5,7 +5,7 @@ from sqlalchemy import case, func, select
 from sqlalchemy.engine.row import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from shared.db.models import AdminUser, Category, Config, Event, EventSlot, User
+from shared.db.models import AdminUser, Category, Config, Event, User
 
 
 async def get_admin_user_analytics(
@@ -127,7 +127,7 @@ async def _get_categories_analytics(
     # Get total categories count
     total_result = await db.execute(
         select(func.count(Category.category_id)).where(
-            Category.category_status == False
+            Category.category_status.is_(False)
         )
     )
     total_categories = total_result.scalar() or 0
@@ -136,7 +136,7 @@ async def _get_categories_analytics(
     current_month_result = await db.execute(
         select(func.count(Category.category_id)).where(
             Category.category_tstamp >= current_month_start,
-            Category.category_status == False,
+            Category.category_status.is_(False),
         )
     )
     current_month_count = current_month_result.scalar() or 0
@@ -146,7 +146,7 @@ async def _get_categories_analytics(
         select(func.count(Category.category_id)).where(
             Category.category_tstamp >= last_month_start,
             Category.category_tstamp < current_month_start,
-            Category.category_status == False,
+            Category.category_status.is_(False),
         )
     )
     last_month_count = last_month_result.scalar() or 0
@@ -179,7 +179,7 @@ async def _get_admin_users_analytics(
     # Get total active users count
     total_result = await db.execute(
         select(func.count(AdminUser.user_id)).where(
-            AdminUser.is_deleted == False
+            AdminUser.is_deleted.is_(False)
         )
     )
     total_users = total_result.scalar() or 0
@@ -188,7 +188,7 @@ async def _get_admin_users_analytics(
     current_week_result = await db.execute(
         select(func.count(AdminUser.user_id)).where(
             AdminUser.created_at >= current_week_start,
-            AdminUser.is_deleted == False,
+            AdminUser.is_deleted.is_(False),
         )
     )
     current_week_count = current_week_result.scalar() or 0
@@ -198,7 +198,7 @@ async def _get_admin_users_analytics(
         select(func.count(AdminUser.user_id)).where(
             AdminUser.created_at >= last_week_start,
             AdminUser.created_at < current_week_start,
-            AdminUser.is_deleted == False,
+            AdminUser.is_deleted.is_(False),
         )
     )
     last_week_count = last_week_result.scalar() or 0
@@ -230,14 +230,14 @@ async def _get_users_analytics(
 
     # Get total active users count
     total_result = await db.execute(
-        select(func.count(User.user_id)).where(User.is_deleted == False)
+        select(func.count(User.user_id)).where(User.is_deleted.is_(False))
     )
     total_users = total_result.scalar() or 0
 
     # Get users added this week
     current_week_result = await db.execute(
         select(func.count(User.user_id)).where(
-            User.created_at >= current_week_start, User.is_deleted == False
+            User.created_at >= current_week_start, User.is_deleted.is_(False)
         )
     )
     current_week_count = current_week_result.scalar() or 0
@@ -247,7 +247,7 @@ async def _get_users_analytics(
         select(func.count(User.user_id)).where(
             User.created_at >= last_week_start,
             User.created_at < current_week_start,
-            User.is_deleted == False,
+            User.is_deleted.is_(False),
         )
     )
     last_week_count = last_week_result.scalar() or 0
@@ -288,7 +288,8 @@ async def _get_revenue_analytics(
     # Get events created this month (as proxy for revenue)
     current_month_events = await db.execute(
         select(func.count(Event.event_id)).where(
-            Event.created_at >= current_month_start, Event.event_status == False
+            Event.created_at >= current_month_start,
+            Event.event_status.is_(False),
         )
     )
     current_month_count = current_month_events.scalar() or 0
@@ -298,7 +299,7 @@ async def _get_revenue_analytics(
         select(func.count(Event.event_id)).where(
             Event.created_at >= last_month_start,
             Event.created_at < current_month_start,
-            Event.event_status == False,
+            Event.event_status.is_(False),
         )
     )
     last_month_count = last_month_events.scalar() or 0
@@ -328,7 +329,8 @@ async def _get_revenue_analytics(
             if percentage_change > 0
             else "down" if percentage_change < 0 else "stable"
         ),
-        "note": "Estimated revenue based on events. Implement actual payment tracking for accurate data.",
+        "note": "Estimated revenue based on events. "
+        "Implement actual payment tracking for accurate data.",
     }
 
 

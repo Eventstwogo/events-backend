@@ -5,9 +5,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from shared.core.logging_config import get_logger
-from shared.db.models import Category, Event, SubCategory
+from shared.db.models import Event
 
 logger = get_logger(__name__)
+
+
+def apply_active_events_filter(query):
+    """Apply filter to show only active events (event_status = False)"""
+    return query.filter(Event.event_status.is_(False))
 
 
 async def fetch_events_with_filters(

@@ -66,7 +66,10 @@ async def list_events(
 async def limited_list_events(
     db: AsyncSession = Depends(get_db),
 ):
-    """Get all limited events - returns event_id, event_title, slug, card_image, organizer_id, username, etc."""
+    """
+    Get all limited events - returns event_id, event_title, slug, card_image,
+    organizer_id, username, etc.
+    """
 
     # Fetch events with filters
     events, total = await fetch_limited_events_without_filters(db)
@@ -435,9 +438,13 @@ async def get_latest_5_events_by_category_or_subcategory_slug(
         }
 
     entity_type = "category" if is_category else "subcategory"
+    message = (
+        f"Latest {len(events)} events retrieved successfully for "
+        f"{entity_type} '{matched_slug}'"
+    )
     return api_response(
         status_code=status.HTTP_200_OK,
-        message=f"Latest {len(events)} events retrieved successfully for {entity_type} '{matched_slug}'",
+        message=message,
         data=response_data,
     )
 
@@ -451,7 +458,10 @@ async def get_latest_5_events_by_category_or_subcategory_slug(
 async def get_latest_events_from_each_category(
     db: AsyncSession = Depends(get_db),
 ):
-    """Get the latest event from each category with event_id, slug, title, banner_image, and description"""
+    """
+    Get the latest event from each category with event_id, slug, title,
+    banner_image, and description
+    """
 
     # Fetch latest events from each category
     events, total = await fetch_latest_event_from_each_category(db)
