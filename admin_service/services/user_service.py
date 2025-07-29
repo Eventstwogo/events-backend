@@ -1,4 +1,6 @@
-from sqlalchemy import select
+from typing import Optional
+
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from admin_service.utils.user_validators import is_account_locked
@@ -49,6 +51,12 @@ async def get_user_by_username(
 
 async def get_role_by_id(db: AsyncSession, role_id: int) -> Role | None:
     result = await db.execute(select(Role).where(Role.role_id == role_id))
+    return result.scalar_one_or_none()
+
+
+async def get_role_by_name(db: AsyncSession, name: str) -> Optional[Role]:
+    stmt = select(Role).where(func.lower(Role.role_name) == func.lower(name))
+    result = await db.execute(stmt)
     return result.scalar_one_or_none()
 
 

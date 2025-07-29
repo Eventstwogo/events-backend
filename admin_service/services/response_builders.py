@@ -48,6 +48,25 @@ def account_deactivated() -> JSONResponse:
     )
 
 
+def account_not_approved() -> JSONResponse:
+    return api_response(
+        status_code=status.HTTP_403_FORBIDDEN,
+        message=(
+            "This user account is not yet approved by the administration, so you can't "
+            "log in until you are verified."
+        ),
+        log_error=True,
+    )
+
+
+def email_not_verified_response() -> JSONResponse:
+    return api_response(
+        status_code=status.HTTP_403_FORBIDDEN,
+        message="Email address has not been verified.",
+        log_error=True,
+    )
+
+
 def initial_login_response(user: AdminUser) -> JSONResponse:
     return api_response(
         status_code=status.HTTP_201_CREATED,
@@ -57,7 +76,10 @@ def initial_login_response(user: AdminUser) -> JSONResponse:
 
 
 def password_expired_response(
-    user: AdminUser, access_token: str, refresh_token: Optional[str] = None
+    user: AdminUser,
+    access_token: str,
+    refresh_token: Optional[str] = None,
+    organizer_info: Optional[dict] = None,
 ) -> JSONResponse:
     response_data = {
         "success": False,
@@ -73,6 +95,9 @@ def password_expired_response(
     if refresh_token:
         response_data["refresh_token"] = refresh_token
 
+    if organizer_info:
+        response_data["organizer_info"] = organizer_info
+
     return JSONResponse(
         status_code=status.HTTP_409_CONFLICT,
         content=response_data,
@@ -84,6 +109,7 @@ def login_success_response(
     access_token: str,
     refresh_token: Optional[str] = None,
     session_id: Optional[int] = None,
+    organizer_info: Optional[dict] = None,
 ) -> JSONResponse:
     response_data = {
         "success": True,
@@ -100,8 +126,20 @@ def login_success_response(
         response_data["refresh_token"] = refresh_token
     if session_id:
         response_data["session_id"] = str(session_id)
+    if organizer_info:
+        response_data["organizer_info"] = organizer_info
 
     return JSONResponse(
         status_code=status.HTTP_200_OK,
         content=response_data,
+    )
+
+
+def organizer_registration_response() -> JSONResponse:
+    return api_response(
+        status_code=status.HTTP_403_FORBIDDEN,
+        message=(
+            "Organizer accounts cannot be created through this endpoint. "
+            "Please use the dedicated organizer registration process."
+        ),
     )

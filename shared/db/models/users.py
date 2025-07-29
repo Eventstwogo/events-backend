@@ -78,6 +78,9 @@ class User(EventsBase):
     last_login: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), default=None
     )
+    account_locked_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     failure_login_attempts: Mapped[int] = mapped_column(
         Integer, default=0, nullable=False
     )

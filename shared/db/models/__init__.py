@@ -20,18 +20,26 @@ Usage:
 # Version of the models package - update when making significant changes
 __version__ = "1.0.0"
 
-from .admin_users import AdminUser, AdminUserDeviceSession, PasswordReset
+from .admin_users import (
+    AdminUser,
+    AdminUserDeviceSession,
+    AdminUserVerification,
+    PasswordReset,
+)
 
 # First, import the base class which has no dependencies
 from .base import EventsBase
 
 # Models with dependencies only on base
-from .categories import Category, SubCategory
+from .categories import Category, Industries, SubCategory
 
 # Import models in dependency order to avoid circular imports at runtime
 # Models with no model dependencies
 from .config import Config
 from .events import Event, EventSlot
+
+# Models that depend on Organization Profile
+from .organizer import BusinessProfile
 
 # Models with potential circular dependencies - order matters
 # Import RBAC models before user models since user.py imports from rbac.py
@@ -48,6 +56,7 @@ __all__ = [
     "Config",
     # Categories
     "Category",
+    "Industries",
     "SubCategory",
     # Events
     "Event",
@@ -60,6 +69,9 @@ __all__ = [
     "AdminUser",
     "PasswordReset",
     "AdminUserDeviceSession",
+    "AdminUserVerification",
+    # Organizer
+    "BusinessProfile",
     # USers
     "User",
     "UserVerification",

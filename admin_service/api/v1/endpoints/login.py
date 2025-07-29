@@ -10,6 +10,7 @@ from fastapi import (
 )
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from admin_service.services.auth import (
@@ -19,6 +20,8 @@ from admin_service.services.auth import (
 )
 from admin_service.services.response_builders import (
     account_deactivated,
+    account_not_approved,
+    email_not_verified_response,
     initial_login_response,
     login_success_response,
     password_expired_response,
@@ -33,7 +36,7 @@ from admin_service.utils.auth import revoke_token
 from shared.core.api_response import api_response
 from shared.core.config import PUBLIC_KEY, settings
 from shared.core.logging_config import get_logger
-from shared.db.models import AdminUser
+from shared.db.models import AdminUser, BusinessProfile
 from shared.db.sessions.database import get_db
 from shared.dependencies.admin import (
     extract_token_from_request,
@@ -44,6 +47,36 @@ from shared.utils.exception_handlers import exception_handler
 logger = get_logger(__name__)
 
 router = APIRouter()
+
+
+async def get_organizer_profile_info(user: AdminUser, db: AsyncSession) -> dict:
+    """Get organizer profile information if user is an organizer"""
+    organizer_info = {
+        "is_approved": False,
+        "ref_number": "",
+        "industry": "",
+    }
+
+    # Check if user role is "Organizer"
+    if user.role and user.role.role_name.lower() == "organizer":
+        profile_stmt = select(
+            BusinessProfile.is_approved,
+            BusinessProfile.ref_number,
+            BusinessProfile.industry,
+        ).where(BusinessProfile.profile_id == user.profile_id)
+
+        profile_result = await db.execute(profile_stmt)
+        profile_data = profile_result.one_or_none()
+
+        if profile_data:
+            is_approved, ref_number, industry = profile_data
+            organizer_info = {
+                "is_approved": is_approved,
+                "ref_number": ref_number or "",
+                "industry": industry or "",
+            }
+
+    return organizer_info
 
 
 @router.post("/login")
@@ -76,7 +109,15 @@ async def validate_login_attempt(
     if not user:
         return user_not_found_response()
 
-    # Step 1.1: Check account activation (is_active=False means active)
+    # Step 1.1: Email verification check
+    if not (user.verification and user.verification.email_verified):
+        return email_not_verified_response()
+
+    # Step 1.2: Account approval check
+    if user.is_verified != 1:
+        return account_not_approved()
+
+    # Step 1.3: Check account activation (is_active=False means active)
     if user.is_deleted:
         return account_deactivated()
 
@@ -128,12 +169,15 @@ async def process_successful_login(
 
     await db.refresh(user)
 
-    # Step 8: Generate JWT access token with session information
+    # Step 8: Get organizer profile information if user is an organizer
+    organizer_info = await get_organizer_profile_info(user, db)
+
+    # Step 9: Generate JWT access token with session information
     access_token = TokenSessionManager.create_token_with_session(
         user, session, "access"
     )
 
-    # Step 9: Generate refresh token with session information
+    # Step 10: Generate refresh token with session information
     refresh_token = TokenSessionManager.create_token_with_session(
         user, session, "refresh"
     )
@@ -157,13 +201,15 @@ async def process_successful_login(
         f"Set access token cookie and Authorization header for user {user.user_id}"
     )
 
-    # Step 10: Return appropriate response
+    # Step 11: Return appropriate response
     if password_expired:
-        return password_expired_response(user, access_token, refresh_token)
+        return password_expired_response(
+            user, access_token, refresh_token, organizer_info
+        )
 
     # Return successful login response
     return login_success_response(
-        user, access_token, refresh_token, session.session_id
+        user, access_token, refresh_token, session.session_id, organizer_info
     )
 
 
