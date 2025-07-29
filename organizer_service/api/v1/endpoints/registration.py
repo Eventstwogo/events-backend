@@ -1,6 +1,3 @@
-import secrets
-from datetime import datetime, timedelta, timezone
-
 from fastapi import APIRouter, BackgroundTasks, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
@@ -25,6 +22,8 @@ from shared.db.sessions.database import get_db
 from shared.utils.email_utils import send_organizer_verification_email
 from shared.utils.exception_handlers import exception_handler
 from shared.utils.id_generators import (
+    generate_digits_lowercase,
+    generate_digits_uppercase,
     generate_lower_uppercase,
 )
 from shared.utils.otp_and_tokens import generate_verification_tokens
@@ -76,6 +75,8 @@ async def register_user(
         email=user_data.email.lower(),
         password_hash=password_hash,
         days_180_flag=config.global_180_day_flag,
+        profile_id=generate_digits_uppercase(length=6),
+        business_id=generate_digits_lowercase(length=6),
         login_status=0,
     )
 

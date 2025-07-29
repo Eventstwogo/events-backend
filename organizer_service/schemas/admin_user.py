@@ -156,7 +156,6 @@ class AdminLoginRequest(BaseModel):
 class AdminUserInfo(BaseModel):
     is_approved: bool
     ref_number: str
-    industry: str
 
 
 class AdminLoginResponse(BaseModel):

@@ -29,7 +29,7 @@ logger = get_logger(__name__)
 
 
 @router.post(
-    "/email/verify",
+    "/verify",
     response_model=VerificationResponse,
     summary="Verify email with token",
 )
@@ -123,7 +123,7 @@ async def verify_email(
 
 
 @router.post(
-    "/email/resend-token",
+    "/resend-token",
     response_model=EmailVerificationSentResponse,
     summary="Resend email verification token",
 )

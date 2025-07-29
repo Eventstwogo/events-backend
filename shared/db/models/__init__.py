@@ -31,7 +31,7 @@ from .admin_users import (
 from .base import EventsBase
 
 # Models with dependencies only on base
-from .categories import Category, Industries, SubCategory
+from .categories import Category, SubCategory
 
 # Import models in dependency order to avoid circular imports at runtime
 # Models with no model dependencies
@@ -56,7 +56,6 @@ __all__ = [
     "Config",
     # Categories
     "Category",
-    "Industries",
     "SubCategory",
     # Events
     "Event",

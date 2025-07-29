@@ -1,7 +1,7 @@
 import re
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -127,10 +127,10 @@ async def generate_store_name_suggestions(
     return suggestions
 
 
-@router.get("/check-store-name/{store_name}")
+@router.get("/store-name-availability")
 @exception_handler
 async def check_store_name_availability_get(
-    store_name: str,
+    name: str = Query(..., description="Store name to check"),
     db: AsyncSession = Depends(get_db),
 ) -> StoreNameAvailabilityResponse:
     """
@@ -140,7 +140,7 @@ async def check_store_name_availability_get(
     taken by another business profile. If unavailable, it provides suggestions.
 
     Args:
-        store_name: Store name to check (URL path parameter)
+        name: Store name to check (URL path parameter)
         db: Database session dependency
 
     Returns:
@@ -150,7 +150,7 @@ async def check_store_name_availability_get(
         HTTPException: For validation errors or server issues
     """
     # Validate and clean the store name
-    cleaned_store_name = validate_store_name(store_name)
+    cleaned_store_name = validate_store_name(name)
 
     # Check if store name already exists (case-insensitive)
     stmt = select(BusinessProfile).where(

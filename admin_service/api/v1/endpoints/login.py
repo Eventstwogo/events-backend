@@ -54,7 +54,6 @@ async def get_organizer_profile_info(user: AdminUser, db: AsyncSession) -> dict:
     organizer_info = {
         "is_approved": False,
         "ref_number": "",
-        "industry": "",
     }
 
     # Check if user role is "Organizer"
@@ -62,18 +61,16 @@ async def get_organizer_profile_info(user: AdminUser, db: AsyncSession) -> dict:
         profile_stmt = select(
             BusinessProfile.is_approved,
             BusinessProfile.ref_number,
-            BusinessProfile.industry,
-        ).where(BusinessProfile.profile_id == user.profile_id)
+        ).where(BusinessProfile.business_id == user.business_id)
 
         profile_result = await db.execute(profile_stmt)
         profile_data = profile_result.one_or_none()
 
         if profile_data:
-            is_approved, ref_number, industry = profile_data
+            is_approved, ref_number = profile_data
             organizer_info = {
                 "is_approved": is_approved,
                 "ref_number": ref_number or "",
-                "industry": industry or "",
             }
 
     return organizer_info

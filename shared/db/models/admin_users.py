@@ -84,6 +84,9 @@ class AdminUser(EventsBase):
     profile_id: Mapped[str] = mapped_column(
         String(6), nullable=False, unique=True
     )
+    business_id: Mapped[str] = mapped_column(
+        String(6), nullable=False, unique=True
+    )
     is_deleted: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False
     )

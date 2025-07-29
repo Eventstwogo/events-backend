@@ -24,7 +24,6 @@ from shared.db.types import EncryptedString
 
 if TYPE_CHECKING:
     from shared.db.models.admin_users import AdminUser
-    from shared.db.models.categories import Industries
 
 
 class BusinessProfile(EventsBase):
@@ -33,8 +32,8 @@ class BusinessProfile(EventsBase):
     sno: Mapped[int] = mapped_column(
         Integer, primary_key=True, autoincrement=True
     )
-    profile_id: Mapped[str] = mapped_column(
-        String(length=6), ForeignKey("e2gadminusers.profile_id"), unique=True
+    business_id: Mapped[str] = mapped_column(
+        String(length=6), ForeignKey("e2gadminusers.business_id"), unique=True
     )
     abn_id: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     abn_hash: Mapped[str] = mapped_column(String, unique=True, nullable=False)
@@ -45,10 +44,6 @@ class BusinessProfile(EventsBase):
     )
     store_name: Mapped[str] = mapped_column(String, nullable=True)
     store_url: Mapped[str] = mapped_column(String, nullable=True)
-    industry: Mapped[str] = mapped_column(
-        String, ForeignKey("e2gindustries.industry_id"), nullable=True
-    )
-
     location: Mapped[str] = mapped_column(String, nullable=True)
 
     # Keep this as unique (used in the relationship)
@@ -58,10 +53,6 @@ class BusinessProfile(EventsBase):
     is_approved: Mapped[bool] = mapped_column(Boolean, default=False)
     timestamp: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow
-    )
-
-    industry_obj: Mapped["Industries"] = relationship(
-        "Industries", back_populates="business_profiles", lazy="joined"
     )
 
     organizer_login: Mapped["AdminUser"] = relationship(

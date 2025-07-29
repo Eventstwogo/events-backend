@@ -23,6 +23,7 @@ from shared.utils.email_utils import send_admin_welcome_email
 from shared.utils.exception_handlers import exception_handler
 from shared.utils.file_uploads import get_media_url
 from shared.utils.id_generators import (
+    generate_digits_lowercase,
     generate_digits_uppercase,
     generate_lower_uppercase,
 )
@@ -91,6 +92,7 @@ async def register_user(
         user_id=user_id,
         role_id=user_data.role_id,
         profile_id=generate_digits_uppercase(length=6),
+        business_id=generate_digits_lowercase(length=6),
         username=user_data.username.lower(),
         email=user_data.email.lower(),
         password_hash=config.default_password_hash,

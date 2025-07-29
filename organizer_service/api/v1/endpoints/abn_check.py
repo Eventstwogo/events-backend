@@ -5,6 +5,9 @@ from bs4 import BeautifulSoup
 from fastapi import APIRouter, Depends, HTTPException, status
 from starlette.responses import JSONResponse
 
+from organizer_service.services.business_profile import fetch_abn_details
+from shared.utils.exception_handlers import exception_handler
+
 router = APIRouter()
 
 
@@ -34,10 +37,13 @@ def validate_abn_id(id: str) -> str:
     return id
 
 
-@router.get("/", summary="Get ABN details by ID")
-async def get_abn_details(id: str = Depends(validate_abn_id)) -> JSONResponse:
+@router.get("/{abn_id}", summary="Get ABN details by ID")
+@exception_handler
+async def get_abn_details(
+    abn_id: str = Depends(validate_abn_id),
+) -> JSONResponse:
     try:
-        url = f"https://abr.business.gov.au/ABN/View?id={id}"
+        url = f"https://abr.business.gov.au/ABN/View?id={abn_id}"
 
         async with httpx.AsyncClient() as client:
             response = await client.get(url)
@@ -102,3 +108,10 @@ async def get_abn_details(id: str = Depends(validate_abn_id)) -> JSONResponse:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"message": f"An unexpected error occurred: {str(e)}"},
         )
+
+
+@router.get("/{abn_id}/verify", summary="Verify ABN ID")
+@exception_handler
+async def verify_abn(abn_id: str):
+    abn_data = await fetch_abn_details(abn_id)
+    return {"success": True, "data": abn_data}

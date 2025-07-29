@@ -20,7 +20,7 @@ from shared.core.security import (
     encrypt_dict_values,
     hash_data,
 )
-from shared.db.models import AdminUser, BusinessProfile, Industries
+from shared.db.models import AdminUser, BusinessProfile
 from shared.db.sessions.database import get_db
 from shared.utils.email_utils import send_organizer_onboarding_email
 from shared.utils.exception_handlers import exception_handler
@@ -29,16 +29,9 @@ from shared.utils.id_generators import generate_digits_letters
 router = APIRouter()
 
 
-@router.get("/abn/verify/{abn_id}")
+@router.post("/")
 @exception_handler
-async def verify_abn(abn_id: str):
-    abn_data = await fetch_abn_details(abn_id)
-    return {"success": True, "data": abn_data}
-
-
-@router.post("/onboarding")
-@exception_handler
-async def vendor_onboarding(
+async def organizer_onboarding(
     background_tasks: BackgroundTasks,
     data: OnboardingRequest,
     abn_id: str = Depends(validate_abn_id),
@@ -46,7 +39,7 @@ async def vendor_onboarding(
 ) -> JSONResponse:
     # Validate profile_ref_id exists
     profile_check_stmt = select(AdminUser).where(
-        AdminUser.profile_id == data.profile_ref_id
+        AdminUser.business_id == data.profile_ref_id
     )
     profile_result = await db.execute(profile_check_stmt)
     existing_profile = profile_result.scalar_one_or_none()
@@ -57,24 +50,6 @@ async def vendor_onboarding(
             content={
                 "message": "Invalid profile reference ID. Profile not found."
             },
-        )
-
-    # Validate industry_id exists
-    industry_check_stmt = select(Industries).where(
-        Industries.industry_id == data.industry_id
-    )
-    industry_result = await db.execute(industry_check_stmt)
-    existing_industry = industry_result.scalar_one_or_none()
-
-    if not existing_industry:
-        return JSONResponse(
-            status_code=404, content={"message": "Industry ID not found."}
-        )
-
-    # Check if industry is active (is_active = true means inactive)
-    if existing_industry.industry_status:
-        return JSONResponse(
-            status_code=400, content={"message": "Industry is inactive."}
         )
 
     # Clean and normalize store name
@@ -198,7 +173,6 @@ async def vendor_onboarding(
         store_name=store_name_cleaned,
         store_url=str(data.store_url),
         location=location_cleaned,
-        industry=data.industry_id,
         purpose=json.dumps([p.value for p in data.purpose]),
         ref_number=ref_number,
     )
@@ -207,17 +181,17 @@ async def vendor_onboarding(
     await db.commit()
     await db.refresh(new_profile)
 
-    # Get vendor email for sending onboarding confirmation email
+    # Get organizer email for sending onboarding confirmation email
     try:
-        vendor_email = decrypt_data(existing_profile.email)
+        organizer_email = decrypt_data(existing_profile.email)
         business_name = store_name_cleaned
-        vendor_name = business_name  # Using business name as vendor name
+        organizer_name = business_name  # Using business name as organizer name
 
         # Send onboarding confirmation email with reference number
         background_tasks.add_task(
             send_organizer_onboarding_email,
-            email=vendor_email,
-            username=vendor_name,
+            email=organizer_email,
+            username=organizer_name,
             business_name=business_name,
             reference_number=ref_number,  # Using reference number
             status="Active",
@@ -229,7 +203,7 @@ async def vendor_onboarding(
     return JSONResponse(
         status_code=201,
         content={
-            "message": "Vendor onboarding completed successfully. Confirmation email sent.",
+            "message": "Organizer onboarding completed successfully. Confirmation email sent.",
             "reference_number": ref_number,
             "profile_ref_id": data.profile_ref_id,
             "store_url": str(data.store_url),

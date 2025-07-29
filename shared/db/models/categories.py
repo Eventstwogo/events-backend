@@ -1,39 +1,12 @@
 from typing import TYPE_CHECKING, List
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from shared.db.models.base import EventsBase
 
 if TYPE_CHECKING:
     from shared.db.models.events import Event
-    from shared.db.models.organizer import BusinessProfile
-
-
-class Industries(EventsBase):
-    __tablename__ = "e2gindustries"
-
-    sno: Mapped[int] = mapped_column(
-        Integer, primary_key=True, autoincrement=True
-    )
-    industry_id: Mapped[str] = mapped_column(String(length=6), unique=True)
-    industry_name: Mapped[str] = mapped_column(
-        String, unique=True, nullable=False
-    )
-    industry_slug: Mapped[str] = mapped_column(
-        String, unique=True, nullable=False
-    )
-    industry_status: Mapped[bool] = mapped_column(Boolean, default=False)
-    industry_tstamp: Mapped[DateTime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, server_default=func.now()
-    )
-
-    business_profiles: Mapped[list["BusinessProfile"]] = relationship(
-        "BusinessProfile", back_populates="industry_obj"
-    )
-    categories: Mapped[List["Category"]] = relationship(
-        "Category", back_populates="industry"
-    )
 
 
 class Category(EventsBase):
@@ -41,10 +14,6 @@ class Category(EventsBase):
 
     category_id: Mapped[str] = mapped_column(
         String, primary_key=True, unique=True
-    )
-    industry_id: Mapped[str] = mapped_column(
-        ForeignKey(column="e2gindustries.industry_id"),
-        nullable=True,
     )
     category_name: Mapped[str] = mapped_column(String, nullable=False)
     category_description: Mapped[str | None] = mapped_column(
@@ -72,9 +41,6 @@ class Category(EventsBase):
     )
 
     # Relationships
-    industry: Mapped["Industries | None"] = relationship(
-        "Industries", back_populates="categories"
-    )
     subcategories: Mapped[List["SubCategory"]] = relationship(
         back_populates="category", cascade="all, delete-orphan"
     )
