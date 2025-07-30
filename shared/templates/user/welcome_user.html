@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Welcome to Events2Go!</title>
+    <title>Welcome to Events2Go</title>
     <!--[if mso]>
     <noscript>
         <xml>
@@ -25,8 +25,8 @@
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             line-height: 1.6;
-            color: #2d3748;
-            background-color: #f7fafc;
+            color: #24292f;
+            background-color: #f6f8fa;
             margin: 0;
             padding: 0;
             -webkit-text-size-adjust: 100%;
@@ -53,232 +53,133 @@
             max-width: 600px;
             margin: 0 auto;
             background-color: #ffffff;
+            border: 1px solid #d1d9e0;
+            border-radius: 6px;
         }
 
         /* Header */
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 40px 30px;
+            background-color: #ffffff;
+            padding: 32px 32px 0;
             text-align: center;
+            border-bottom: 1px solid #d1d9e0;
         }
 
         .logo {
-            max-width: 180px;
+            max-width: 120px;
             height: auto;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
 
         .header-title {
-            color: #ffffff;
-            font-size: 28px;
-            font-weight: 700;
-            margin: 0;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        /* Welcome Section */
-        .welcome-section {
-            background-color: #ffffff;
-            padding: 40px 30px;
-            text-align: center;
-        }
-
-        .welcome-badge {
-            width: 100px;
-            height: 100px;
-            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
-            border-radius: 50%;
-            margin: 0 auto 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 48px;
-            color: white;
-            box-shadow: 0 8px 25px rgba(72, 187, 120, 0.4);
-            animation: bounce 2s infinite;
-        }
-
-        @keyframes bounce {
-            0%, 20%, 50%, 80%, 100% {
-                transform: translateY(0);
-            }
-            40% {
-                transform: translateY(-10px);
-            }
-            60% {
-                transform: translateY(-5px);
-            }
-        }
-
-        .welcome-title {
-            font-size: 32px;
-            font-weight: 700;
-            color: #2d3748;
-            margin-bottom: 15px;
-        }
-
-        .welcome-subtitle {
-            font-size: 18px;
-            color: #718096;
-            margin-bottom: 30px;
+            color: #24292f;
+            font-size: 20px;
+            font-weight: 600;
+            margin: 0 0 32px 0;
         }
 
         /* Content */
         .content {
-            padding: 20px 30px 40px;
+            padding: 32px;
             background-color: #ffffff;
         }
 
         .greeting {
-            font-size: 18px;
-            color: #2d3748;
-            margin-bottom: 25px;
-            text-align: center;
+            font-size: 16px;
+            color: #24292f;
+            margin-bottom: 16px;
         }
 
         .message {
-            font-size: 16px;
-            color: #4a5568;
-            line-height: 1.7;
-            margin-bottom: 30px;
-            text-align: center;
+            font-size: 14px;
+            color: #656d76;
+            line-height: 1.5;
+            margin-bottom: 24px;
         }
 
         /* CTA Button */
         .cta-container {
             text-align: center;
-            margin: 40px 0;
+            margin: 32px 0;
         }
 
         .cta-button {
             display: inline-block;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-color: #2da44e;
             color: #ffffff !important;
             text-decoration: none;
-            padding: 18px 40px;
-            border-radius: 50px;
-            font-weight: 600;
-            font-size: 16px;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 14px;
+            border: 1px solid rgba(27, 31, 36, 0.15);
         }
 
         .cta-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+            background-color: #2c974b;
         }
 
-        /* Features Section */
-        .features-section {
-            background-color: #f8fafc;
-            padding: 40px 30px;
+        /* Info Section */
+        .info-section {
+            background-color: #f6f8fa;
+            border: 1px solid #d1d9e0;
+            border-radius: 6px;
+            padding: 16px;
+            margin: 24px 0;
         }
 
-        .features-title {
-            text-align: center;
-            font-size: 24px;
-            font-weight: 600;
-            color: #2d3748;
-            margin-bottom: 30px;
-        }
-
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 25px;
-        }
-
-        /* Fallback for email clients that don't support CSS Grid */
-        @supports not (display: grid) {
-            .features-grid {
-                display: flex;
-                flex-wrap: wrap;
-                margin: 0 -12px;
-            }
-
-            .feature-card {
-                flex: 1 1 250px;
-                margin: 0 12px 25px;
-            }
-        }
-
-        .feature-card {
-            background-color: #ffffff;
-            border-radius: 16px;
-            padding: 30px 25px;
-            text-align: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            transition: all 0.3s ease;
-            border-top: 4px solid #667eea;
-        }
-
-        .feature-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-        }
-
-        .feature-icon {
-            font-size: 48px;
-            margin-bottom: 20px;
-            display: block;
-        }
-
-        .feature-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #2d3748;
-            margin-bottom: 15px;
-        }
-
-        .feature-desc {
+        .info-title {
             font-size: 14px;
-            color: #718096;
-            line-height: 1.6;
-        }
-
-        /* Next Steps */
-        .next-steps {
-            background-color: #ffffff;
-            padding: 40px 30px;
-        }
-
-        .next-steps-title {
-            font-size: 24px;
             font-weight: 600;
-            color: #2d3748;
-            margin-bottom: 30px;
-            text-align: center;
+            color: #24292f;
+            margin-bottom: 8px;
+        }
+
+        .info-text {
+            font-size: 12px;
+            color: #656d76;
+            line-height: 1.4;
+        }
+
+        /* Steps List */
+        .steps-section {
+            margin: 24px 0;
+        }
+
+        .steps-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #24292f;
+            margin-bottom: 16px;
         }
 
         .steps-list {
             list-style: none;
             padding: 0;
-            max-width: 500px;
-            margin: 0 auto;
         }
 
         .step-item {
             display: flex;
             align-items: flex-start;
-            margin-bottom: 25px;
-            padding: 20px;
-            background-color: #f8fafc;
-            border-radius: 12px;
-            border-left: 4px solid #667eea;
+            margin-bottom: 12px;
+            padding: 12px;
+            background-color: #f6f8fa;
+            border-radius: 6px;
+            border-left: 3px solid #2da44e;
         }
 
         .step-number {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-color: #24292f;
             color: white;
-            width: 30px;
-            height: 30px;
+            width: 20px;
+            height: 20px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 600;
-            font-size: 14px;
-            margin-right: 15px;
+            font-size: 12px;
+            margin-right: 12px;
             flex-shrink: 0;
         }
 
@@ -287,112 +188,62 @@
         }
 
         .step-title {
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 600;
-            color: #2d3748;
-            margin-bottom: 5px;
+            color: #24292f;
+            margin-bottom: 4px;
         }
 
         .step-desc {
-            font-size: 14px;
-            color: #4a5568;
-            line-height: 1.5;
+            font-size: 12px;
+            color: #656d76;
+            line-height: 1.4;
         }
 
         /* Footer */
         .footer {
-            background-color: #2d3748;
-            color: #a0aec0;
-            padding: 40px 30px;
+            background-color: #f6f8fa;
+            color: #656d76;
+            padding: 24px 32px;
             text-align: center;
-        }
-
-        .footer-content {
-            margin-bottom: 20px;
-        }
-
-        .footer-title {
-            color: #ffffff;
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 15px;
+            border-top: 1px solid #d1d9e0;
+            font-size: 12px;
         }
 
         .footer-text {
-            font-size: 14px;
-            line-height: 1.6;
-            margin-bottom: 10px;
-        }
-
-        .footer-links {
-            margin: 20px 0;
+            margin-bottom: 8px;
         }
 
         .footer-link {
-            color: #667eea;
+            color: #0969da;
             text-decoration: none;
-            margin: 0 15px;
-            font-size: 14px;
         }
 
         .footer-link:hover {
-            color: #ffffff;
-        }
-
-        .footer-bottom {
-            border-top: 1px solid #4a5568;
-            padding-top: 20px;
-            font-size: 12px;
-            color: #718096;
+            text-decoration: underline;
         }
 
         /* Responsive */
         @media only screen and (max-width: 600px) {
             .email-container {
                 width: 100% !important;
+                border-radius: 0 !important;
+                border-left: none !important;
+                border-right: none !important;
             }
 
-            .header, .content, .welcome-section, .features-section, .next-steps, .footer {
-                padding-left: 20px !important;
-                padding-right: 20px !important;
-            }
-
-            .welcome-title {
-                font-size: 28px !important;
-            }
-
-            .header-title {
-                font-size: 24px !important;
+            .header, .content, .footer {
+                padding-left: 16px !important;
+                padding-right: 16px !important;
             }
 
             .cta-button {
-                padding: 16px 30px !important;
-                font-size: 15px !important;
-            }
-
-            .features-grid {
-                grid-template-columns: 1fr !important;
+                padding: 10px 16px !important;
+                font-size: 13px !important;
             }
         }
 
-        /* Dark mode support */
-        @media (prefers-color-scheme: dark) {
-            .email-container {
-                background-color: #1a202c !important;
-            }
 
-            .content, .welcome-section, .next-steps, .feature-card {
-                background-color: #2d3748 !important;
-            }
-
-            .welcome-title, .greeting, .features-title, .next-steps-title, .feature-title, .step-title {
-                color: #ffffff !important;
-            }
-
-            .message, .welcome-subtitle, .feature-desc, .step-desc {
-                color: #a0aec0 !important;
-            }
-        }
     </style>
 </head>
 <body>
@@ -400,80 +251,72 @@
         <!-- Header -->
         <div class="header">
             {% if logo_url %}
-            <img src="{{ logo_url }}" alt="Events2Go Logo" class="logo">
+            <img src="{{ logo_url }}" alt="Events2Go" class="logo">
             {% else %}
-            <img src="/media/events2go-gradient-logo.png" alt="Events2Go Logo" class="logo">
+            <img src="https://drive.google.com/uc?export=view&id=11A_iCjfgjonUXMhjptwsNk6FvzIqZRvi" alt="Events2Go" class="logo">
             {% endif %}
-        </div>
-
-        <!-- Welcome Section -->
-        <div class="welcome-section">
-            <div class="welcome-badge">🎉</div>
-            <h1 class="welcome-title">Welcome, {{ username }}!</h1>
-            <p class="welcome-subtitle">Your Events2Go journey begins now</p>
+            <h1 class="header-title">Welcome to Events2Go</h1>
         </div>
 
         <!-- Content -->
         <div class="content">
-            <p class="greeting">Hello <strong>{{ username }}</strong>,</p>
+            <p class="greeting">Hi {{ username }},</p>
 
             <p class="message">
-                Welcome to Events2Go! We're thrilled to have you join our community of event enthusiasts.
-                Get ready to discover amazing events, connect with like-minded people, and create unforgettable memories.
+                Your Events2Go account has been successfully created. You can now discover and book events in your area.
             </p>
+
+            <div class="info-section">
+                <div class="info-title">Account Details</div>
+                <div class="info-text">
+                    <strong>Email:</strong> {{ email }}<br>
+                    <strong>Account Type:</strong> Standard User
+                </div>
+            </div>
 
             <!-- CTA Button -->
             <div class="cta-container">
                 <a href="{{ welcome_url }}" class="cta-button">
-                    🚀 Start Exploring Events
+                    Get Started
                 </a>
             </div>
-        </div>
 
-        <!-- Next Steps -->
-        <div class="next-steps">
-            <h2 class="next-steps-title">Get Started in 3 Easy Steps</h2>
-            <ul class="steps-list">
-                <li class="step-item">
-                    <div class="step-number">1</div>
-                    <div class="step-content">
-                        <h4 class="step-title">Complete Your Profile</h4>
-                        <p class="step-desc">Add your interests and preferences to get personalized event recommendations.</p>
-                    </div>
-                </li>
-                <li class="step-item">
-                    <div class="step-number">2</div>
-                    <div class="step-content">
-                        <h4 class="step-title">Explore Events</h4>
-                        <p class="step-desc">Browse our curated selection of events and find something that excites you.</p>
-                    </div>
-                </li>
-                <li class="step-item">
-                    <div class="step-number">3</div>
-                    <div class="step-content">
-                        <h4 class="step-title">Book Your First Event</h4>
-                        <p class="step-desc">Reserve your spot and get ready for an amazing experience!</p>
-                    </div>
-                </li>
-            </ul>
+            <!-- Next Steps -->
+            <div class="steps-section">
+                <h2 class="steps-title">Next Steps</h2>
+                <ul class="steps-list">
+                    <li class="step-item">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <div class="step-title">Complete your profile</div>
+                            <div class="step-desc">Add your preferences to get personalized event recommendations.</div>
+                        </div>
+                    </li>
+                    <li class="step-item">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <div class="step-title">Browse events</div>
+                            <div class="step-desc">Explore events happening in your area.</div>
+                        </div>
+                    </li>
+                    <li class="step-item">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <div class="step-title">Book your first event</div>
+                            <div class="step-desc">Reserve your spot for an upcoming event.</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
         </div>
 
         <!-- Footer -->
         <div class="footer">
-            <div class="footer-content">
-                <h3 class="footer-title">Welcome to Events2Go!</h3>
-                <p class="footer-text">Your gateway to unforgettable experiences</p>
-
-                <div class="footer-links">
-                    <a href="#" class="footer-link">Getting Started</a>
-                    <a href="#" class="footer-link">Help Center</a>
-                    <a href="#" class="footer-link">Contact Support</a>
-                </div>
+            <div class="footer-text">
+                If you have any questions, please contact our <a href="#" class="footer-link">support team</a>.
             </div>
-
-            <div class="footer-bottom">
-                <p>&copy; {{ year }} Events2Go. All rights reserved.</p>
-                <p>Thank you for joining our community!</p>
+            <div class="footer-text">
+                © {{ year }} Events2Go. All rights reserved.
             </div>
         </div>
     </div>

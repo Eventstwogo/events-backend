@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Verify Your Events2Go Organizer Account</title>
+    <title>Verify Your Organizer Account - Events2Go</title>
     <!--[if mso]>
     <noscript>
         <xml>
@@ -25,8 +25,8 @@
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             line-height: 1.6;
-            color: #2d3748;
-            background-color: #f7fafc;
+            color: #24292f;
+            background-color: #f6f8fa;
             margin: 0;
             padding: 0;
             -webkit-text-size-adjust: 100%;
@@ -53,346 +53,176 @@
             max-width: 600px;
             margin: 0 auto;
             background-color: #ffffff;
+            border: 1px solid #d1d9e0;
+            border-radius: 6px;
         }
 
         /* Header */
         .header {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            padding: 40px 30px;
+            background-color: #ffffff;
+            padding: 32px 32px 0;
             text-align: center;
+            border-bottom: 1px solid #d1d9e0;
         }
 
         .logo {
-            max-width: 180px;
+            max-width: 120px;
             height: auto;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
 
         .header-title {
-            color: #ffffff;
-            font-size: 28px;
-            font-weight: 700;
-            margin: 0;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        /* Welcome Section */
-        .welcome-section {
-            background-color: #ffffff;
-            padding: 40px 30px 20px;
-            text-align: center;
-        }
-
-        .welcome-icon {
-            width: 80px;
-            height: 80px;
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            border-radius: 50%;
-            margin: 0 auto 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 36px;
-            color: white;
-        }
-
-        .welcome-title {
-            font-size: 32px;
-            font-weight: 700;
-            color: #2d3748;
-            margin-bottom: 10px;
-        }
-
-        .welcome-subtitle {
-            font-size: 18px;
-            color: #718096;
-            margin-bottom: 30px;
+            color: #24292f;
+            font-size: 20px;
+            font-weight: 600;
+            margin: 0 0 32px 0;
         }
 
         /* Content */
         .content {
-            padding: 20px 30px 40px;
+            padding: 32px;
             background-color: #ffffff;
         }
 
         .greeting {
-            font-size: 18px;
-            color: #2d3748;
-            margin-bottom: 25px;
+            font-size: 16px;
+            color: #24292f;
+            margin-bottom: 16px;
         }
 
         .message {
-            font-size: 16px;
-            color: #4a5568;
-            line-height: 1.7;
-            margin-bottom: 30px;
-        }
-
-        /* Business Info */
-        .business-info {
-            background-color: #f8fafc;
-            padding: 20px;
-            border-radius: 12px;
-            margin: 25px 0;
-            border-left: 4px solid #f093fb;
-        }
-
-        .business-info h3 {
-            color: #2d3748;
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 10px;
-        }
-
-        .business-info p {
-            color: #4a5568;
             font-size: 14px;
-            margin: 5px 0;
+            color: #656d76;
+            line-height: 1.5;
+            margin-bottom: 24px;
         }
 
         /* CTA Button */
         .cta-container {
             text-align: center;
-            margin: 40px 0;
+            margin: 32px 0;
         }
 
         .cta-button {
             display: inline-block;
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            background-color: #8250df;
             color: #ffffff !important;
             text-decoration: none;
-            padding: 18px 40px;
-            border-radius: 50px;
-            font-weight: 600;
-            font-size: 16px;
-            text-align: center;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(240, 147, 251, 0.4);
-            border: none;
-            cursor: pointer;
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 14px;
+            border: 1px solid rgba(27, 31, 36, 0.15);
         }
 
         .cta-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(240, 147, 251, 0.6);
+            background-color: #7c3aed;
         }
 
-        /* Alternative Link */
-        .alt-link-section {
-            background-color: #f8fafc;
-            padding: 25px;
-            border-radius: 12px;
-            margin: 30px 0;
-            border-left: 4px solid #f093fb;
-        }
-
-        .alt-link-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: #2d3748;
-            margin-bottom: 10px;
-        }
-
-        .alt-link {
-            font-size: 14px;
-            color: #f093fb;
-            word-break: break-all;
-            text-decoration: none;
-            background-color: #ffffff;
-            padding: 12px;
+        /* Info Section */
+        .info-section {
+            background-color: #f3f4f6;
+            border: 1px solid #d1d5da;
+            border-left: 3px solid #8250df;
             border-radius: 6px;
-            border: 1px solid #e2e8f0;
-            display: block;
+            padding: 16px;
+            margin: 24px 0;
         }
 
-        /* Info Box */
-        .info-box {
-            background: linear-gradient(135deg, #fef5e7 0%, #fdf2e9 100%);
-            border: 1px solid #f6ad55;
-            border-radius: 12px;
-            padding: 20px;
-            margin: 30px 0;
-        }
-
-        .info-icon {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            background-color: #f6ad55;
-            border-radius: 50%;
-            margin-right: 10px;
-            vertical-align: middle;
-        }
-
-        .info-text {
+        .info-title {
             font-size: 14px;
-            color: #744210;
-            margin: 0;
-            display: inline-block;
-            vertical-align: middle;
-            width: calc(100% - 35px);
-        }
-
-        /* Features Section */
-        .features-section {
-            background-color: #f8fafc;
-            padding: 40px 30px;
-        }
-
-        .features-title {
-            text-align: center;
-            font-size: 24px;
             font-weight: 600;
-            color: #2d3748;
-            margin-bottom: 30px;
-        }
-
-        .features-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            justify-content: center;
-        }
-
-        /* Fallback for older email clients */
-        @supports not (display: flex) {
-            .features-grid {
-                text-align: center;
-            }
-
-            .feature-item {
-                display: inline-block;
-                vertical-align: top;
-                margin: 10px;
-            }
-        }
-
-        .feature-item {
-            flex: 1;
-            min-width: 150px;
-            text-align: center;
-            padding: 20px;
-            background-color: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
-
-        .feature-icon {
-            font-size: 32px;
-            margin-bottom: 15px;
-        }
-
-        .feature-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: #2d3748;
+            color: #24292f;
             margin-bottom: 8px;
         }
 
-        .feature-desc {
+        .info-text {
+            font-size: 12px;
+            color: #656d76;
+            line-height: 1.4;
+        }
+
+        /* Benefits Section */
+        .benefits-section {
+            background-color: #f6f8fa;
+            border: 1px solid #d1d9e0;
+            border-radius: 6px;
+            padding: 16px;
+            margin: 24px 0;
+        }
+
+        .benefits-title {
             font-size: 14px;
-            color: #718096;
-            line-height: 1.5;
+            font-weight: 600;
+            color: #24292f;
+            margin-bottom: 12px;
+        }
+
+        .benefits-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .benefit-item {
+            font-size: 12px;
+            color: #656d76;
+            margin-bottom: 6px;
+            padding-left: 16px;
+            position: relative;
+        }
+
+        .benefit-item:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #2da44e;
+            font-weight: bold;
         }
 
         /* Footer */
         .footer {
-            background-color: #2d3748;
-            color: #a0aec0;
-            padding: 40px 30px;
+            background-color: #f6f8fa;
+            color: #656d76;
+            padding: 24px 32px;
             text-align: center;
-        }
-
-        .footer-content {
-            margin-bottom: 20px;
-        }
-
-        .footer-title {
-            color: #ffffff;
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 15px;
+            border-top: 1px solid #d1d9e0;
+            font-size: 12px;
         }
 
         .footer-text {
-            font-size: 14px;
-            line-height: 1.6;
-            margin-bottom: 10px;
-        }
-
-        .footer-links {
-            margin: 20px 0;
+            margin-bottom: 8px;
         }
 
         .footer-link {
-            color: #f093fb;
+            color: #0969da;
             text-decoration: none;
-            margin: 0 15px;
-            font-size: 14px;
         }
 
         .footer-link:hover {
-            color: #ffffff;
-        }
-
-        .footer-bottom {
-            border-top: 1px solid #4a5568;
-            padding-top: 20px;
-            font-size: 12px;
-            color: #718096;
+            text-decoration: underline;
         }
 
         /* Responsive */
         @media only screen and (max-width: 600px) {
             .email-container {
                 width: 100% !important;
+                border-radius: 0 !important;
+                border-left: none !important;
+                border-right: none !important;
             }
 
-            .header, .content, .welcome-section, .features-section, .footer {
-                padding-left: 20px !important;
-                padding-right: 20px !important;
-            }
-
-            .welcome-title {
-                font-size: 28px !important;
-            }
-
-            .header-title {
-                font-size: 24px !important;
+            .header, .content, .footer {
+                padding-left: 16px !important;
+                padding-right: 16px !important;
             }
 
             .cta-button {
-                padding: 16px 30px !important;
-                font-size: 15px !important;
-            }
-
-            .features-grid {
-                flex-direction: column;
-            }
-
-            .feature-item {
-                min-width: auto;
+                padding: 10px 16px !important;
+                font-size: 13px !important;
             }
         }
 
-        /* Dark mode support */
-        @media (prefers-color-scheme: dark) {
-            .email-container {
-                background-color: #1a202c !important;
-            }
 
-            .content, .welcome-section, .feature-item {
-                background-color: #2d3748 !important;
-            }
-
-            .welcome-title, .greeting, .alt-link-title, .features-title, .feature-title {
-                color: #ffffff !important;
-            }
-
-            .message, .welcome-subtitle, .feature-desc {
-                color: #a0aec0 !important;
-            }
-        }
     </style>
 </head>
 <body>
@@ -400,77 +230,58 @@
         <!-- Header -->
         <div class="header">
             {% if logo_url %}
-            <img src="{{ logo_url }}" alt="Events2Go Logo" class="logo">
+            <img src="{{ logo_url }}" alt="Events2Go" class="logo">
             {% else %}
-            <img src="/media/events2go-gradient-logo.png" alt="Events2Go Logo" class="logo">
+            <img src="https://drive.google.com/uc?export=view&id=11A_iCjfgjonUXMhjptwsNk6FvzIqZRvi" alt="Events2Go" class="logo">
             {% endif %}
-        </div>
-
-        <!-- Welcome Section -->
-        <div class="welcome-section">
-            <div class="welcome-icon">🎪</div>
-            <h1 class="welcome-title">Welcome to Events2Go!</h1>
-            <p class="welcome-subtitle">{{ header_subtitle | default('Verify your Organizer account to get started') }}</p>
+            <h1 class="header-title">Verify Your Organizer Account</h1>
         </div>
 
         <!-- Content -->
         <div class="content">
-            <p class="greeting">Hello <strong>{{ vendor_name }}</strong>,</p>
+            <p class="greeting">Hi {{ username }},</p>
 
             <p class="message">
-                Thank you for joining Events2Go as an event organizer! We're excited to have you create amazing events for our community.
-                To get started and unlock all the organizer features, please verify your email address by clicking the button below.
+                Thank you for applying to become an event organizer on Events2Go. To complete your organizer account setup, please verify your email address by clicking the button below.
             </p>
-
-            <!-- Business Info -->
-            {% if business_name %}
-            <div class="business-info">
-                <h3>Business Information</h3>
-                <p><strong>Business Name:</strong> {{ business_name }}</p>
-                <p><strong>Email:</strong> {{ vendor_email }}</p>
-                <p><strong>Registration Date:</strong> {{ registration_date }}</p>
-            </div>
-            {% endif %}
 
             <!-- CTA Button -->
             <div class="cta-container">
                 <a href="{{ verification_link }}" class="cta-button">
-                    ✓ Verify My Organizer Account
+                    Verify Organizer Account
                 </a>
             </div>
 
-            <!-- Alternative Link -->
-            <div class="alt-link-section">
-                <p class="alt-link-title">Button not working? Copy and paste this link:</p>
-                <a href="{{ verification_link }}" class="alt-link">{{ verification_link }}</a>
+            <div class="benefits-section">
+                <div class="benefits-title">As an Events2Go Organizer, you can:</div>
+                <ul class="benefits-list">
+                    <li class="benefit-item">Create and manage unlimited events</li>
+                    <li class="benefit-item">Access detailed analytics and insights</li>
+                    <li class="benefit-item">Manage ticket sales and attendee data</li>
+                    <li class="benefit-item">Promote events to our user community</li>
+                </ul>
             </div>
 
-            <!-- Info Box -->
-            <div class="info-box">
-                <span class="info-icon"></span>
-                <p class="info-text">
-                    <strong>Important:</strong> This verification link will expire in {{ expiry_minutes }} minutes for security reasons.
-                    If you didn't create this organizer account, please ignore this email.
-                </p>
+            <div class="info-section">
+                <div class="info-title">Next Steps</div>
+                <div class="info-text">
+                    After verification, your organizer account will be reviewed by our team. You'll receive a confirmation email once approved, typically within 24-48 hours.
+                </div>
             </div>
+
+            <p class="message">
+                If the button above doesn't work, you can copy and paste this link into your browser:<br>
+                <a href="{{ verification_link }}" class="footer-link">{{ verification_link }}</a>
+            </p>
         </div>
 
         <!-- Footer -->
         <div class="footer">
-            <div class="footer-content">
-                <h3 class="footer-title">Events2Go</h3>
-                <p class="footer-text">Empowering organizers to create unforgettable experiences</p>
-
-                <div class="footer-links">
-                    <a href="#" class="footer-link">Organizer Help Center</a>
-                    <a href="#" class="footer-link">Privacy Policy</a>
-                    <a href="#" class="footer-link">Terms of Service</a>
-                </div>
+            <div class="footer-text">
+                If you have any questions, please contact our <a href="#" class="footer-link">organizer support team</a>.
             </div>
-
-            <div class="footer-bottom">
-                <p>&copy; {{ year }} Events2Go. All rights reserved.</p>
-                <p>This is an automated message, please do not reply to this email.</p>
+            <div class="footer-text">
+                © {{ year }} Events2Go. All rights reserved.
             </div>
         </div>
     </div>

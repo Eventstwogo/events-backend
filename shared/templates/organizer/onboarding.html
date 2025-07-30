@@ -3,8 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>Welcome to Events2Go Organizer Portal</title>
+    <!--[if mso]>
+    <noscript>
+        <xml>
+            <o:OfficeDocumentSettings>
+                <o:PixelsPerInch>96</o:PixelsPerInch>
+            </o:OfficeDocumentSettings>
+        </xml>
+    </noscript>
+    <![endif]-->
     <style>
+        /* Reset and base styles */
         * {
             margin: 0;
             padding: 0;
@@ -12,159 +23,173 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             line-height: 1.6;
-            color: #333;
-            background-color: #f4f4f4;
+            color: #24292f;
+            background-color: #f6f8fa;
+            margin: 0;
+            padding: 0;
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
         }
 
+        table {
+            border-collapse: collapse;
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
+        }
+
+        img {
+            border: 0;
+            height: auto;
+            line-height: 100%;
+            outline: none;
+            text-decoration: none;
+            -ms-interpolation-mode: bicubic;
+        }
+
+        /* Container */
         .email-container {
             max-width: 600px;
             margin: 0 auto;
             background-color: #ffffff;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: 1px solid #d1d9e0;
+            border-radius: 6px;
         }
 
+        /* Header */
         .header {
-            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
-            color: white;
-            padding: 30px 20px;
+            background-color: #ffffff;
+            padding: 32px 32px 0;
             text-align: center;
+            border-bottom: 1px solid #d1d9e0;
         }
 
-        .header h1 {
-            font-size: 28px;
-            font-weight: 700;
-            margin-bottom: 5px;
+        .logo {
+            max-width: 120px;
+            height: auto;
+            margin-bottom: 16px;
         }
 
-        .header p {
-            font-size: 16px;
-            opacity: 0.9;
+        .header-title {
+            color: #24292f;
+            font-size: 20px;
+            font-weight: 600;
+            margin: 0 0 32px 0;
         }
 
+        /* Content */
         .content {
-            padding: 40px 30px;
+            padding: 32px;
+            background-color: #ffffff;
         }
 
         .greeting {
-            font-size: 18px;
-            font-weight: 600;
-            color: #2c3e50;
-            margin-bottom: 20px;
+            font-size: 16px;
+            color: #24292f;
+            margin-bottom: 16px;
         }
 
         .message {
-            font-size: 16px;
-            line-height: 1.8;
-            color: #555;
-            margin-bottom: 30px;
+            font-size: 14px;
+            color: #656d76;
+            line-height: 1.5;
+            margin-bottom: 24px;
         }
 
-        .info-box {
-            background-color: #f8f9fa;
-            border-left: 4px solid #3498db;
-            padding: 20px;
-            margin: 25px 0;
-            border-radius: 5px;
+        /* CTA Button */
+        .cta-container {
+            text-align: center;
+            margin: 32px 0;
         }
 
-        .info-box h3 {
-            color: #2c3e50;
-            margin-bottom: 15px;
-            font-size: 18px;
+        .cta-button {
+            display: inline-block;
+            background-color: #8250df;
+            color: #ffffff !important;
+            text-decoration: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 14px;
+            border: 1px solid rgba(27, 31, 36, 0.15);
         }
 
-        .info-item {
+        .cta-button:hover {
+            background-color: #7c3aed;
+        }
+
+        /* Account Details */
+        .account-details {
+            background-color: #f6f8fa;
+            border: 1px solid #d1d9e0;
+            border-radius: 6px;
+            padding: 16px;
+            margin: 24px 0;
+        }
+
+        .details-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #24292f;
+            margin-bottom: 12px;
+        }
+
+        .detail-item {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 10px;
-            padding: 8px 0;
-            border-bottom: 1px solid #e9ecef;
-        }
-
-        .info-item:last-child {
-            border-bottom: none;
-            margin-bottom: 0;
-        }
-
-        .info-label {
-            font-weight: 600;
-            color: #495057;
-        }
-
-        .info-value {
-            color: #6c757d;
-            word-break: break-all;
-        }
-
-        .button {
-            display: inline-block;
-            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
-            color: white;
-            padding: 15px 30px;
-            text-decoration: none;
-            border-radius: 25px;
-            font-weight: 600;
-            font-size: 16px;
-            text-align: center;
-            transition: transform 0.2s ease;
-            margin: 20px 0;
-        }
-
-        .button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        }
-
-        .status-badge {
-            display: inline-block;
-            background-color: #3498db;
-            color: white;
-            padding: 5px 15px;
-            border-radius: 20px;
+            margin-bottom: 8px;
             font-size: 12px;
+        }
+
+        .detail-label {
+            color: #656d76;
+        }
+
+        .detail-value {
+            color: #24292f;
+            font-weight: 500;
+        }
+
+        /* Next Steps */
+        .steps-section {
+            margin: 24px 0;
+        }
+
+        .steps-title {
+            font-size: 16px;
             font-weight: 600;
-            text-transform: uppercase;
-            margin: 10px 0;
+            color: #24292f;
+            margin-bottom: 16px;
         }
 
-        .onboarding-steps {
-            background-color: #f8f9fa;
-            border-radius: 8px;
-            padding: 20px;
-            margin: 25px 0;
+        .steps-list {
+            list-style: none;
+            padding: 0;
         }
 
-        .onboarding-steps h3 {
-            color: #2c3e50;
-            margin-bottom: 15px;
-            font-size: 18px;
-        }
-
-        .step {
+        .step-item {
             display: flex;
-            align-items: center;
-            margin-bottom: 15px;
-            padding: 15px;
-            background-color: white;
-            border-radius: 5px;
-            border-left: 4px solid #3498db;
+            align-items: flex-start;
+            margin-bottom: 12px;
+            padding: 12px;
+            background-color: #f6f8fa;
+            border-radius: 6px;
+            border-left: 3px solid #8250df;
         }
 
         .step-number {
-            background-color: #3498db;
+            background-color: #24292f;
             color: white;
-            width: 30px;
-            height: 30px;
+            width: 20px;
+            height: 20px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 600;
-            margin-right: 15px;
+            font-size: 12px;
+            margin-right: 12px;
             flex-shrink: 0;
         }
 
@@ -173,233 +198,182 @@
         }
 
         .step-title {
+            font-size: 14px;
             font-weight: 600;
-            color: #2c3e50;
-            margin-bottom: 5px;
+            color: #24292f;
+            margin-bottom: 4px;
         }
 
-        .step-description {
-            color: #555;
+        .step-desc {
+            font-size: 12px;
+            color: #656d76;
+            line-height: 1.4;
+        }
+
+        /* Info Section */
+        .info-section {
+            background-color: #dbeafe;
+            border: 1px solid #93c5fd;
+            border-left: 3px solid #3b82f6;
+            border-radius: 6px;
+            padding: 16px;
+            margin: 24px 0;
+        }
+
+        .info-title {
             font-size: 14px;
-        }
-
-        .benefits-box {
-            background-color: #e8f5e8;
-            border: 1px solid #c3e6c3;
-            border-radius: 5px;
-            padding: 15px;
-            margin: 25px 0;
-        }
-
-        .benefits-box h4 {
-            color: #155724;
-            margin-bottom: 10px;
-        }
-
-        .benefits-box p {
-            color: #155724;
-            font-size: 14px;
+            font-weight: 600;
+            color: #24292f;
             margin-bottom: 8px;
         }
 
-        .footer {
-            background-color: #2c3e50;
-            color: #ecf0f1;
-            padding: 30px 20px;
-            text-align: center;
-        }
-
-        .footer p {
-            margin-bottom: 10px;
-            font-size: 14px;
-        }
-
-        .footer .company-info {
+        .info-text {
             font-size: 12px;
-            opacity: 0.8;
-            margin-top: 20px;
+            color: #656d76;
+            line-height: 1.4;
         }
 
-        .vendor-icon {
-            font-size: 48px;
-            margin-bottom: 20px;
+        /* Footer */
+        .footer {
+            background-color: #f6f8fa;
+            color: #656d76;
+            padding: 24px 32px;
+            text-align: center;
+            border-top: 1px solid #d1d9e0;
+            font-size: 12px;
         }
 
-        .contact-info {
-            background-color: #d1ecf1;
-            border: 1px solid #bee5eb;
-            border-radius: 5px;
-            padding: 15px;
-            margin: 25px 0;
+        .footer-text {
+            margin-bottom: 8px;
         }
 
-        .contact-info h4 {
-            color: #0c5460;
-            margin-bottom: 10px;
+        .footer-link {
+            color: #0969da;
+            text-decoration: none;
         }
 
-        .contact-info p {
-            color: #0c5460;
-            font-size: 14px;
-            margin-bottom: 5px;
+        .footer-link:hover {
+            text-decoration: underline;
         }
 
-        @media (max-width: 600px) {
+        /* Responsive */
+        @media only screen and (max-width: 600px) {
             .email-container {
-                margin: 10px;
-                border-radius: 5px;
+                width: 100% !important;
+                border-radius: 0 !important;
+                border-left: none !important;
+                border-right: none !important;
             }
 
-            .content {
-                padding: 25px 20px;
+            .header, .content, .footer {
+                padding-left: 16px !important;
+                padding-right: 16px !important;
             }
 
-            .header {
-                padding: 25px 15px;
+            .cta-button {
+                padding: 10px 16px !important;
+                font-size: 13px !important;
             }
 
-            .header h1 {
-                font-size: 24px;
-            }
-
-            .info-item {
+            .detail-item {
                 flex-direction: column;
-                gap: 5px;
-            }
-
-            .button {
-                display: block;
-                text-align: center;
-            }
-
-            .step {
-                flex-direction: column;
-                text-align: center;
-            }
-
-            .step-number {
-                margin-bottom: 10px;
-                margin-right: 0;
+                gap: 4px;
             }
         }
+
+
     </style>
 </head>
 <body>
     <div class="email-container">
+        <!-- Header -->
         <div class="header">
-            <div class="vendor-icon">🎉</div>
-            <h1>Welcome to Events2Go</h1>
-            <p>{{ header_subtitle }}</p>
+            {% if logo_url %}
+            <img src="{{ logo_url }}" alt="Events2Go" class="logo">
+            {% else %}
+            <img src="https://drive.google.com/uc?export=view&id=11A_iCjfgjonUXMhjptwsNk6FvzIqZRvi" alt="Events2Go" class="logo">
+            {% endif %}
+            <h1 class="header-title">Welcome to Events2Go Organizer Portal</h1>
         </div>
 
+        <!-- Content -->
         <div class="content">
-            <div class="greeting">Hello {{ vendor_name }}!</div>
+            <p class="greeting">Hi {{ organizer_name }},</p>
 
-            <div class="message">
-                <p>Congratulations! Your organizer account has been successfully created and approved. You're now part of the Events2Go platform and ready to start creating and managing amazing events for your community.</p>
-            </div>
+            <p class="message">
+                Congratulations! Your organizer account has been approved and is now active. You can start creating and managing events on Events2Go.
+            </p>
 
-            <div class="status-badge">{{ status|upper }} ORGANIZER</div>
-
-            <div class="info-box">
-                <h3>🎯 Your Organizer Account Details</h3>
-                <div class="info-item">
-                    <span class="info-label">Organization Name:</span>
-                    <span class="info-value">{{ business_name }}</span>
+            <div class="account-details">
+                <div class="details-title">Account Information</div>
+                <div class="detail-item">
+                    <span class="detail-label">Name:</span>
+                    <span class="detail-value">{{ organizer_name }}</span>
                 </div>
-                <div class="info-item">
-                    <span class="info-label">Organizer Email:</span>
-                    <span class="info-value">{{ email }}</span>
+                <div class="detail-item">
+                    <span class="detail-label">Email:</span>
+                    <span class="detail-value">{{ organizer_email }}</span>
                 </div>
-                <div class="info-item">
-                    <span class="info-label">Reference Number:</span>
-                    <span class="info-value" style="background-color: #e3f2fd; padding: 8px 12px; border-radius: 5px; border: 2px solid #3498db; font-weight: bold; color: #1565c0; font-size: 16px;">{{ reference_number }}</span>
+                <div class="detail-item">
+                    <span class="detail-label">Account Type:</span>
+                    <span class="detail-value">Event Organizer</span>
                 </div>
-                <div class="info-item">
-                    <span class="info-label">Account Status:</span>
-                    <span class="info-value">{{ status }}</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Organizer Portal URL:</span>
-                    <span class="info-value">{{ vendor_portal_url }}</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Account Created:</span>
-                    <span class="info-value">{{ creation_date }}</span>
+                <div class="detail-item">
+                    <span class="detail-label">Status:</span>
+                    <span class="detail-value">Active</span>
                 </div>
             </div>
 
-            <div style="text-align: center;">
-                <a href="{{ vendor_portal_url }}" class="button">Access Organizer Portal</a>
+            <!-- CTA Button -->
+            <div class="cta-container">
+                <a href="{{ dashboard_url }}" class="cta-button">
+                    Access Organizer Dashboard
+                </a>
             </div>
 
-            <div class="onboarding-steps">
-                <h3>🚀 Getting Started - Next Steps</h3>
-
-                <div class="step">
-                    <div class="step-number">1</div>
-                    <div class="step-content">
-                        <div class="step-title">Complete Your Organization Profile</div>
-                        <div class="step-description">Add your organization description, logo, and contact information to build trust with event attendees.</div>
-                    </div>
-                </div>
-
-                <div class="step">
-                    <div class="step-number">2</div>
-                    <div class="step-content">
-                        <div class="step-title">Set Up Payment & Ticketing</div>
-                        <div class="step-description">Configure your payment methods and ticketing options to start selling event tickets.</div>
-                    </div>
-                </div>
-
-                <div class="step">
-                    <div class="step-number">3</div>
-                    <div class="step-content">
-                        <div class="step-title">Create Your First Event</div>
-                        <div class="step-description">Upload event images, descriptions, and pricing to start promoting your events immediately.</div>
-                    </div>
-                </div>
-
-                <div class="step">
-                    <div class="step-number">4</div>
-                    <div class="step-content">
-                        <div class="step-title">Review Organizer Guidelines</div>
-                        <div class="step-description">Familiarize yourself with our policies, event standards, and best practices for successful events.</div>
-                    </div>
-                </div>
+            <!-- Next Steps -->
+            <div class="steps-section">
+                <h2 class="steps-title">Getting Started</h2>
+                <ul class="steps-list">
+                    <li class="step-item">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <div class="step-title">Complete your profile</div>
+                            <div class="step-desc">Add your organization details and profile information.</div>
+                        </div>
+                    </li>
+                    <li class="step-item">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <div class="step-title">Create your first event</div>
+                            <div class="step-desc">Use our event creation tools to set up your first event.</div>
+                        </div>
+                    </li>
+                    <li class="step-item">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <div class="step-title">Manage tickets and attendees</div>
+                            <div class="step-desc">Set up ticket types and track registrations.</div>
+                        </div>
+                    </li>
+                </ul>
             </div>
 
-            <div class="benefits-box">
-                <h4>🎯 Organizer Benefits & Features</h4>
-                <p>• Access to thousands of potential event attendees on our platform</p>
-                <p>• Comprehensive event analytics and attendance reporting tools</p>
-                <p>• Integrated payment processing and automated ticket sales</p>
-                <p>• Marketing tools and event promotional opportunities</p>
-                <p>• 24/7 organizer support and dedicated account management</p>
-                <p>• Mobile-friendly organizer dashboard for on-the-go event management</p>
-            </div>
-
-            <div class="contact-info">
-                <h4>📞 Organizer Support Contact</h4>
-                <p><strong>Email:</strong> organizer-support@events2go.com</p>
-                <p><strong>Phone:</strong> {{ support_phone|default("+1 (555) 123-4567") }}</p>
-                <p><strong>Support Hours:</strong> Monday - Friday, 9 AM - 6 PM EST</p>
-                <p><strong>Emergency Support:</strong> Available 24/7 for critical event issues</p>
-            </div>
-
-            <div class="message">
-                <p>We're excited to have you as an organizer partner! Our team is here to help you succeed on the platform. Don't hesitate to reach out if you need any assistance getting started.</p>
-
-                <p><strong>Pro Tip:</strong> Organizers who complete their profile and create events within the first week typically see 3x higher attendance in their first month!</p>
+            <div class="info-section">
+                <div class="info-title">Need Help?</div>
+                <div class="info-text">
+                    Check out our organizer documentation and resources to make the most of your Events2Go account. Our support team is also available to assist you.
+                </div>
             </div>
         </div>
 
+        <!-- Footer -->
         <div class="footer">
-            <p><strong>Events2Go Organizer Relations Team</strong></p>
-            <p>Your success is our success</p>
-            <div class="company-info">
-                <p>&copy; {{ year }} Events2Go. All rights reserved.</p>
-                <p>This email contains important organizer account information.</p>
+            <div class="footer-text">
+                Questions? Contact our <a href="#" class="footer-link">organizer support team</a>.
+            </div>
+            <div class="footer-text">
+                © {{ year }} Events2Go. All rights reserved.
             </div>
         </div>
     </div>

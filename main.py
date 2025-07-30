@@ -25,6 +25,7 @@ def create_app() -> FastAPI:
         description="Events Service API",
         lifespan=lifespan,
         debug=settings.ENVIRONMENT == "development",
+        redirect_slashes=True,
         swagger_ui_parameters={
             "filter": True,  # Enable filter
             "persistAuthorization": True,  # Persist auth tokens
