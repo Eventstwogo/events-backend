@@ -11,13 +11,15 @@ from shared.core.config import PRIVATE_KEY, settings
 from shared.db.models import User, UserDeviceSession
 from user_service.utils.auth import create_jwt_token, verify_password
 
+MAX_LOGIN_ATTEMPTS = 3
+
 
 async def check_account_lock(
     user: User, db: AsyncSession
 ) -> JSONResponse | None:
     if user.login_status == 1:
-        if user.last_login and (
-            datetime.now(timezone.utc) - user.last_login
+        if user.account_locked_at and (
+            datetime.now(timezone.utc) - user.account_locked_at
         ) < timedelta(hours=24):
             return api_response(
                 status_code=status.HTTP_423_LOCKED,
@@ -38,21 +40,26 @@ async def check_password(
 ) -> JSONResponse | None:
     if not verify_password(password, user.password_hash):
         user.failure_login_attempts += 1
-        if user.failure_login_attempts >= 3:
+        await db.commit()
+
+        remaining_attempts = MAX_LOGIN_ATTEMPTS - user.failure_login_attempts
+
+        if user.failure_login_attempts >= MAX_LOGIN_ATTEMPTS:
             user.login_status = 1
-            user.last_login = datetime.now(timezone.utc)
+            user.account_locked_at = datetime.now(timezone.utc)
             await db.commit()
             return api_response(
                 status_code=status.HTTP_423_LOCKED,
                 message="Account locked after 3 failed login attempts. Try again after 24 hours.",
                 log_error=True,
             )
-        await db.commit()
+
         return api_response(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            message="Invalid credentials.",
+            message=f"Incorrect password. {remaining_attempts} attempt(s) remaining before account lock.",
             log_error=True,
         )
+
     return None
 
 

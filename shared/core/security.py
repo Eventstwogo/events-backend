@@ -114,6 +114,19 @@ def generate_searchable_hash(value: str) -> str:
     return hashlib.sha256(normalized_value.encode()).hexdigest()
 
 
+def hash_data(data: str) -> str:
+    return hashlib.sha256(data.encode()).hexdigest()
+
+
+def encrypt_dict_values(data: dict) -> dict:
+    return {key: encrypt_data(value) for key, value in data.items()}
+
+
+def decrypt_dict_values(data: dict) -> dict:
+    return {key: decrypt_data(value) for key, value in data.items()}
+
+
+# Unused Code Functions for Encryption Algorithms
 def encrypt_aes256(plaintext: str, key: str) -> str:
     """
     Encrypt a string using AES-256 encryption.

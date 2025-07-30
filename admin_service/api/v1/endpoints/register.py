@@ -6,7 +6,10 @@ from admin_service.schemas.register import (
     AdminRegisterRequest,
     AdminRegisterResponse,
 )
-from admin_service.services.response_builders import config_not_found_response
+from admin_service.services.response_builders import (
+    config_not_found_response,
+    organizer_registration_response,
+)
 from admin_service.services.user_service import get_config_or_404
 from admin_service.services.user_validation import (
     validate_role,
@@ -14,12 +17,16 @@ from admin_service.services.user_validation import (
     validate_unique_user,
 )
 from shared.core.api_response import api_response
-from shared.db.models import AdminUser, Role
+from shared.db.models import AdminUser, AdminUserVerification, Role
 from shared.db.sessions.database import get_db
 from shared.utils.email_utils import send_admin_welcome_email
 from shared.utils.exception_handlers import exception_handler
 from shared.utils.file_uploads import get_media_url
-from shared.utils.id_generators import generate_lower_uppercase
+from shared.utils.id_generators import (
+    generate_digits_lowercase,
+    generate_digits_uppercase,
+    generate_lower_uppercase,
+)
 
 router = APIRouter()
 
@@ -64,6 +71,9 @@ async def register_user(
 
     role = role_result
 
+    if role.role_name.lower() == "organizer":
+        return organizer_registration_response()
+
     # Check superadmin uniqueness
     superadmin_result = await validate_superadmin_uniqueness(db, role)
     if superadmin_result is not None:
@@ -81,14 +91,24 @@ async def register_user(
     new_user = AdminUser(
         user_id=user_id,
         role_id=user_data.role_id,
+        profile_id=generate_digits_uppercase(length=6),
+        business_id=generate_digits_lowercase(length=6),
         username=user_data.username.lower(),
         email=user_data.email.lower(),
         password_hash=config.default_password_hash,
         days_180_flag=config.global_180_day_flag,
+        is_verified=1,
+    )
+
+    verification = AdminUserVerification(
+        user_id=user_id,
+        email_verified=True,
+        phone_verified=False,
     )
 
     # Add to database
     db.add(new_user)
+    db.add(verification)
     await db.commit()
     await db.refresh(new_user)
 

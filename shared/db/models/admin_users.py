@@ -10,6 +10,7 @@ from sqlalchemy import (
     func,
     select,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import (
     Mapped,
     mapped_column,
@@ -22,6 +23,7 @@ from shared.db.types import EncryptedString
 
 if TYPE_CHECKING:
     from shared.db.models.events import Event
+    from shared.db.models.organizer import BusinessProfile
     from shared.db.models.rbac import Role
 
 
@@ -70,13 +72,22 @@ class AdminUser(EventsBase):
     last_login: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), default=None
     )
+    account_locked_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     failure_login_attempts: Mapped[int] = mapped_column(
         Integer, default=0, nullable=False
     )
     successful_login_count: Mapped[int] = mapped_column(
         Integer, default=0, nullable=False
     )
-
+    is_verified: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    profile_id: Mapped[str] = mapped_column(
+        String(6), nullable=False, unique=True
+    )
+    business_id: Mapped[str] = mapped_column(
+        String(6), nullable=False, unique=True
+    )
     is_deleted: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False
     )
@@ -89,6 +100,10 @@ class AdminUser(EventsBase):
 
     # Relationships
     role: Mapped["Role"] = relationship(back_populates="users")
+    # Relationships
+    verification: Mapped[Optional["AdminUserVerification"]] = relationship(
+        back_populates="admin_user", uselist=False, cascade="all, delete-orphan"
+    )
     password_reset: Mapped[Optional["PasswordReset"]] = relationship(
         back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
@@ -99,6 +114,18 @@ class AdminUser(EventsBase):
         "Event",
         back_populates="organizer",
         lazy="dynamic",
+    )
+    business_profile: Mapped[Optional["BusinessProfile"]] = relationship(
+        "BusinessProfile",
+        back_populates="organizer_login",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+    user_profile: Mapped[Optional["AdminUserProfile"]] = relationship(
+        "AdminUserProfile",
+        back_populates="admin_user_profile",
+        uselist=False,
+        cascade="all, delete-orphan",
     )
 
     # Properties for username and email
@@ -152,6 +179,40 @@ class AdminUser(EventsBase):
 
         email_hash = generate_searchable_hash(email)
         return select(AdminUser).where(AdminUser.email_hash == email_hash)
+
+
+# UserVerification Table
+class AdminUserVerification(EventsBase):
+    __tablename__ = "e2gadminuserverifications"
+
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("e2gadminusers.user_id"), primary_key=True
+    )
+
+    email_verified: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    phone_verified: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+
+    email_verification_token: Mapped[Optional[str]] = mapped_column(
+        String(255), default=None
+    )
+    email_token_expires_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), default=None
+    )
+
+    phone_verification_code: Mapped[Optional[str]] = mapped_column(
+        String(6), default=None
+    )
+    phone_code_expires_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), default=None
+    )
+
+    admin_user: Mapped["AdminUser"] = relationship(
+        back_populates="verification"
+    )
 
 
 # PasswordReset Table
@@ -240,3 +301,22 @@ class AdminUserDeviceSession(EventsBase):
     )
 
     user: Mapped["AdminUser"] = relationship(back_populates="device_sessions")
+
+
+class AdminUserProfile(EventsBase):
+    __tablename__ = "e2gadminuserprofiles"
+
+    profile_id: Mapped[str] = mapped_column(
+        String(6), ForeignKey("e2gadminusers.profile_id"), primary_key=True
+    )
+    full_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    phone: Mapped[str] = mapped_column(String(15), unique=True, nullable=True)
+    address: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    social_links: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    preferences: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    profile_bio: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+
+    # Relationship to AdminUser
+    admin_user_profile: Mapped["AdminUser"] = relationship(
+        "AdminUser", back_populates="user_profile", uselist=False, lazy="joined"
+    )

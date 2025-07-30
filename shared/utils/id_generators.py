@@ -74,6 +74,23 @@ def generate_digits_upper_lower_case(length: int = 6) -> str:
     return "".join(secrets.choice(seq=chars) for _ in range(length))
 
 
+## for Organizer id in Onboarding
+def generate_digits_letters(length: int = 6) -> str:
+    """
+    Generate a secure random string with digits, lowercase and uppercase letters.
+
+    Args:
+        length (int): Length of the string to generate. Default is 6.
+
+    Returns:
+        str: A secure random string.
+    """
+    chars: LiteralString = (
+        string.ascii_lowercase + string.ascii_uppercase + string.digits
+    )
+    return "".join(secrets.choice(seq=chars) for _ in range(length))
+
+
 def generate_verification_token(length: int = 32) -> str:
     """
     Generate a cryptographically secure verification token.

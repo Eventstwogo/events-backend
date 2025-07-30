@@ -108,14 +108,15 @@ class Settings(BaseSettings):
     EMAIL_FROM: str = "your-email@gmail.com"
     EMAIL_FROM_NAME: str = "Events2Go API"
     EMAIL_TEMPLATES_DIR: str = "shared/templates"
+    SUPPORT_EMAIL: str = "support@events2go.com"
 
     # === JWT ===
     JWT_ALGORITHM: str = "RS256"
     JWT_ACCESS_TOKEN_EXPIRE_SECONDS: int = 3600
     REFRESH_TOKEN_EXPIRE_DAYS_IN_SECONDS: int = 604800
     JWT_KEYS_DIR: str = "shared/keys"
-    JWT_ISSUER: str = "events2go-api"
-    JWT_AUDIENCE: str = "events2go-clients"
+    JWT_ISSUER: str = "e2g-api"
+    JWT_AUDIENCE: str = "e2g-clients"
 
     # === AES256 Encryption ===
     FERNET_KEY: str = "fernet-key"
