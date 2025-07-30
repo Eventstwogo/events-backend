@@ -83,11 +83,6 @@ async def get_all_organizers(db: AsyncSession = Depends(get_db)):
                     ],
                     "profile_details": decrypted_profile_details,
                     "purpose": purpose_data,
-                    "payment_preference": (
-                        business_profile.payment_preference
-                        if business_profile
-                        else []
-                    ),
                     "ref_number": (
                         business_profile.ref_number
                         if business_profile
@@ -175,9 +170,6 @@ async def get_organizer_details(
             "is_approved": validation_result["business_profile_approved"],
             "profile_details": decrypted_profile_details,
             "purpose": purpose_data,
-            "payment_preference": (
-                business_profile.payment_preference if business_profile else []
-            ),
             "ref_number": (
                 business_profile.ref_number if business_profile else None
             ),

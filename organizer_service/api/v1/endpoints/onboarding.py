@@ -169,7 +169,6 @@ async def organizer_onboarding(
         abn_id=encrypted_abn_id,
         abn_hash=abn_hash,
         profile_details=encrypted_profile_json,
-        payment_preference=[p.value for p in data.payment_preference],
         store_name=store_name_cleaned,
         store_url=str(data.store_url),
         location=location_cleaned,

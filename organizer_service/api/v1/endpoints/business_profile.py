@@ -81,7 +81,6 @@ async def get_business_profile(
         "profile_details": decrypted_profile,
         "business_logo": business.business_logo,
         "location": business.location,
-        "payment_preference": business.payment_preference,
         "store_name": business.store_name,
         "store_url": business.store_url,
         "ref_number": business.ref_number,

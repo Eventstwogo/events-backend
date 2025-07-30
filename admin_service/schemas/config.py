@@ -11,12 +11,6 @@ class ConfigOut(BaseModel):
         description="The unique identifier of the configuration record.",
         examples=[1],
     )
-    default_password: str = Field(
-        default=...,
-        title="Default Password",
-        description="The default plain text password (only for reference).",
-        examples=["Welcome@123"],
-    )
     logo_url: Optional[str] = Field(
         default=None,
         title="Logo URL",

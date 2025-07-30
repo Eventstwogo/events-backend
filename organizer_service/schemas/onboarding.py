@@ -15,15 +15,9 @@ class PurposeEnum(str, Enum):
     other = "Other"
 
 
-class PaymentPreferenceEnum(str, Enum):
-    product_listing = "Payments for Product Listing"
-    orders = "Payments for Orders"
-
-
 class OnboardingRequest(BaseModel):
     business_id: str = Field(..., min_length=1, max_length=6)
     purpose: list[PurposeEnum]
-    payment_preference: list[PaymentPreferenceEnum]
     store_name: str = Field(..., min_length=3, max_length=100)
     store_url: HttpUrl
     location: str = Field(..., min_length=2, max_length=100)
@@ -33,13 +27,6 @@ class OnboardingRequest(BaseModel):
     def validate_purpose(cls, v):
         if not v:
             raise ValueError("Purpose cannot be empty")
-        return v
-
-    @field_validator("payment_preference")
-    @classmethod
-    def validate_payment(cls, v):
-        if not v:
-            raise ValueError("Payment preference cannot be empty")
         return v
 
     @field_validator("store_name")

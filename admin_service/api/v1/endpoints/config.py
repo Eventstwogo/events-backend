@@ -94,11 +94,14 @@ async def create_config(
     await db.commit()
     await db.refresh(config)
 
+    # Convert to response format
     config.logo_url = get_media_url(config.logo_url)
+    config_response = ConfigOut.model_validate(config)
+
     return api_response(
         status_code=status.HTTP_201_CREATED,
         message="Configuration created successfully.",
-        data=config,
+        data=config_response,
     )
 
 
@@ -114,12 +117,14 @@ async def get_config(
     if not config:
         return handle_not_found("Configuration")
 
+    # Convert to response format
     config.logo_url = get_media_url(config.logo_url)
+    config_response = ConfigOut.model_validate(config)
 
     return api_response(
         status_code=status.HTTP_200_OK,
         message="Configuration retrieved successfully.",
-        data=config,
+        data=config_response,
     )
 
 
@@ -185,13 +190,14 @@ async def update_config(
     await db.commit()
     await db.refresh(config)
 
-    # Convert internal path to public media URL
+    # Convert to response format
     config.logo_url = get_media_url(config.logo_url)
+    config_response = ConfigOut.model_validate(config)
 
     return api_response(
         status_code=status.HTTP_200_OK,
         message="Configuration updated successfully.",
-        data=config,
+        data=config_response,
     )
 
 
@@ -241,9 +247,12 @@ async def update_logo(
     await db.commit()
     await db.refresh(config)
 
+    # Convert to response format
     config.logo_url = get_media_url(config.logo_url)
+    config_response = ConfigOut.model_validate(config)
+
     return api_response(
         status_code=status.HTTP_200_OK,
         message="Logo updated successfully.",
-        data=config,
+        data=config_response,
     )

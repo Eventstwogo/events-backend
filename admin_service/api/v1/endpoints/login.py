@@ -61,19 +61,36 @@ APPROVAL_REJECTED = 2
 
 async def get_organizer_profile_info(user: AdminUser, db: AsyncSession) -> dict:
     """
-    Return organizer profile details if the user has an 'Organizer' role.
-    Includes approval status, reference number, and onboarding status.
+    Return organizer profile details based on user role.
+
+    For Organizer users:
+    - Returns actual business profile approval status and onboarding details
+    - Checks BusinessProfile table for is_approved status and ref_number
+    - Determines onboarding_status based on verification and approval state
+
+    For non-Organizer users (Admin, etc.):
+    - Returns approved status (is_approved=1, onboarding_status="approved")
+    - This allows frontend navigation without requiring organizer approval process
+
+    Returns:
+        dict: Contains is_approved, ref_number, and onboarding_status
     """
+    # Step 1: Check if user role is "Organizer"
+    user_role_name = await get_user_role_name(db, user.user_id)
+    if not user_role_name or user_role_name.lower() != "organizer":
+        # For non-organizer users, return approved status for frontend navigation
+        return {
+            "is_approved": 1,  # Non-organizers are considered approved
+            "ref_number": "",
+            "onboarding_status": "approved",  # Non-organizers don't need approval process
+        }
+
+    # Default values for organizer users
     organizer_info = {
         "is_approved": 0,
         "ref_number": "",
         "onboarding_status": "unknown",
     }
-
-    # Step 1: Check if user role is "Organizer"
-    user_role_name = await get_user_role_name(db, user.user_id)
-    if not user_role_name or user_role_name.lower() != "organizer":
-        return organizer_info
 
     # Step 2: Fetch business profile info
     profile_stmt = select(
