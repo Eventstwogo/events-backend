@@ -32,7 +32,7 @@ logger = get_logger(__name__)
 router = APIRouter()
 
 
-@router.get("/", response_model=SessionListResponse)
+@router.get("", response_model=SessionListResponse)
 @exception_handler
 async def get_user_sessions(
     current_user: Annotated[AdminUser, Depends(get_current_active_user)],
@@ -185,7 +185,7 @@ async def terminate_user_session(
         )
 
 
-@router.delete("/", response_model=SessionTerminateResponse)
+@router.delete("", response_model=SessionTerminateResponse)
 @exception_handler
 async def terminate_all_user_sessions(
     current_user: Annotated[AdminUser, Depends(get_current_active_user)],

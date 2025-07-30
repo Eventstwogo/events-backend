@@ -52,32 +52,61 @@ logger = get_logger(__name__)
 
 router = APIRouter()
 
+# Constants for Business Profile approval statuses
+APPROVAL_NOT_STARTED = -1
+APPROVAL_UNDER_REVIEW = 0
+APPROVAL_APPROVED = 1
+APPROVAL_REJECTED = 2
+
 
 async def get_organizer_profile_info(user: AdminUser, db: AsyncSession) -> dict:
-    """Get organizer profile information if user is an organizer"""
+    """
+    Return organizer profile details if the user has an 'Organizer' role.
+    Includes approval status, reference number, and onboarding status.
+    """
     organizer_info = {
-        "is_approved": False,
+        "is_approved": 0,
         "ref_number": "",
+        "onboarding_status": "unknown",
     }
 
-    # Check if user role is "Organizer"
+    # Step 1: Check if user role is "Organizer"
     user_role_name = await get_user_role_name(db, user.user_id)
-    if user_role_name and user_role_name.lower() == "organizer":
-        profile_stmt = select(
-            BusinessProfile.is_approved,
-            BusinessProfile.ref_number,
-        ).where(BusinessProfile.business_id == user.business_id)
+    if not user_role_name or user_role_name.lower() != "organizer":
+        return organizer_info
 
-        profile_result = await db.execute(profile_stmt)
-        profile_data = profile_result.one_or_none()
+    # Step 2: Fetch business profile info
+    profile_stmt = select(
+        BusinessProfile.is_approved,
+        BusinessProfile.ref_number,
+    ).where(BusinessProfile.business_id == user.business_id)
 
-        if profile_data:
-            is_approved, ref_number = profile_data
-            organizer_info = {
-                "is_approved": is_approved,
-                "ref_number": ref_number or "",
-            }
+    result = await db.execute(profile_stmt)
+    is_approved, ref_number = result.one_or_none() or (APPROVAL_NOT_STARTED, "")
 
+    organizer_info.update(
+        {
+            "is_approved": is_approved,
+            "ref_number": ref_number or "",
+        }
+    )
+
+    # Step 3: Determine onboarding status
+    if user.is_verified and is_approved == APPROVAL_APPROVED:
+        onboarding_status = "approved"
+    elif not user.is_verified:
+        if is_approved == APPROVAL_NOT_STARTED:
+            onboarding_status = "not_started"
+        elif is_approved == APPROVAL_REJECTED:
+            onboarding_status = "rejected"
+        elif is_approved == APPROVAL_UNDER_REVIEW and ref_number:
+            onboarding_status = "under_review"
+        else:
+            onboarding_status = "unknown"
+    else:
+        onboarding_status = "unknown"
+
+    organizer_info["onboarding_status"] = onboarding_status
     return organizer_info
 
 

@@ -24,7 +24,7 @@ from shared.utils.validators import (
 router = APIRouter()
 
 
-@router.get("/", response_model=List[AdminUserResponse])
+@router.get("", response_model=List[AdminUserResponse])
 @exception_handler
 async def get_admin_users(
     is_deleted: Optional[bool] = Query(

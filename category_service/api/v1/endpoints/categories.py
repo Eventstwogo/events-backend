@@ -226,7 +226,7 @@ async def _create_category(
     )
 
 
-@router.post("/")
+@router.post("")
 @exception_handler
 async def create_category_or_subcategory(  # pylint: disable=too-many-arguments
     # pylint: disable=too-many-positional-arguments
@@ -290,7 +290,7 @@ async def create_category_or_subcategory(  # pylint: disable=too-many-arguments
     )
 
 
-@router.get("/")
+@router.get("")
 @exception_handler
 async def get_all_categories(
     status_filter: Optional[bool] = Query(

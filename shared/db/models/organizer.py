@@ -1,15 +1,13 @@
 from datetime import datetime
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     ARRAY,
-    Boolean,
     DateTime,
     ForeignKey,
     Integer,
     String,
     func,
-    select,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import (
@@ -18,9 +16,7 @@ from sqlalchemy.orm import (
     relationship,
 )
 
-from shared.core.security import generate_searchable_hash
 from shared.db.models.base import EventsBase
-from shared.db.types import EncryptedString
 
 if TYPE_CHECKING:
     from shared.db.models.admin_users import AdminUser
@@ -50,9 +46,11 @@ class BusinessProfile(EventsBase):
     ref_number: Mapped[str] = mapped_column(String(length=6), unique=True)
 
     purpose: Mapped[dict] = mapped_column(JSONB, nullable=False)
-    is_approved: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_approved: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     timestamp: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
     )
 
     organizer_login: Mapped["AdminUser"] = relationship(

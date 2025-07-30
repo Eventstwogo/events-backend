@@ -154,7 +154,7 @@ class AdminLoginRequest(BaseModel):
 
 
 class AdminUserInfo(BaseModel):
-    is_approved: bool
+    is_approved: int
     ref_number: str
 
 

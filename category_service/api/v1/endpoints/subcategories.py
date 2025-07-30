@@ -16,7 +16,7 @@ from shared.utils.file_uploads import get_media_url
 router = APIRouter()
 
 
-@router.get("/")
+@router.get("")
 @exception_handler
 async def get_all_subcategories(
     status_filter: Optional[bool] = Query(

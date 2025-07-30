@@ -19,7 +19,7 @@ from shared.utils.exception_handlers import exception_handler
 router = APIRouter()
 
 
-@router.post("/", summary="Create a new role-permission relationship")
+@router.post("", summary="Create a new role-permission relationship")
 @exception_handler
 async def create_role_permission(
     role_permission: CreateRolePermission,
@@ -97,7 +97,7 @@ async def create_role_permission(
 
 
 @router.get(
-    "/",
+    "",
     response_model=List[RolePermissionDetails],
     summary="Get role-permission records by status",
 )

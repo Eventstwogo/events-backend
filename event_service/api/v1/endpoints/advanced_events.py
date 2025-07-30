@@ -37,7 +37,7 @@ router = APIRouter()
 
 # Advanced Event APIs
 @router.get(
-    "/", status_code=status.HTTP_200_OK, response_model=EventListResponse
+    "", status_code=status.HTTP_200_OK, response_model=EventListResponse
 )
 @exception_handler
 async def list_events(

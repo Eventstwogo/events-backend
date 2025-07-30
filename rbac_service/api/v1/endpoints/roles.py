@@ -18,7 +18,7 @@ from shared.utils.validators import is_single_reserved_word
 router = APIRouter()
 
 
-@router.post("/", summary="Create a new role")
+@router.post("", summary="Create a new role")
 @exception_handler
 async def create_role(
     role: CreateRole,
@@ -74,7 +74,7 @@ async def create_role(
 
 
 @router.get(
-    "/", response_model=List[RoleDetails], summary="Get roles by active status"
+    "", response_model=List[RoleDetails], summary="Get roles by active status"
 )
 @exception_handler
 async def get_roles(

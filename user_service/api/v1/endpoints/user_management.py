@@ -20,7 +20,7 @@ logger = get_logger(__name__)
 router = APIRouter()
 
 
-@router.get("/", response_model=List[UserMeOut], summary="Get all users")
+@router.get("", response_model=List[UserMeOut], summary="Get all users")
 @exception_handler
 async def get_app_users(
     current_user: Annotated[User, Depends(get_current_active_user)],

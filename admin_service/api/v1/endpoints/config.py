@@ -27,9 +27,7 @@ from shared.utils.password_validator import PasswordValidator
 router = APIRouter()
 
 
-@router.post(
-    "/", response_model=ConfigOut, summary="Create a new configuration"
-)
+@router.post("", response_model=ConfigOut, summary="Create a new configuration")
 @exception_handler
 async def create_config(
     default_password: str = Form(
@@ -105,7 +103,7 @@ async def create_config(
 
 
 @router.get(
-    "/", response_model=ConfigOut, summary="Get the current configuration"
+    "", response_model=ConfigOut, summary="Get the current configuration"
 )
 @exception_handler
 async def get_config(
@@ -126,7 +124,7 @@ async def get_config(
 
 
 @router.put(
-    "/", response_model=ConfigOut, summary="Update the existing configuration"
+    "", response_model=ConfigOut, summary="Update the existing configuration"
 )
 @exception_handler
 async def update_config(

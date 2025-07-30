@@ -36,8 +36,8 @@ async def approve_organizer(
         )
 
     # Update values
-    organizer.is_verified = True
-    business_profile.is_approved = True
+    organizer.is_verified = 1
+    business_profile.is_approved = 1
 
     db.add_all([organizer, business_profile])
     await db.commit()
@@ -72,8 +72,8 @@ async def reject_organizer(
         )
 
     # Update values
-    organizer.is_verified = False
-    business_profile.is_approved = False
+    organizer.is_verified = 0
+    business_profile.is_approved = 2
 
     db.add_all([organizer, business_profile])
     await db.commit()

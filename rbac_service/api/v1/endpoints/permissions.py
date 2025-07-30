@@ -22,7 +22,7 @@ from shared.utils.validators import is_single_reserved_word
 router = APIRouter()
 
 
-@router.post("/", summary="Create a new permission")
+@router.post("", summary="Create a new permission")
 @exception_handler
 async def create_permission(
     permission: CreatePermission,
@@ -81,7 +81,7 @@ async def create_permission(
 
 
 @router.get(
-    "/",
+    "",
     response_model=List[PermissionDetails],
     summary="Get permissions by active status",
 )

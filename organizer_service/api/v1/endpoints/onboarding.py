@@ -29,7 +29,7 @@ from shared.utils.id_generators import generate_digits_letters
 router = APIRouter()
 
 
-@router.post("/")
+@router.post("")
 @exception_handler
 async def organizer_onboarding(
     background_tasks: BackgroundTasks,

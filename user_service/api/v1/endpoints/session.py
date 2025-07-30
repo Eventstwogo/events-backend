@@ -52,7 +52,7 @@ async def get_current_session_id(
 
 
 @router.get(
-    "/",
+    "",
     response_model=List[DeviceSessionResponse],
     summary="Get user sessions",
 )
@@ -193,7 +193,7 @@ async def terminate_session(
     )
 
 
-@router.delete("/", summary="Terminate all sessions except current")
+@router.delete("", summary="Terminate all sessions except current")
 @exception_handler
 async def terminate_all_sessions(
     request: Request,

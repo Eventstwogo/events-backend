@@ -29,7 +29,7 @@ from user_service.schemas.profile import UpdateProfileRequest, UserProfile
 router = APIRouter()
 
 
-@router.get("/", response_model=UserProfile, summary="Get current user profile")
+@router.get("", response_model=UserProfile, summary="Get current user profile")
 @exception_handler
 async def get_profile(
     current_user: Annotated[User, Depends(get_current_active_user)],
@@ -74,7 +74,7 @@ async def get_profile(
     )
 
 
-@router.put("/", response_model=UserProfile, summary="Update user profile")
+@router.put("", response_model=UserProfile, summary="Update user profile")
 @exception_handler
 async def update_profile(
     current_user: Annotated[User, Depends(get_current_active_user)],
@@ -316,7 +316,7 @@ async def update_profile_picture(
     )
 
 
-@router.delete("/", summary="Delete current user account")
+@router.delete("", summary="Delete current user account")
 @exception_handler
 async def delete_account(
     current_user: Annotated[User, Depends(get_current_active_user)],
