@@ -5,18 +5,18 @@ from pydantic import BaseModel, Field, HttpUrl, field_validator
 
 
 class PurposeEnum(str, Enum):
-    feedback = "Collect feedback"
-    roadmap = "Prioritize my roadmap"
-    announcements = "Product announcements"
-    sales = "Increase Sales"
-    awareness = "Brand Awareness"
-    reach = "Expand Reach"
-    efficiency = "Operational Efficiency"
-    other = "Other"
+    sell_event_tickets = "Sell Event Tickets"
+    build_event_community = "Build Event Community"
+    promote_brand_events = "Promote Brand Events"
+    increase_event_attendance = "Increase Event Attendance"
+    manage_event_registrations = "Manage Event Registrations"
+    create_recurring_events = "Create Recurring Events"
+    corporate_event_planning = "Corporate Event Planning"
+    entertainment_events = "Entertainment Events"
 
 
 class OnboardingRequest(BaseModel):
-    business_id: str = Field(..., min_length=1, max_length=6)
+    user_id: str = Field(..., min_length=1, max_length=6)
     purpose: list[PurposeEnum]
     store_name: str = Field(..., min_length=3, max_length=100)
     store_url: HttpUrl

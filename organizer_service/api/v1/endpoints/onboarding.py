@@ -37,9 +37,9 @@ async def organizer_onboarding(
     abn_id: str = Depends(validate_abn_id),
     db: AsyncSession = Depends(get_db),
 ) -> JSONResponse:
-    # Validate business_id exists
+    # Validate user_id exists
     profile_check_stmt = select(AdminUser).where(
-        AdminUser.business_id == data.business_id
+        AdminUser.user_id == data.user_id
     )
     profile_result = await db.execute(profile_check_stmt)
     existing_profile = profile_result.scalar_one_or_none()
@@ -165,7 +165,7 @@ async def organizer_onboarding(
 
     # Create new BusinessProfile instance
     new_profile = BusinessProfile(
-        business_id=data.business_id,
+        business_id=existing_profile.business_id,
         abn_id=encrypted_abn_id,
         abn_hash=abn_hash,
         profile_details=encrypted_profile_json,
@@ -204,7 +204,7 @@ async def organizer_onboarding(
         content={
             "message": "Organizer onboarding completed successfully. Confirmation email sent.",
             "reference_number": ref_number,
-            "business_id": data.business_id,
+            "business_id": existing_profile.business_id,
             "store_url": str(data.store_url),
         },
     )
