@@ -6,7 +6,10 @@ stored as JSON strings or dictionaries, with proper type checking and error hand
 """
 
 import json
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional, Union
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from shared.core.security import decrypt_dict_values
 
@@ -126,3 +129,135 @@ def process_business_profile_data(
     parsed_purpose = safe_parse_json_field(purpose, "purpose")
 
     return decrypted_profile, parsed_purpose
+
+
+# Validation functions for organizer data
+def validate_organizer_role(role_name: Optional[str]) -> bool:
+    """
+    Validate if the user has the 'Organizer' role.
+
+    Args:
+        role_name: The role name to validate
+
+    Returns:
+        bool: True if role is 'Organizer', False otherwise
+    """
+    return role_name is not None and role_name.lower() == "organizer"
+
+
+def validate_business_profile_exists(business_profile) -> bool:
+    """
+    Validate if business profile exists and has required data.
+
+    Args:
+        business_profile: The business profile object
+
+    Returns:
+        bool: True if business profile exists and is valid, False otherwise
+    """
+    return business_profile is not None
+
+
+def create_organizer_validation_error(
+    user_id: str, issue: str
+) -> Dict[str, Any]:
+    """
+    Create a standardized error response for organizer validation issues.
+
+    Args:
+        user_id: The user ID that failed validation
+        issue: Description of the validation issue
+
+    Returns:
+        Dict: Error response structure
+    """
+    return {
+        "user_id": user_id,
+        "error": f"Validation failed: {issue}",
+        "status": "invalid",
+    }
+
+
+async def validate_organizer_with_business_profile(
+    db: AsyncSession, user_id: str, business_id: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Comprehensive validation for organizer role and business profile.
+
+    Args:
+        db: Database session
+        user_id: The user ID to validate
+        business_id: Optional business ID to validate (if not provided, will get from user)
+
+    Returns:
+        Dict containing validation results:
+        {
+            "is_valid": bool,
+            "role_name": str or None,
+            "has_business_profile": bool,
+            "business_profile_approved": bool or None,
+            "error_message": str or None
+        }
+    """
+    from admin_service.services.user_service import get_user_role_name
+    from shared.db.models import AdminUser, BusinessProfile
+
+    result = {
+        "is_valid": False,
+        "role_name": None,
+        "has_business_profile": False,
+        "business_profile_approved": None,
+        "error_message": None,
+    }
+
+    try:
+        # Get user role name
+        role_name = await get_user_role_name(db, user_id)
+        result["role_name"] = role_name
+
+        # Check if user has organizer role
+        if not validate_organizer_role(role_name):
+            current_role = (role_name or "None").upper()
+            result["error_message"] = (
+                f"Access restricted to organizers only. Your current role '{current_role}' does not have the required permissions."
+            )
+            return result
+
+        # Get business_id if not provided
+        if not business_id:
+            user_stmt = select(AdminUser.business_id).where(
+                AdminUser.user_id == user_id
+            )
+            user_result = await db.execute(user_stmt)
+            business_id = user_result.scalar_one_or_none()
+
+            if not business_id:
+                result["error_message"] = (
+                    "No business profile is associated with this organizer account. Please complete your business registration."
+                )
+                return result
+
+        # Check business profile
+        profile_stmt = select(
+            BusinessProfile.is_approved,
+            BusinessProfile.ref_number,
+        ).where(BusinessProfile.business_id == business_id)
+
+        profile_result = await db.execute(profile_stmt)
+        profile_data = profile_result.first()
+
+        if profile_data:
+            result["has_business_profile"] = True
+            result["business_profile_approved"] = profile_data.is_approved
+            result["is_valid"] = True
+        else:
+            result["error_message"] = (
+                "Business profile not found. Please complete your business registration to access organizer features."
+            )
+
+    except Exception as e:
+        result["error_message"] = (
+            f"Unable to validate organizer credentials. Please try again or contact support if the issue persists."
+        )
+
+    return result
