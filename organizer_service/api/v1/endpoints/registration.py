@@ -17,7 +17,7 @@ from organizer_service.schemas.register import (
     OrganizerRegisterResponse,
 )
 from shared.core.api_response import api_response
-from shared.db.models import AdminUser, UserVerification
+from shared.db.models import AdminUser, AdminUserVerification
 from shared.db.sessions.database import get_db
 from shared.utils.email_utils import send_organizer_verification_email
 from shared.utils.exception_handlers import exception_handler
@@ -74,6 +74,7 @@ async def register_user(
         username=user_data.username.lower(),
         email=user_data.email.lower(),
         password_hash=password_hash,
+        role_id=role.role_id,
         days_180_flag=config.global_180_day_flag,
         profile_id=generate_digits_uppercase(length=6),
         business_id=generate_digits_lowercase(length=6),
@@ -84,7 +85,7 @@ async def register_user(
     verification_token, expiration_time = generate_verification_tokens(
         expires_in_minutes=60
     )
-    verification = UserVerification(
+    verification = AdminUserVerification(
         user_id=user_id,
         email_verification_token=verification_token,
         email_token_expires_at=expiration_time,

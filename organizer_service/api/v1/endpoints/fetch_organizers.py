@@ -1,13 +1,12 @@
-import json
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from shared.core.security import decrypt_data, decrypt_dict_values
+from shared.core.security import decrypt_data
 from shared.db.models import AdminUser, BusinessProfile
 from shared.db.sessions.database import get_db
+from shared.utils.data_utils import process_business_profile_data
 
 router = APIRouter()
 
@@ -23,26 +22,18 @@ async def get_all_organizers(db: AsyncSession = Depends(get_db)):
     for organizer in organizers:
         business_profile = organizer.business_profile
 
-        # Decrypt profile_details if present
-        decrypted_profile_details = {}
-        if business_profile and business_profile.profile_details:
-            try:
-                raw_data = business_profile.profile_details
-                if isinstance(raw_data, str):
-                    raw_data = json.loads(raw_data)
-                decrypted_profile_details = decrypt_dict_values(raw_data)
-            except Exception as e:
-                decrypted_profile_details = {
-                    "error": f"Decryption failed: {str(e)}"
-                }
-
-        decrypted_email = decrypt_data(organizer.email)
+        # Process profile_details and purpose using utility functions
+        decrypted_profile_details, purpose_data = process_business_profile_data(
+            business_profile.profile_details if business_profile else None,
+            business_profile.purpose if business_profile else None,
+            use_fallback=True,  # Use fallback for list endpoint to avoid breaking
+        )
 
         all_organizer_data.append(
             {
                 "organizer_login": {
                     "user_id": organizer.user_id,
-                    "email": decrypted_email,
+                    "email": organizer.email,
                     "is_verified": organizer.is_verified,
                     "is_active": organizer.is_verified,
                     "last_login": organizer.last_login,
@@ -63,9 +54,7 @@ async def get_all_organizers(db: AsyncSession = Depends(get_db)):
                         else None
                     ),
                     "profile_details": decrypted_profile_details,
-                    "purpose": (
-                        business_profile.purpose if business_profile else {}
-                    ),
+                    "purpose": purpose_data,
                     "payment_preference": (
                         business_profile.payment_preference
                         if business_profile
@@ -99,20 +88,18 @@ async def get_organizer_details(
     business_result = await db.execute(business_stmt)
     business_profile = business_result.scalar_one_or_none()
 
-    # Decrypt profile_details if available
-    decrypted_profile_details = {}
-    if business_profile and business_profile.profile_details:
-        try:
-            # Ensure profile_details is a dict before decrypting
-            raw_data = business_profile.profile_details
-            if isinstance(raw_data, str):
-                raw_data = json.loads(raw_data)
-            decrypted_profile_details = decrypt_dict_values(raw_data)
-        except Exception as e:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to decrypt profile details: {str(e)}",
-            )
+    # Process profile_details and purpose using utility functions
+    try:
+        decrypted_profile_details, purpose_data = process_business_profile_data(
+            business_profile.profile_details if business_profile else None,
+            business_profile.purpose if business_profile else None,
+            use_fallback=False,  # Strict mode for single item endpoint
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e),
+        )
 
     return {
         "organizer_login": {
@@ -132,6 +119,6 @@ async def get_organizer_details(
                 business_profile.is_approved if business_profile else None
             ),
             "profile_details": decrypted_profile_details,
-            "purpose": business_profile.purpose if business_profile else {},
+            "purpose": purpose_data,
         },
     }

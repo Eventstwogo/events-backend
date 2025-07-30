@@ -17,19 +17,19 @@ def sanitize_inputs(text: str) -> str:
     return text.strip()
 
 
-def validate_abn_id(id: str) -> str:
-    if id != id.strip():
+def validate_abn_id(abn_id: str) -> str:
+    if abn_id != abn_id.strip():
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="ABN must not contain leading or trailing whitespace.",
         )
-    id = sanitize_inputs(id)
-    if not re.fullmatch(r"\d{11}", id):
+    abn_id = sanitize_inputs(abn_id)
+    if not re.fullmatch(r"\d{11}", abn_id):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="ABN must be exactly 11 digits with no spaces or other characters.",
         )
-    return id
+    return abn_id
 
 
 async def fetch_abn_details(abn_id: str) -> dict:

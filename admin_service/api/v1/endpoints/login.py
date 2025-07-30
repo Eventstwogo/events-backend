@@ -31,7 +31,11 @@ from admin_service.services.session_management import (
     SessionManager,
     TokenSessionManager,
 )
-from admin_service.services.user_service import get_user_by_email
+from admin_service.services.user_service import (
+    check_user_email_verified,
+    get_user_by_email,
+    get_user_role_name,
+)
 from admin_service.utils.auth import revoke_token
 from shared.core.api_response import api_response
 from shared.core.config import PUBLIC_KEY, settings
@@ -57,7 +61,8 @@ async def get_organizer_profile_info(user: AdminUser, db: AsyncSession) -> dict:
     }
 
     # Check if user role is "Organizer"
-    if user.role and user.role.role_name.lower() == "organizer":
+    user_role_name = await get_user_role_name(db, user.user_id)
+    if user_role_name and user_role_name.lower() == "organizer":
         profile_stmt = select(
             BusinessProfile.is_approved,
             BusinessProfile.ref_number,
@@ -107,7 +112,8 @@ async def validate_login_attempt(
         return user_not_found_response()
 
     # Step 1.1: Email verification check
-    if not (user.verification and user.verification.email_verified):
+    email_verified = await check_user_email_verified(db, user.user_id)
+    if not email_verified:
         return email_not_verified_response()
 
     # Step 1.2: Account approval check

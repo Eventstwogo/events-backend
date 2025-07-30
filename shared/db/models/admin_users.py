@@ -10,6 +10,7 @@ from sqlalchemy import (
     func,
     select,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import (
     Mapped,
     mapped_column,
@@ -117,6 +118,12 @@ class AdminUser(EventsBase):
     business_profile: Mapped[Optional["BusinessProfile"]] = relationship(
         "BusinessProfile",
         back_populates="organizer_login",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+    user_profile: Mapped[Optional["AdminUserProfile"]] = relationship(
+        "AdminUserProfile",
+        back_populates="admin_user_profile",
         uselist=False,
         cascade="all, delete-orphan",
     )
@@ -294,3 +301,22 @@ class AdminUserDeviceSession(EventsBase):
     )
 
     user: Mapped["AdminUser"] = relationship(back_populates="device_sessions")
+
+
+class AdminUserProfile(EventsBase):
+    __tablename__ = "e2gadminuserprofiles"
+
+    profile_id: Mapped[str] = mapped_column(
+        String(6), ForeignKey("e2gadminusers.profile_id"), primary_key=True
+    )
+    full_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    phone: Mapped[str] = mapped_column(String(15), unique=True, nullable=True)
+    address: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    social_links: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    preferences: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    profile_bio: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+
+    # Relationship to AdminUser
+    admin_user_profile: Mapped["AdminUser"] = relationship(
+        "AdminUser", back_populates="user_profile", uselist=False, lazy="joined"
+    )
