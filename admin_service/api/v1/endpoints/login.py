@@ -145,9 +145,9 @@ async def validate_login_attempt(
     if not email_verified:
         return email_not_verified_response()
 
-    # Step 1.2: Account approval check
-    if user.is_verified != 1:
-        return account_not_approved()
+    # # Step 1.2: Account approval check
+    # if user.is_verified != 1:
+    #     return account_not_approved()
 
     # Step 1.3: Check account activation (is_active=False means active)
     if user.is_deleted:
