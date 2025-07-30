@@ -519,7 +519,6 @@ class TokenSessionManager:
             "sid": session.session_id,
             "token_type": token_type,
             "df": session.device_fingerprint,
-            "bid": user.business_id,
         }
 
         # Set expiration based on token type
