@@ -20,6 +20,15 @@ from shared.utils.exception_handlers import exception_handler
 router = APIRouter()
 
 
+def calculate_total_slots(slots_data):
+    total = 0
+    for slot_obj in slots_data:
+        slot_data = slot_obj.get("slot_data", {})
+        for date, slots_on_date in slot_data.items():
+            total += len(slots_on_date)  # count slot_1, slot_2, etc.
+    return total
+
+
 @router.get(
     "/organizer-details/{user_id}",
     status_code=200,
@@ -146,7 +155,6 @@ async def get_organizer_full_details(
         for slot in event.slots:
             slots_data.append(
                 {
-                    "id": slot.id,
                     "slot_id": slot.slot_id,
                     "slot_data": slot.slot_data,
                     "slot_status": slot.slot_status,
@@ -189,7 +197,7 @@ async def get_organizer_full_details(
             "created_at": event.created_at,
             "updated_at": event.updated_at,
             "slots": slots_data,
-            "total_slots": len(slots_data),
+            "total_slots": calculate_total_slots(slots_data),
         }
         events_data.append(event_data)
 
