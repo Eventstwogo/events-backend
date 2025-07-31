@@ -123,7 +123,7 @@ class AdminUser(EventsBase):
     )
     user_profile: Mapped[Optional["AdminUserProfile"]] = relationship(
         "AdminUserProfile",
-        back_populates="admin_user_profile",
+        back_populates="admin_user",
         uselist=False,
         cascade="all, delete-orphan",
     )
@@ -317,6 +317,6 @@ class AdminUserProfile(EventsBase):
     profile_bio: Mapped[Optional[str]] = mapped_column(String, nullable=True)
 
     # Relationship to AdminUser
-    admin_user_profile: Mapped["AdminUser"] = relationship(
+    admin_user: Mapped["AdminUser"] = relationship(
         "AdminUser", back_populates="user_profile", uselist=False, lazy="joined"
     )

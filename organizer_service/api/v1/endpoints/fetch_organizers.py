@@ -62,6 +62,7 @@ async def get_all_organizers(db: AsyncSession = Depends(get_db)):
                     "is_verified": user.is_verified,
                     "is_active": user.is_verified,
                     "last_login": user.last_login,
+                    "is_deleted": user.is_deleted,
                     "created_at": user.created_at,
                 },
                 "business_profile": {
@@ -157,6 +158,7 @@ async def get_organizer_details(
             "is_verified": user.is_verified,
             "is_active": user.is_verified,
             "last_login": user.last_login,
+            "is_deleted": user.is_deleted,
             "created_at": user.created_at,
         },
         "business_profile": {

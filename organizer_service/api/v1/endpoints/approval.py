@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from shared.core.api_response import api_response
 from shared.db.models import AdminUser, BusinessProfile
 from shared.db.sessions.database import get_db
 from shared.utils.exception_handlers import exception_handler
@@ -21,7 +22,11 @@ async def approve_organizer(
     organizer = result.scalar_one_or_none()
 
     if not organizer:
-        raise HTTPException(status_code=404, detail="Organizer not found")
+        return api_response(
+            status_code=status.HTTP_404_NOT_FOUND,
+            message=f"Organizer {user_id} does not exist",
+            log_error=True,
+        )
 
     # Fetch business profile
     profile_stmt = select(BusinessProfile).where(
@@ -31,8 +36,10 @@ async def approve_organizer(
     business_profile = profile_result.scalar_one_or_none()
 
     if not business_profile:
-        raise HTTPException(
-            status_code=404, detail="Business profile not found"
+        return api_response(
+            status_code=status.HTTP_404_NOT_FOUND,
+            message=f"Business profile for Organizer {user_id} does not exist",
+            log_error=True,
         )
 
     # Update values
@@ -42,7 +49,10 @@ async def approve_organizer(
     db.add_all([organizer, business_profile])
     await db.commit()
 
-    return {"message": "Organizer approved successfully"}
+    return api_response(
+        status_code=status.HTTP_200_OK,
+        message="Organizer approved successfully",
+    )
 
 
 @router.post("/reject", response_model=dict)
@@ -57,7 +67,11 @@ async def reject_organizer(
     organizer = result.scalar_one_or_none()
 
     if not organizer:
-        raise HTTPException(status_code=404, detail="Organizer not found")
+        return api_response(
+            status_code=status.HTTP_404_NOT_FOUND,
+            message=f"Organizer {user_id} does not exist",
+            log_error=True,
+        )
 
     # Fetch business profile
     profile_stmt = select(BusinessProfile).where(
@@ -67,8 +81,10 @@ async def reject_organizer(
     business_profile = profile_result.scalar_one_or_none()
 
     if not business_profile:
-        raise HTTPException(
-            status_code=404, detail="Business profile not found"
+        return api_response(
+            status_code=status.HTTP_404_NOT_FOUND,
+            message=f"Business profile for Organizer {user_id} does not exist",
+            log_error=True,
         )
 
     # Update values
@@ -78,7 +94,10 @@ async def reject_organizer(
     db.add_all([organizer, business_profile])
     await db.commit()
 
-    return {"message": "Organizer approval rejected successfully"}
+    return api_response(
+        status_code=status.HTTP_200_OK,
+        message="Organizer approval rejected successfully",
+    )
 
 
 @router.put("/soft-delete", response_model=dict)
@@ -92,18 +111,27 @@ async def soft_delete_organizer(
     organizer = result.scalar_one_or_none()
 
     if not organizer:
-        raise HTTPException(status_code=404, detail="Organizer not found")
+        return api_response(
+            status_code=status.HTTP_404_NOT_FOUND,
+            message=f"Organizer {user_id} does not exist",
+            log_error=True,
+        )
 
     if organizer.is_deleted:
-        return {"message": f"Organizer '{user_id}' is already inactive."}
+        return api_response(
+            status_code=status.HTTP_409_CONFLICT,
+            message=f"Organizer '{user_id}' is already inactive.",
+            log_error=False,
+        )
 
     organizer.is_deleted = True
     db.add(organizer)
     await db.commit()
 
-    return {
-        "message": f"Organizer '{user_id}' has been soft deleted (deactivated) successfully."
-    }
+    return api_response(
+        status_code=status.HTTP_200_OK,
+        message=f"Organizer '{user_id}' has been soft deleted (deactivated) successfully.",
+    )
 
 
 @router.put("/restore", response_model=dict)
@@ -117,15 +145,24 @@ async def restore_organizer(
     organizer = result.scalar_one_or_none()
 
     if not organizer:
-        raise HTTPException(status_code=404, detail="Organizer not found")
+        return api_response(
+            status_code=status.HTTP_404_NOT_FOUND,
+            message=f"Organizer {user_id} does not exist",
+            log_error=True,
+        )
 
     if not organizer.is_deleted:
-        return {"message": f"Organizer '{user_id}' is already active."}
+        return api_response(
+            status_code=status.HTTP_409_CONFLICT,
+            message=f"Organizer '{user_id}' is already active.",
+            log_error=False,
+        )
 
     organizer.is_deleted = False
     db.add(organizer)
     await db.commit()
 
-    return {
-        "message": f"Organizer '{user_id}' has been restored (activated) successfully."
-    }
+    return api_response(
+        status_code=status.HTTP_200_OK,
+        message=f"Organizer '{user_id}' has been restored (activated) successfully.",
+    )
