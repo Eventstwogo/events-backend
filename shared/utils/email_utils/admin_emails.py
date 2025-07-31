@@ -85,7 +85,7 @@ def send_organizer_verification_email(
 ) -> bool:
     """Send verification email to organizer with token."""
     verification_link = (
-        f"{settings.FRONTEND_URL}/organizer/VerifyEmail?email={email}"
+        f"{settings.FRONTEND_URL}/emailconfirmation?email={email}"
         f"&token={verification_token}"
     )
 

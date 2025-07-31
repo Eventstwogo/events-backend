@@ -85,7 +85,6 @@ def password_expired_response(
         "success": False,
         "message": "Password expired. Please update your password.",
         "data": {
-            "user_id": user.user_id,
             "email": user.email,
         },
         "access_token": access_token,
@@ -115,7 +114,6 @@ def login_success_response(
         "success": True,
         "message": "Login successful.",
         "data": {
-            "user_id": user.user_id,
             "email": user.email,
         },
         "access_token": access_token,
