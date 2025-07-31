@@ -16,6 +16,7 @@ from shared.db.models import AdminUser, BusinessProfile, Event, EventSlot
 from shared.db.sessions.database import get_db
 from shared.utils.data_utils import process_business_profile_data
 from shared.utils.exception_handlers import exception_handler
+from shared.utils.file_uploads import get_media_url
 
 router = APIRouter()
 
@@ -27,6 +28,14 @@ def calculate_total_slots(slots_data):
         for date, slots_on_date in slot_data.items():
             total += len(slots_on_date)  # count slot_1, slot_2, etc.
     return total
+
+
+def extra_images_media_urls(value: Optional[List[str]]) -> Optional[List[str]]:
+    if not value:
+        return None
+    result = [get_media_url(url) for url in value]
+    result = [r for r in result if r is not None]
+    return result if result else None
 
 
 @router.get(
@@ -187,9 +196,11 @@ async def get_organizer_full_details(
             "end_date": event.end_date,
             "location": event.location,
             "is_online": event.is_online,
-            "card_image": event.card_image,
-            "banner_image": event.banner_image,
-            "event_extra_images": event.event_extra_images,
+            "card_image": get_media_url(event.card_image),
+            "banner_image": get_media_url(event.banner_image),
+            "event_extra_images": extra_images_media_urls(
+                event.event_extra_images
+            ),
             "extra_data": event.extra_data,
             "hash_tags": event.hash_tags,
             "event_status": event.event_status,
@@ -220,7 +231,7 @@ async def get_organizer_full_details(
             "user_id": admin_user.user_id,
             "username": admin_user.username,
             "email": admin_user.email,
-            "profile_picture": admin_user.profile_picture,
+            "profile_picture": get_media_url(admin_user.profile_picture),
             "role": (
                 {
                     "role_id": admin_user.role.role_id,
@@ -315,7 +326,7 @@ async def get_organizer_summary(
             "user_id": admin_user.user_id,
             "username": admin_user.username,
             "email": admin_user.email,
-            "profile_picture": admin_user.profile_picture,
+            "profile_picture": get_media_url(admin_user.profile_picture),
             "role_name": admin_user.role.role_name if admin_user.role else None,
             "is_verified": admin_user.is_verified,
             "created_at": admin_user.created_at,

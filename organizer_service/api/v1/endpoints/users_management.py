@@ -14,6 +14,7 @@ from shared.core.api_response import api_response
 from shared.db.models import AdminUser, Event, Role
 from shared.db.sessions.database import get_db
 from shared.utils.exception_handlers import exception_handler
+from shared.utils.file_uploads import get_media_url
 
 router = APIRouter()
 
@@ -113,7 +114,7 @@ async def get_users_list(
             "user_id": user.user_id,
             "username": user.username,
             "email": user.email,
-            "profile_picture": user.profile_picture,
+            "profile_picture": get_media_url(user.profile_picture),
             "role_name": role_name,
             "is_verified": user.is_verified,
             "is_deleted": user.is_deleted,
