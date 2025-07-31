@@ -42,7 +42,7 @@ async def approve_organizer(
     db.add_all([organizer, business_profile])
     await db.commit()
 
-    return {"message": f"Organizer approved successfully"}
+    return {"message": "Organizer approved successfully"}
 
 
 @router.post("/reject", response_model=dict)
@@ -78,7 +78,7 @@ async def reject_organizer(
     db.add_all([organizer, business_profile])
     await db.commit()
 
-    return {"message": f"Organizer approved successfully"}
+    return {"message": "Organizer approval rejected successfully"}
 
 
 @router.put("/soft-delete", response_model=dict)
@@ -103,4 +103,29 @@ async def soft_delete_organizer(
 
     return {
         "message": f"Organizer '{user_id}' has been soft deleted (deactivated) successfully."
+    }
+
+
+@router.put("/restore", response_model=dict)
+@exception_handler
+async def restore_organizer(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    stmt = select(AdminUser).where(AdminUser.user_id == user_id)
+    result = await db.execute(stmt)
+    organizer = result.scalar_one_or_none()
+
+    if not organizer:
+        raise HTTPException(status_code=404, detail="Organizer not found")
+
+    if not organizer.is_deleted:
+        return {"message": f"Organizer '{user_id}' is already active."}
+
+    organizer.is_deleted = False
+    db.add(organizer)
+    await db.commit()
+
+    return {
+        "message": f"Organizer '{user_id}' has been restored (activated) successfully."
     }

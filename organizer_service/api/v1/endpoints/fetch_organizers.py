@@ -15,7 +15,7 @@ from shared.utils.data_utils import (
 router = APIRouter()
 
 
-@router.get("/", response_model=list[dict])
+@router.get("/list", response_model=list[dict])
 async def get_all_organizers(db: AsyncSession = Depends(get_db)):
     # Fetch all AdminUsers with their business profiles
     stmt = select(AdminUser).options(joinedload(AdminUser.business_profile))
