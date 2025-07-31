@@ -70,6 +70,10 @@ async def get_business_profile(
         )
 
     return {
+        "user_id": user_result.user_id,
+        "email": user_result.email,
+        "username": user_result.username,
+        "role_name": user_result.role.role_name.lower(),
         "business_id": business.business_id,
         "profile_details": decrypted_profile,
         "business_logo": business.business_logo,

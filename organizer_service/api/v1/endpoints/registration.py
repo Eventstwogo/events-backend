@@ -116,8 +116,5 @@ async def register_user(
             "Organizer registered successfully. Verification email sent "
             "to your email address in background."
         ),
-        data=OrganizerRegisterResponse(
-            user_id=user_id,
-            email=user_data.email,
-        ),
+        data=OrganizerRegisterResponse(email=user_data.email),
     )

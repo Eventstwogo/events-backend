@@ -117,5 +117,4 @@ class OrganizerRegisterRequest(BaseModel):
 
 
 class OrganizerRegisterResponse(BaseModel):
-    user_id: str
     email: EmailStr

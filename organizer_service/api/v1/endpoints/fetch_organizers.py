@@ -57,6 +57,7 @@ async def get_all_organizers(db: AsyncSession = Depends(get_db)):
             {
                 "organizer_login": {
                     "user_id": user.user_id,
+                    "username": user.username,
                     "email": user.email,
                     "role": validation_result["role_name"],
                     "is_verified": user.is_verified,
@@ -153,6 +154,7 @@ async def get_organizer_details(
     return {
         "organizer_login": {
             "user_id": user.user_id,
+            "username": user.username,
             "email": user.email,
             "role": validation_result["role_name"],
             "is_verified": user.is_verified,
