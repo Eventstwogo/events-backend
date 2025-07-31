@@ -2,12 +2,14 @@ from fastapi import APIRouter
 
 from organizer_service.api.v1.endpoints import (
     abn_check,
+    analytics,
     approval,
     business_profile,
     fetch_organizers,
     onboarding,
     registration,
     store,
+    users_management,
     verify,
 )
 
@@ -36,3 +38,11 @@ organizer_router.include_router(
     tags=["Organizer Business Profile"],
 )
 organizer_router.include_router(fetch_organizers.router, tags=["Organizers"])
+organizer_router.include_router(
+    analytics.router, prefix="/analytics", tags=["Organizer Analytics"]
+)
+organizer_router.include_router(
+    users_management.router,
+    prefix="/users",
+    tags=["Organizer Users Management"],
+)
