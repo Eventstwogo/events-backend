@@ -10,6 +10,7 @@ from organizer_service.schemas.analytics import (
     OrganizerFullDetailsApiResponse,
     OrganizerSummaryApiResponse,
 )
+from shared.constants import ONBOARDING_UNDER_REVIEW
 from shared.core.api_response import api_response
 from shared.core.security import decrypt_data
 from shared.db.models import AdminUser, BusinessProfile, Event, EventSlot
@@ -310,7 +311,11 @@ async def get_organizer_summary(
     # Check business profile status
     business_profile = admin_user.business_profile
     has_business_profile = business_profile is not None
-    business_approved = business_profile.is_approved if business_profile else 0
+    business_approved = (
+        business_profile.is_approved
+        if business_profile
+        else ONBOARDING_UNDER_REVIEW
+    )
 
     # Get event statistics
     events_stmt = select(Event).where(Event.organizer_id == user_id)

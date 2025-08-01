@@ -1,7 +1,11 @@
+from datetime import datetime
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from shared.constants import ONBOARDING_APPROVED, ONBOARDING_REJECTED
 from shared.core.api_response import api_response
 from shared.db.models import AdminUser, BusinessProfile
 from shared.db.sessions.database import get_db
@@ -44,7 +48,8 @@ async def approve_organizer(
 
     # Update values
     organizer.is_verified = 1
-    business_profile.is_approved = 1
+    business_profile.is_approved = ONBOARDING_APPROVED
+    business_profile.approved_date = datetime.now()
 
     db.add_all([organizer, business_profile])
     await db.commit()
@@ -59,8 +64,16 @@ async def approve_organizer(
 @exception_handler
 async def reject_organizer(
     user_id: str,
+    reviewer_comment: str,
     db: AsyncSession = Depends(get_db),
 ):
+    if not reviewer_comment:
+        return api_response(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message="Reviewer comment cannot be empty",
+            log_error=True,
+        )
+
     # Fetch organizer
     stmt = select(AdminUser).where(AdminUser.user_id == user_id)
     result = await db.execute(stmt)
@@ -89,7 +102,8 @@ async def reject_organizer(
 
     # Update values
     organizer.is_verified = 0
-    business_profile.is_approved = 2
+    business_profile.is_approved = ONBOARDING_REJECTED
+    business_profile.reviewer_comment = reviewer_comment.strip()
 
     db.add_all([organizer, business_profile])
     await db.commit()

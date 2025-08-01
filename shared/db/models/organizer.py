@@ -7,6 +7,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
+    Text,
     func,
 )
 from sqlalchemy.dialects.postgresql import JSONB
@@ -44,6 +45,8 @@ class BusinessProfile(EventsBase):
 
     purpose: Mapped[dict] = mapped_column(JSONB, nullable=False)
     is_approved: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    reviewer_comment: Mapped[str] = mapped_column(Text, nullable=True)
+    approved_date: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     timestamp: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

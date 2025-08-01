@@ -37,6 +37,12 @@ from admin_service.services.user_service import (
     get_user_role_name,
 )
 from admin_service.utils.auth import revoke_token
+from shared.constants import (
+    ONBOARDING_APPROVED,
+    ONBOARDING_NOT_STARTED,
+    ONBOARDING_REJECTED,
+    ONBOARDING_SUBMITTED,
+)
 from shared.core.api_response import api_response
 from shared.core.config import PUBLIC_KEY, settings
 from shared.core.logging_config import get_logger
@@ -52,79 +58,71 @@ logger = get_logger(__name__)
 
 router = APIRouter()
 
-# Constants for Business Profile approval statuses
-APPROVAL_NOT_STARTED = -1
-APPROVAL_UNDER_REVIEW = 0
-APPROVAL_APPROVED = 1
-APPROVAL_REJECTED = 2
-
 
 async def get_organizer_profile_info(user: AdminUser, db: AsyncSession) -> dict:
     """
-    Return organizer profile details based on user role.
+    Returns organizer business profile approval status and onboarding progress.
 
     For Organizer users:
-    - Returns actual business profile approval status and onboarding details
-    - Checks BusinessProfile table for is_approved status and ref_number
-    - Determines onboarding_status based on verification and approval state
+    - Fetches actual BusinessProfile info
+    - Determines onboarding_status from is_approved and verification state
 
-    For non-Organizer users (Admin, etc.):
-    - Returns approved status (is_approved=1, onboarding_status="approved")
-    - This allows frontend navigation without requiring organizer approval process
+    For non-Organizer users:
+    - Returns is_approved=2 (approved) to allow frontend flow
 
     Returns:
         dict: Contains is_approved, ref_number, and onboarding_status
     """
-    # Step 1: Check if user role is "Organizer"
     user_role_name = await get_user_role_name(db, user.user_id)
+
+    # Non-organizer users
     if not user_role_name or user_role_name.lower() != "organizer":
-        # For non-organizer users, return approved status for frontend navigation
         return {
-            "is_approved": 1,  # Non-organizers are considered approved
+            "is_approved": ONBOARDING_APPROVED,
             "ref_number": "",
-            "onboarding_status": "approved",  # Non-organizers don't need approval process
+            "reviewer_comment": "",
+            "onboarding_status": "approved",
         }
 
-    # Default values for organizer users
-    organizer_info = {
-        "is_approved": 0,
-        "ref_number": "",
-        "onboarding_status": "unknown",
-    }
+    # Default for organizers
+    is_approved = ONBOARDING_NOT_STARTED
+    ref_number = ""
+    reviewer_comment = ""
+    onboarding_status = "not_started"
 
-    # Step 2: Fetch business profile info
+    # Fetch business profile data
     profile_stmt = select(
         BusinessProfile.is_approved,
         BusinessProfile.ref_number,
     ).where(BusinessProfile.business_id == user.business_id)
 
     result = await db.execute(profile_stmt)
-    is_approved, ref_number = result.one_or_none() or (APPROVAL_NOT_STARTED, "")
+    profile = result.one_or_none()
 
-    organizer_info.update(
-        {
-            "is_approved": is_approved,
-            "ref_number": ref_number or "",
-        }
-    )
+    if profile:
+        is_approved, ref_number = profile
 
-    # Step 3: Determine onboarding status
-    if user.is_verified and is_approved == APPROVAL_APPROVED:
-        onboarding_status = "approved"
-    elif not user.is_verified:
-        if is_approved == APPROVAL_NOT_STARTED:
-            onboarding_status = "not_started"
-        elif is_approved == APPROVAL_REJECTED:
+        if is_approved == ONBOARDING_APPROVED and user.is_verified:
+            onboarding_status = "approved"
+        elif is_approved == ONBOARDING_REJECTED:
             onboarding_status = "rejected"
-        elif is_approved == APPROVAL_UNDER_REVIEW and ref_number:
-            onboarding_status = "under_review"
+            reviewer_comment = profile.reviewer_comment or ""
+        elif is_approved == ONBOARDING_SUBMITTED:
+            onboarding_status = (
+                "under_review" if not user.is_verified else "approved"
+            )
         else:
-            onboarding_status = "unknown"
+            onboarding_status = "submitted"
     else:
-        onboarding_status = "unknown"
+        is_approved = ONBOARDING_NOT_STARTED
+        onboarding_status = "not_started"
 
-    organizer_info["onboarding_status"] = onboarding_status
-    return organizer_info
+    return {
+        "is_approved": is_approved,
+        "ref_number": ref_number or "",
+        "reviewer_comment": reviewer_comment,
+        "onboarding_status": onboarding_status,
+    }
 
 
 @router.post("/login")
