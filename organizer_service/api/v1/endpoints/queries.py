@@ -58,6 +58,7 @@ async def create_query(
         type="query",
         sender_type="organizer",
         user_id=sender.user_id,
+        username=sender.username,
         message=request.message,
         timestamp=datetime.now(timezone.utc),
     )
@@ -265,6 +266,7 @@ async def add_message_to_query(
         type=request.message_type,
         sender_type=sender_type,
         user_id=request.user_id,
+        username=user.username,
         message=request.message,
         timestamp=datetime.now(timezone.utc),
     )
@@ -303,13 +305,13 @@ async def update_query_status(
         return api_response(
             status.HTTP_404_NOT_FOUND, "User not found", log_error=True
         )
-
-    if user.role.role_name.lower() != "admin":
-        return api_response(
-            status.HTTP_403_FORBIDDEN,
-            "Only admins can update query status",
-            log_error=True,
-        )
+    if request.query_status == QueryStatus.QUERY_CLOSED:
+        if user.role.role_name.lower() != "admin":
+            return api_response(
+                status.HTTP_403_FORBIDDEN,
+                "Only admins can update query status as closed",
+                log_error=True,
+            )
 
     query = await get_query_by_id(query_id, db)
     if not query:
@@ -325,8 +327,13 @@ async def update_query_status(
     if request.message:
         status_message = ThreadMessage(
             type="response",
-            sender_type="admin",
+            sender_type=(
+                "admin"
+                if user.role.role_name.lower() == "admin"
+                else "organizer"
+            ),
             user_id=request.user_id,
+            username=user.username,
             message=request.message,
             timestamp=datetime.now(timezone.utc),
         )

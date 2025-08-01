@@ -17,6 +17,7 @@ class ThreadMessage(BaseModel):
     type: Literal["query", "response", "followup"]
     sender_type: Literal["organizer", "admin"]
     user_id: str
+    username: str
     message: str
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
