@@ -58,7 +58,7 @@ async def create_query(
         type="query",
         sender_type="organizer",
         user_id=sender.user_id,
-        username=sender.username,
+        username=sender.username or "",
         message=request.message,
         timestamp=datetime.now(timezone.utc),
     )
@@ -266,7 +266,7 @@ async def add_message_to_query(
         type=request.message_type,
         sender_type=sender_type,
         user_id=request.user_id,
-        username=user.username,
+        username=user.username or "",
         message=request.message,
         timestamp=datetime.now(timezone.utc),
     )
@@ -333,7 +333,7 @@ async def update_query_status(
                 else "organizer"
             ),
             user_id=request.user_id,
-            username=user.username,
+            username=user.username or "",
             message=request.message,
             timestamp=datetime.now(timezone.utc),
         )
