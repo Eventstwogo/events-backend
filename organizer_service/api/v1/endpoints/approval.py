@@ -5,7 +5,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from shared.constants import ONBOARDING_APPROVED, ONBOARDING_REJECTED
+from shared.constants import (
+    ONBOARDING_APPROVED,
+    ONBOARDING_REJECTED,
+    ONBOARDING_UNDER_REVIEW,
+)
 from shared.core.api_response import api_response
 from shared.db.models import AdminUser, BusinessProfile
 from shared.db.sessions.database import get_db
@@ -67,6 +71,7 @@ async def reject_organizer(
     reviewer_comment: str,
     db: AsyncSession = Depends(get_db),
 ):
+    reviewer_comment = reviewer_comment.strip()
     if not reviewer_comment:
         return api_response(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -112,6 +117,44 @@ async def reject_organizer(
         status_code=status.HTTP_200_OK,
         message="Organizer approval rejected successfully",
     )
+
+
+@router.patch("/under-review", response_model=dict)
+@exception_handler
+async def under_review_organizer(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    # Fetch organizer
+    stmt = select(AdminUser).where(AdminUser.user_id == user_id)
+    result = await db.execute(stmt)
+    organizer = result.scalar_one_or_none()
+
+    if not organizer:
+        return api_response(
+            status_code=status.HTTP_404_NOT_FOUND,
+            message=f"Organizer {user_id} does not exist",
+            log_error=True,
+        )
+
+    # Fetch business profile
+    profile_stmt = select(BusinessProfile).where(
+        BusinessProfile.business_id == organizer.business_id
+    )
+    profile_result = await db.execute(profile_stmt)
+    business_profile = profile_result.scalar_one_or_none()
+    if not business_profile:
+        return api_response(
+            status_code=status.HTTP_404_NOT_FOUND,
+            message=f"Business profile for Organizer {user_id} does not exist",
+            log_error=True,
+        )
+
+    # Update values
+    business_profile.is_approved = ONBOARDING_UNDER_REVIEW
+    db.add(business_profile)
+    await db.commit()
+    return api_response(status_code=status.HTTP_200_OK, message="Under review")
 
 
 @router.put("/soft-delete", response_model=dict)

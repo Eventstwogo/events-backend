@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from admin_service.api.v1.endpoints import (
     analytics,
     config,
+    enquiry,
     login,
     my_session,
     password,
@@ -46,4 +47,7 @@ admin_router.include_router(
 )
 admin_router.include_router(
     analytics.router, prefix="/admin", tags=["Admin Analytics"]
+)
+admin_router.include_router(
+    enquiry.router, prefix="/admin/enquiries", tags=["Admin Enquiry Management"]
 )

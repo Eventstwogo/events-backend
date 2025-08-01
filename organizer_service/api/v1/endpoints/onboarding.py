@@ -14,6 +14,7 @@ from organizer_service.services.business_profile import (
     fetch_abn_details,
     validate_abn_id,
 )
+from shared.constants import ONBOARDING_SUBMITTED
 from shared.core.security import (
     decrypt_data,
     encrypt_data,
@@ -172,6 +173,7 @@ async def organizer_onboarding(
         store_name=store_name_cleaned,
         store_url=str(data.store_url),
         location=location_cleaned,
+        is_approved=ONBOARDING_SUBMITTED,
         purpose=json.dumps([p.value for p in data.purpose]),
         ref_number=ref_number,
     )
