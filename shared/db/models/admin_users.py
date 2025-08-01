@@ -23,7 +23,7 @@ from shared.db.types import EncryptedString
 
 if TYPE_CHECKING:
     from shared.db.models.events import Event
-    from shared.db.models.organizer import BusinessProfile
+    from shared.db.models.organizer import BusinessProfile, OrganizerQuery
     from shared.db.models.rbac import Role
 
 
@@ -125,6 +125,21 @@ class AdminUser(EventsBase):
         "AdminUserProfile",
         back_populates="admin_user",
         uselist=False,
+        cascade="all, delete-orphan",
+    )
+
+    # Query relationships
+    organizer_queries: Mapped[List["OrganizerQuery"]] = relationship(
+        "OrganizerQuery",
+        foreign_keys="OrganizerQuery.organizer_id",
+        back_populates="organizer",
+        cascade="all, delete-orphan",
+    )
+
+    admin_queries: Mapped[List["OrganizerQuery"]] = relationship(
+        "OrganizerQuery",
+        foreign_keys="OrganizerQuery.admin_user_id",
+        back_populates="admin_user",
         cascade="all, delete-orphan",
     )
 

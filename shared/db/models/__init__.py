@@ -39,7 +39,7 @@ from .config import Config
 from .events import Event, EventSlot
 
 # Models that depend on Organization Profile
-from .organizer import BusinessProfile
+from .organizer import BusinessProfile, OrganizerQuery
 
 # Models with potential circular dependencies - order matters
 # Import RBAC models before user models since user.py imports from rbac.py
@@ -71,6 +71,7 @@ __all__ = [
     "AdminUserVerification",
     # Organizer
     "BusinessProfile",
+    "OrganizerQuery",
     # USers
     "User",
     "UserVerification",

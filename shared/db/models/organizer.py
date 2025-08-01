@@ -1,9 +1,14 @@
-from datetime import datetime
-from typing import TYPE_CHECKING
+from datetime import datetime, timezone
+from enum import Enum
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from sqlalchemy import (
     ARRAY,
+    TIMESTAMP,
     DateTime,
+)
+from sqlalchemy import Enum as SQLAlchemyEnum
+from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
@@ -21,6 +26,15 @@ from shared.db.models.base import EventsBase
 
 if TYPE_CHECKING:
     from shared.db.models.admin_users import AdminUser
+
+
+# Enum for Query status
+class QueryStatus(Enum):
+    """Enum for query status values"""
+
+    QUERY_OPEN = "open"
+    QUERY_ANSWERED = "answered"
+    QUERY_CLOSED = "close"
 
 
 class BusinessProfile(EventsBase):
@@ -44,7 +58,9 @@ class BusinessProfile(EventsBase):
     ref_number: Mapped[str] = mapped_column(String(length=6), unique=True)
 
     purpose: Mapped[dict] = mapped_column(JSONB, nullable=False)
-    is_approved: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    is_approved: Mapped[int] = mapped_column(
+        Integer, default=-2, nullable=False
+    )
     reviewer_comment: Mapped[str] = mapped_column(Text, nullable=True)
     approved_date: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     timestamp: Mapped[datetime] = mapped_column(
@@ -58,4 +74,52 @@ class BusinessProfile(EventsBase):
         back_populates="business_profile",
         uselist=False,
         lazy="joined",
+    )
+
+
+class OrganizerQuery(EventsBase):
+    __tablename__ = "e2gorganizerqueries"
+
+    query_id: Mapped[str] = mapped_column(
+        String(8), primary_key=True, unique=True
+    )
+    organizer_id: Mapped[str] = mapped_column(
+        String(6),
+        ForeignKey("e2gadminusers.user_id", ondelete="SET NULL"),
+        nullable=False,
+    )
+    admin_user_id: Mapped[Optional[str]] = mapped_column(
+        String(6),
+        ForeignKey("e2gadminusers.user_id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    query: Mapped[str] = mapped_column(Text, nullable=False)
+    answers: Mapped[Optional[List[Dict[str, Any]]]] = mapped_column(
+        JSONB, nullable=True
+    )
+    query_status: Mapped[QueryStatus] = mapped_column(
+        SQLAlchemyEnum(QueryStatus),
+        default=QueryStatus.QUERY_OPEN,
+        nullable=False,
+        server_default="open",
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+    # Relationships to AdminUser
+    organizer: Mapped["AdminUser"] = relationship(
+        "AdminUser",
+        foreign_keys=[organizer_id],
+        back_populates="organizer_queries",
+    )
+
+    admin_user: Mapped[Optional["AdminUser"]] = relationship(
+        "AdminUser",
+        foreign_keys=[admin_user_id],
+        back_populates="admin_queries",
     )
