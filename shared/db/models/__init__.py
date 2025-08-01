@@ -36,10 +36,11 @@ from .categories import Category, SubCategory
 # Import models in dependency order to avoid circular imports at runtime
 # Models with no model dependencies
 from .config import Config
+from .enquiry import Enquiry, EnquiryStatus
 from .events import Event, EventSlot
 
 # Models that depend on Organization Profile
-from .organizer import BusinessProfile
+from .organizer import BusinessProfile, OrganizerQuery, QueryStatus
 
 # Models with potential circular dependencies - order matters
 # Import RBAC models before user models since user.py imports from rbac.py
@@ -76,6 +77,12 @@ __all__ = [
     "UserVerification",
     "UserPasswordReset",
     "UserDeviceSession",
+    # Enquiry Form
+    "Enquiry",
+    "EnquiryStatus",
+    # Organizer Queries
+    "OrganizerQuery",
+    "QueryStatus",
 ]
 
 # Model relationships overview:

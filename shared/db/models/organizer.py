@@ -1,9 +1,13 @@
-from datetime import datetime
-from typing import TYPE_CHECKING
+from datetime import datetime, timezone
+from enum import Enum
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from sqlalchemy import (
     ARRAY,
     DateTime,
+)
+from sqlalchemy import Enum as SQLAlchemyEnum
+from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
@@ -21,6 +25,13 @@ from shared.db.models.base import EventsBase
 
 if TYPE_CHECKING:
     from shared.db.models.admin_users import AdminUser
+
+
+class QueryStatus(str, Enum):
+    QUERY_OPEN = "open"
+    QUERY_IN_PROGRESS = "in-progress"
+    QUERY_ANSWERED = "answered"
+    QUERY_CLOSED = "closed"
 
 
 class BusinessProfile(EventsBase):
@@ -58,4 +69,42 @@ class BusinessProfile(EventsBase):
         back_populates="business_profile",
         uselist=False,
         lazy="joined",
+    )
+
+
+class OrganizerQuery(EventsBase):
+    __tablename__ = "e2gorganizerqueries"
+
+    id: Mapped[int] = mapped_column(
+        Integer, primary_key=True, autoincrement=True
+    )
+    sender_user_id: Mapped[str] = mapped_column(
+        String, nullable=False
+    )  # who raised the query
+    receiver_user_id: Mapped[Optional[str]] = mapped_column(
+        String, nullable=True
+    )  # admin who handles
+    title: Mapped[str] = mapped_column(String(100), nullable=False)
+    category: Mapped[str] = mapped_column(String(50), nullable=False)
+
+    # The full threaded messages between vendor <-> admin
+    thread: Mapped[List[Dict[str, Any]]] = mapped_column(
+        JSONB,  # using JSONB for PostgreSQL
+        default=list,
+        nullable=False,
+    )
+
+    query_status: Mapped[QueryStatus] = mapped_column(
+        SQLAlchemyEnum(QueryStatus),
+        default=QueryStatus.QUERY_OPEN,
+        nullable=False,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=datetime.now(timezone.utc)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=datetime.now(timezone.utc),
+        onupdate=datetime.now(timezone.utc),
     )

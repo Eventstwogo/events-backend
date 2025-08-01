@@ -7,6 +7,7 @@ from organizer_service.api.v1.endpoints import (
     business_profile,
     fetch_organizers,
     onboarding,
+    queries,
     registration,
     store,
     users_management,
@@ -45,4 +46,9 @@ organizer_router.include_router(
     users_management.router,
     prefix="/users",
     tags=["Organizer Users Management"],
+)
+organizer_router.include_router(
+    queries.router,
+    prefix="/queries",
+    tags=["Organizer Queries"],
 )
