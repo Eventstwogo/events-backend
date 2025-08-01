@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException, Query, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import and_, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -210,3 +210,146 @@ async def get_query_stats(
         stats["my_queries"] = result.scalar()
 
     return stats
+
+
+async def _count(db: AsyncSession, stmt) -> int:
+    result = await db.execute(stmt)
+    return result.scalar() or 0
+
+
+async def get_query_stats_service(
+    db: AsyncSession, user_id: str
+) -> Dict[str, int] | JSONResponse:
+    user = await get_user_with_role(db, user_id)
+    if not user:
+        return api_response(
+            status_code=status.HTTP_404_NOT_FOUND,
+            message="User not found",
+            log_error=True,
+        )
+
+    role = user.role.role_name.lower()
+    stats = {}
+    base_query = select(func.count()).select_from(OrganizerQuery)
+
+    if role == "organizer":
+        stats["my_queries"] = await _count(
+            db, base_query.where(OrganizerQuery.sender_user_id == user_id)
+        )
+        for qstatus in QueryStatus:
+            key = f"{qstatus.value.replace('-', '_')}_queries"
+            condition = and_(
+                OrganizerQuery.sender_user_id == user_id,
+                OrganizerQuery.query_status == qstatus,
+            )
+            stats[key] = await _count(db, base_query.where(condition))
+        stats["total_queries"] = stats["my_queries"]
+        stats["assigned_to_me"] = 0
+    elif role == "admin":
+        stats["total_queries"] = await _count(db, base_query)
+        for qstatus in QueryStatus:
+            key = f"{qstatus.value.replace('-', '_')}_queries"
+            stats[key] = await _count(
+                db, base_query.where(OrganizerQuery.query_status == qstatus)
+            )
+        stats["assigned_to_me"] = await _count(
+            db, base_query.where(OrganizerQuery.receiver_user_id == user_id)
+        )
+        stats["my_queries"] = await _count(
+            db, base_query.where(OrganizerQuery.sender_user_id == user_id)
+        )
+    else:
+        return api_response(
+            status_code=status.HTTP_403_FORBIDDEN,
+            message="Invalid user role",
+            log_error=True,
+        )
+
+    return stats
+
+
+async def update_query_status_service(
+    db: AsyncSession,
+    query_id: int,
+    user_id: str,
+    request: UpdateQueryStatusRequest,
+) -> OrganizerQuery | JSONResponse:
+    """Update query status with proper permission validation and message handling"""
+
+    # Get the query
+    query_obj = await db.get(OrganizerQuery, query_id)
+    if not query_obj:
+        return api_response(
+            status_code=status.HTTP_404_NOT_FOUND,
+            message=f"Query with ID {query_id} not found",
+            log_error=True,
+        )
+
+    # Get user with role information
+    user = await get_user_with_role(db, user_id)
+    if not user:
+        return api_response(
+            status_code=status.HTTP_404_NOT_FOUND,
+            message="User not found",
+            log_error=True,
+        )
+
+    user_role = user.role.role_name.lower()
+
+    # Permission validation
+    can_update = False
+    if user_role == "organizer":
+        # Organizers can only update their own queries
+        can_update = query_obj.sender_user_id == user_id
+    elif user_role in ["admin", "superadmin"]:
+        # Admins can update any query
+        can_update = True
+
+    if not can_update:
+        return api_response(
+            status_code=status.HTTP_403_FORBIDDEN,
+            message="You do not have permission to update this query",
+            log_error=True,
+        )
+
+    # Update the query status
+    query_obj.query_status = request.query_status
+
+    # If admin is updating, set them as receiver
+    if user_role in ["admin", "superadmin"] and not query_obj.receiver_user_id:
+        query_obj.receiver_user_id = user_id
+
+    # Add message to thread if provided
+    if request.message:
+        from datetime import datetime, timezone
+
+        # Determine sender type based on role
+        sender_type = (
+            "admin" if user_role in ["admin", "superadmin"] else "organizer"
+        )
+
+        # Create thread message
+        thread_message = {
+            "type": "response",
+            "sender_type": sender_type,
+            "user_id": user_id,
+            "message": request.message,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+
+        # Add to thread
+        if query_obj.thread is None:
+            query_obj.thread = []
+        query_obj.thread.append(thread_message)
+
+    try:
+        await db.commit()
+        await db.refresh(query_obj)
+        return query_obj
+    except Exception as e:
+        await db.rollback()
+        return api_response(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            message=f"Failed to update query status: {str(e)}",
+            log_error=True,
+        )

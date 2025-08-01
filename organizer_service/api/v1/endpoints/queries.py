@@ -12,13 +12,16 @@ from organizer_service.schemas.queries import (
     CreateQueryRequest,
     QueryFilters,
     QueryResponse,
+    QueryStatsResponse,
     QueryStatus,
     ThreadMessage,
     UpdateQueryStatusRequest,
 )
 from organizer_service.services.queries import (
     get_query_by_id,
+    get_query_stats_service,
     get_user_by_id,
+    update_query_status_service,
 )
 from shared.core.api_response import api_response
 from shared.db.models import AdminUser
@@ -78,7 +81,7 @@ async def create_query(
     )
 
 
-@router.get("", summary="Get paginated list of queries")
+@router.get("/list", summary="Get paginated list of queries")
 @exception_handler
 async def get_queries_list(
     user_id: str,
@@ -338,4 +341,140 @@ async def update_query_status(
         status.HTTP_200_OK,
         "Query status updated successfully",
         QueryResponse.model_validate(query).model_dump(),
+    )
+
+
+@router.get(
+    "/stats/dashboard",
+    response_model=QueryStatsResponse,
+    summary="Get query statistics",
+)
+@exception_handler
+async def get_query_stats(
+    user_id: str, db: AsyncSession = Depends(get_db)
+) -> JSONResponse:
+    """
+    Get query statistics for dashboard based on user role (organizer/admin).
+    """
+    stats = await get_query_stats_service(db, user_id)
+    if isinstance(stats, JSONResponse):
+        return stats
+
+    return api_response(
+        status_code=status.HTTP_200_OK,
+        message="Query statistics retrieved successfully",
+        data=QueryStatsResponse(**stats).model_dump(),
+    )
+
+
+@router.delete("/{query_id}", summary="Close query")
+@exception_handler
+async def delete_query(
+    user_id: str,
+    query_id: int = Path(..., description="Query ID"),
+    db: AsyncSession = Depends(get_db),
+) -> JSONResponse:
+    """
+    Soft delete a query (mark as closed). Only admin or query sender allowed.
+    """
+    request = UpdateQueryStatusRequest(
+        user_id=user_id,
+        query_status=QueryStatus.QUERY_CLOSED,
+        message="Query has been closed.",
+    )
+    query = await update_query_status_service(db, query_id, user_id, request)
+    if isinstance(query, JSONResponse):
+        return query
+
+    return api_response(
+        status_code=status.HTTP_200_OK,
+        message="Query has been successfully closed",
+        data={"query_id": query_id, "status": query.query_status.value},
+    )
+
+
+@router.get("/categories/list", summary="Get query categories")
+@exception_handler
+async def get_query_categories(
+    db: AsyncSession = Depends(get_db),
+) -> JSONResponse:
+    """
+    Get list of available query categories.
+    """
+    categories = [
+        "Account Management",
+        "Profile Setup",
+        "Event Creation",
+        "Payment Issues",
+        "Technical Support",
+        "Feature Request",
+        "Bug Report",
+        "General Inquiry",
+        "Business Verification",
+        "API Integration",
+    ]
+    return api_response(
+        status_code=status.HTTP_200_OK,
+        message="Query categories retrieved successfully",
+        data={"categories": categories},
+    )
+
+
+@router.get("/templates/message", summary="Get message templates")
+@exception_handler
+async def get_message_templates(
+    template_type: str = Query(
+        "admin", description="Type of templates (admin/organizer)"
+    ),
+    db: AsyncSession = Depends(get_db),
+) -> JSONResponse:
+    """
+    Get predefined message templates for quick responses.
+    """
+    admin_templates = [
+        {
+            "id": "welcome",
+            "title": "Welcome Message",
+            "content": "Thank you for contacting us. We have received your query and will respond within 24 hours.",
+        },
+        {
+            "id": "more_info",
+            "title": "Request More Information",
+            "content": "To better assist you, could you please provide more details about your issue?",
+        },
+        {
+            "id": "resolved",
+            "title": "Issue Resolved",
+            "content": "Your issue has been resolved. Please let us know if you need any further assistance.",
+        },
+        {
+            "id": "escalated",
+            "title": "Escalated to Technical Team",
+            "content": "Your query has been escalated to our technical team. You will receive an update within 48 hours.",
+        },
+    ]
+    organizer_templates = [
+        {
+            "id": "followup",
+            "title": "Follow-up Question",
+            "content": "Thank you for your response. I have a follow-up question:",
+        },
+        {
+            "id": "clarification",
+            "title": "Need Clarification",
+            "content": "Could you please clarify the following:",
+        },
+        {
+            "id": "thanks",
+            "title": "Thank You",
+            "content": "Thank you for your help. This resolves my query.",
+        },
+    ]
+    templates = (
+        admin_templates if template_type == "admin" else organizer_templates
+    )
+    return api_response(
+        status_code=status.HTTP_200_OK,
+        message="Message templates retrieved successfully",
+        data={"templates": templates},
     )
