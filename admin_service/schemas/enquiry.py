@@ -199,3 +199,11 @@ class EnquiryUpdateRequest(BaseModel):
         if v is not None and v not in EnquiryStatus:
             raise ValueError("Invalid enquiry status.")
         return v
+
+
+class EnquiryDeleteResponse(BaseModel):
+    message: str = Field(
+        ...,
+        title="Message",
+        description="Success message for the deletion.",
+    )
