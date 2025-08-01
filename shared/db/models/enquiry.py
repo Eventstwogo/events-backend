@@ -32,7 +32,6 @@ class Enquiry(EventsBase):
         SQLAlchemyEnum(EnquiryStatus),
         default=EnquiryStatus.PENDING,
         nullable=False,
-        server_default="pending",
     )
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
