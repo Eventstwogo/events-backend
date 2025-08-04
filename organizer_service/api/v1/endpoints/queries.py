@@ -276,7 +276,7 @@ async def add_message_to_query(
     if sender_type == "admin" and query.query_status == QueryStatus.QUERY_OPEN:
         query.query_status = QueryStatus.QUERY_IN_PROGRESS
     elif sender_type == "admin" and request.message_type == "response":
-        query.query_status = QueryStatus.QUERY_ANSWERED
+        query.query_status = QueryStatus.QUERY_IN_PROGRESS
 
     query.updated_at = datetime.now(timezone.utc)
     await db.commit()

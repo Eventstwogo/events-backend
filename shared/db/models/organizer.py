@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 class QueryStatus(str, Enum):
     QUERY_OPEN = "open"
     QUERY_IN_PROGRESS = "in-progress"
-    QUERY_ANSWERED = "answered"
+    QUERY_ANSWERED = "resolved"
     QUERY_CLOSED = "closed"
 
 
