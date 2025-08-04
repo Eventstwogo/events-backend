@@ -400,6 +400,78 @@ async def delete_query(
     )
 
 
+@router.get("/all/by-status", summary="Get all queries by status (Admin only)")
+@exception_handler
+async def get_all_queries_by_status(
+    status_filter: QueryStatus = Query(
+        ..., alias="status", description="Query status to filter by"
+    ),
+    category: Optional[str] = Query(
+        None, description="Optional category filter"
+    ),
+    page: int = Query(1, ge=1, description="Page number"),
+    limit: int = Query(20, ge=1, le=100, description="Items per page"),
+    db: AsyncSession = Depends(get_db),
+) -> JSONResponse:
+    """
+    Get all queries by status, irrespective of user. Admin access only.
+    This endpoint allows admins to view all queries in the system filtered by status.
+    """
+    # Build query - no user restrictions since this is for all queries
+    query_stmt = select(OrganizerQuery).where(
+        OrganizerQuery.query_status == status_filter
+    )
+
+    # Apply optional category filter
+    if category:
+        query_stmt = query_stmt.where(
+            OrganizerQuery.category.ilike(f"%{category}%")
+        )
+
+    # Get total count
+    count_stmt = select(func.count()).select_from(query_stmt.subquery())
+    count_result = await db.execute(count_stmt)
+    total_count = count_result.scalar() or 0
+
+    # Apply ordering and pagination
+    query_stmt = query_stmt.order_by(desc(OrganizerQuery.updated_at))
+    query_stmt = query_stmt.offset((page - 1) * limit).limit(limit)
+
+    # Execute query
+    result = await db.execute(query_stmt)
+    queries = result.scalars().all()
+
+    # Calculate pagination info
+    total_pages = (total_count + limit - 1) // limit
+
+    # Format response
+    queries_response = []
+    for query in queries:
+        query_dict = QueryResponse.model_validate(query).model_dump()
+        query_dict["last_message"] = (
+            query.thread[-1].get("message", "")[:100] if query.thread else None
+        )
+        query_dict["unread_count"] = 0
+        queries_response.append(query_dict)
+
+    return api_response(
+        status.HTTP_200_OK,
+        f"All queries with status '{status_filter.value}' retrieved successfully",
+        {
+            "queries": queries_response,
+            "status_filter": status_filter.value,
+            "pagination": {
+                "current_page": page,
+                "total_pages": total_pages,
+                "total_items": total_count,
+                "items_per_page": limit,
+                "has_next": page < total_pages,
+                "has_prev": page > 1,
+            },
+        },
+    )
+
+
 @router.get("/categories/list", summary="Get query categories")
 @exception_handler
 async def get_query_categories(
