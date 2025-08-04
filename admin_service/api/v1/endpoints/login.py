@@ -94,19 +94,20 @@ async def get_organizer_profile_info(user: AdminUser, db: AsyncSession) -> dict:
     profile_stmt = select(
         BusinessProfile.is_approved,
         BusinessProfile.ref_number,
+        BusinessProfile.reviewer_comment,
     ).where(BusinessProfile.business_id == user.business_id)
 
     result = await db.execute(profile_stmt)
     profile = result.one_or_none()
 
     if profile:
-        is_approved, ref_number = profile
+        is_approved, ref_number, reviewer_comment_from_db = profile
 
         if is_approved == ONBOARDING_APPROVED and user.is_verified:
             onboarding_status = "approved"
         elif is_approved == ONBOARDING_REJECTED:
             onboarding_status = "rejected"
-            reviewer_comment = profile.reviewer_comment or ""
+            reviewer_comment = reviewer_comment_from_db or ""
         elif is_approved == ONBOARDING_SUBMITTED:
             onboarding_status = (
                 "under_review" if not user.is_verified else "approved"

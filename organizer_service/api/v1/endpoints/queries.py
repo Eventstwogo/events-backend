@@ -306,14 +306,26 @@ async def update_query_status(
             status.HTTP_404_NOT_FOUND, "User not found", log_error=True
         )
     if request.query_status == QueryStatus.QUERY_CLOSED:
-        if user.role.role_name.lower() != "admin":
+        if user.role.role_name.lower() == "admin":
             return api_response(
                 status.HTTP_403_FORBIDDEN,
-                "Only admins can update query status as closed",
+                "Admins cannot close queries. Only organizers can close their own queries.",
                 log_error=True,
             )
-
-    query = await get_query_by_id(query_id, db)
+        # For organizers, check if they own the query
+        query = await get_query_by_id(query_id, db)
+        if not query:
+            return api_response(
+                status.HTTP_404_NOT_FOUND, "Query not found", log_error=True
+            )
+        if query.sender_user_id != request.user_id:
+            return api_response(
+                status.HTTP_403_FORBIDDEN,
+                "You can only close your own queries",
+                log_error=True,
+            )
+    else:
+        query = await get_query_by_id(query_id, db)
     if not query:
         return api_response(
             status.HTTP_404_NOT_FOUND, "Query not found", log_error=True
@@ -382,7 +394,7 @@ async def delete_query(
     db: AsyncSession = Depends(get_db),
 ) -> JSONResponse:
     """
-    Soft delete a query (mark as closed). Only admin or query sender allowed.
+    Soft delete a query (mark as closed). Only organizers can close their own queries.
     """
     request = UpdateQueryStatusRequest(
         user_id=user_id,
@@ -403,8 +415,8 @@ async def delete_query(
 @router.get("/all/by-status", summary="Get all queries by status (Admin only)")
 @exception_handler
 async def get_all_queries_by_status(
-    status_filter: QueryStatus = Query(
-        ..., alias="status", description="Query status to filter by"
+    status_filter: Optional[QueryStatus] = Query(
+        None, alias="status", description="Query status to filter by (optional - use 'all' or omit to get all statuses)"
     ),
     category: Optional[str] = Query(
         None, description="Optional category filter"
@@ -416,11 +428,16 @@ async def get_all_queries_by_status(
     """
     Get all queries by status, irrespective of user. Admin access only.
     This endpoint allows admins to view all queries in the system filtered by status.
+    If no status is provided, returns all queries regardless of status.
     """
     # Build query - no user restrictions since this is for all queries
-    query_stmt = select(OrganizerQuery).where(
-        OrganizerQuery.query_status == status_filter
-    )
+    query_stmt = select(OrganizerQuery)
+    
+    # Apply status filter only if provided
+    if status_filter:
+        query_stmt = query_stmt.where(
+            OrganizerQuery.query_status == status_filter
+        )
 
     # Apply optional category filter
     if category:
@@ -454,12 +471,20 @@ async def get_all_queries_by_status(
         query_dict["unread_count"] = 0
         queries_response.append(query_dict)
 
+    # Determine response message and status filter value
+    if status_filter:
+        message = f"All queries with status '{status_filter.value}' retrieved successfully"
+        status_filter_value = status_filter.value
+    else:
+        message = "All queries retrieved successfully"
+        status_filter_value = "all"
+
     return api_response(
         status.HTTP_200_OK,
-        f"All queries with status '{status_filter.value}' retrieved successfully",
+        message,
         {
             "queries": queries_response,
-            "status_filter": status_filter.value,
+            "status_filter": status_filter_value,
             "pagination": {
                 "current_page": page,
                 "total_pages": total_pages,

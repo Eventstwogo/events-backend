@@ -298,19 +298,39 @@ async def update_query_status_service(
 
     # Permission validation
     can_update = False
-    if user_role == "organizer":
-        # Organizers can only update their own queries
-        can_update = query_obj.sender_user_id == user_id
-    elif user_role in ["admin", "superadmin"]:
-        # Admins can update any query
-        can_update = True
+    
+    # Special handling for closing queries
+    if request.query_status == QueryStatus.QUERY_CLOSED:
+        if user_role in ["admin", "superadmin"]:
+            return api_response(
+                status_code=status.HTTP_403_FORBIDDEN,
+                message="Admins cannot close queries. Only organizers can close their own queries.",
+                log_error=True,
+            )
+        elif user_role == "organizer":
+            # Organizers can only close their own queries
+            can_update = query_obj.sender_user_id == user_id
+            if not can_update:
+                return api_response(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    message="You can only close your own queries",
+                    log_error=True,
+                )
+    else:
+        # For other status updates, use existing logic
+        if user_role == "organizer":
+            # Organizers can only update their own queries
+            can_update = query_obj.sender_user_id == user_id
+        elif user_role in ["admin", "superadmin"]:
+            # Admins can update any query (except closing)
+            can_update = True
 
-    if not can_update:
-        return api_response(
-            status_code=status.HTTP_403_FORBIDDEN,
-            message="You do not have permission to update this query",
-            log_error=True,
-        )
+        if not can_update:
+            return api_response(
+                status_code=status.HTTP_403_FORBIDDEN,
+                message="You do not have permission to update this query",
+                log_error=True,
+            )
 
     # Update the query status
     query_obj.query_status = request.query_status
