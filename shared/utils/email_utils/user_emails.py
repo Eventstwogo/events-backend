@@ -5,7 +5,7 @@ from typing import Optional
 
 from pydantic import EmailStr
 
-from shared.core.config import settings
+from lifespan import settings
 from shared.core.logging_config import get_logger
 from shared.utils.email import email_sender
 

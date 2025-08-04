@@ -5,7 +5,7 @@ from typing import Any, Dict, Union
 import jwt
 from passlib.context import CryptContext
 
-from shared.core.config import JWT_KEY_ID, PUBLIC_KEY, settings
+from lifespan import JWT_KEY_ID, PUBLIC_KEY, settings
 from shared.core.logging_config import get_logger
 from shared.utils.token_blacklist import add_to_blacklist, is_blacklisted
 

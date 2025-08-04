@@ -12,8 +12,8 @@ from starlette.responses import JSONResponse
 
 from admin_service.schemas.config import ConfigOut
 from admin_service.utils.auth import hash_password
+from lifespan import settings
 from shared.core.api_response import api_response
-from shared.core.config import settings
 from shared.db.models import Config
 from shared.db.sessions.database import get_db
 from shared.utils.exception_handlers import exception_handler, handle_not_found

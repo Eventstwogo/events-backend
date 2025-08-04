@@ -15,7 +15,7 @@ from admin_service.services.response_builders import (
 from admin_service.services.session_management import TokenSessionManager
 from admin_service.services.user_service import get_user_by_id
 from admin_service.utils.auth import verify_jwt_token
-from shared.core.config import PUBLIC_KEY
+from lifespan import PUBLIC_KEY
 from shared.core.logging_config import get_logger
 from shared.db.models import AdminUser
 from shared.db.sessions.database import get_db

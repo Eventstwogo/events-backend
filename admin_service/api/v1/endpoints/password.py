@@ -28,8 +28,8 @@ from admin_service.utils.auth import (
     hash_password,
     verify_password,
 )
+from lifespan import settings
 from shared.core.api_response import api_response
-from shared.core.config import settings
 from shared.core.logging_config import get_logger
 from shared.db.models.admin_users import AdminUser
 from shared.db.sessions.database import get_db

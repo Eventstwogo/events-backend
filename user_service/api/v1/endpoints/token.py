@@ -12,8 +12,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
 
+from lifespan import PRIVATE_KEY, PUBLIC_KEY, settings
 from shared.core.api_response import api_response
-from shared.core.config import PRIVATE_KEY, PUBLIC_KEY, settings
 from shared.core.logging_config import get_logger
 from shared.db.models import User, UserDeviceSession
 from shared.db.sessions.database import get_db

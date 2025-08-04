@@ -7,7 +7,7 @@ from typing import Any, Dict, Optional, Union
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from pydantic import EmailStr
 
-from shared.core.config import settings
+from lifespan import settings
 from shared.core.logging_config import get_logger
 
 logger = get_logger(__name__)

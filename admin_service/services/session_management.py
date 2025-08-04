@@ -6,7 +6,7 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from admin_service.utils.auth import create_jwt_token
-from shared.core.config import PRIVATE_KEY, settings
+from lifespan import PRIVATE_KEY, settings
 from shared.core.logging_config import get_logger
 from shared.db.models import AdminUser, AdminUserDeviceSession
 from shared.utils.device_info import (

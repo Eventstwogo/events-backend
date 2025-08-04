@@ -9,7 +9,7 @@ from fastapi.security import HTTPBearer, OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
 
-from shared.core.config import PUBLIC_KEY
+from lifespan import PUBLIC_KEY
 from shared.core.logging_config import get_logger
 from shared.db.models import User
 from shared.db.sessions.database import get_db

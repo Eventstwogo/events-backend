@@ -7,8 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
 
 from admin_service.utils.auth import create_jwt_token, verify_password
+from lifespan import PRIVATE_KEY, settings
 from shared.core.api_response import api_response
-from shared.core.config import PRIVATE_KEY, settings
 from shared.db.models import AdminUser, AdminUserDeviceSession
 
 MAX_LOGIN_ATTEMPTS = 3

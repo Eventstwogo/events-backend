@@ -6,8 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from starlette.responses import JSONResponse
 
+from lifespan import PUBLIC_KEY
 from shared.core.api_response import api_response
-from shared.core.config import PUBLIC_KEY
 from shared.db.models import User, UserDeviceSession
 from shared.db.sessions.database import get_db
 from shared.utils.exception_handlers import exception_handler

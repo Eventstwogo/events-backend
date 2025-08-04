@@ -37,6 +37,7 @@ from admin_service.services.user_service import (
     get_user_role_name,
 )
 from admin_service.utils.auth import revoke_token
+from lifespan import PUBLIC_KEY, settings
 from shared.constants import (
     ONBOARDING_APPROVED,
     ONBOARDING_NOT_STARTED,
@@ -44,7 +45,6 @@ from shared.constants import (
     ONBOARDING_SUBMITTED,
 )
 from shared.core.api_response import api_response
-from shared.core.config import PUBLIC_KEY, settings
 from shared.core.logging_config import get_logger
 from shared.db.models import AdminUser, BusinessProfile
 from shared.db.sessions.database import get_db

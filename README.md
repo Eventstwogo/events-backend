@@ -200,11 +200,11 @@ DEBUG=true
 FRONTEND_URL=http://localhost:3000
 
 # Database Configuration
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=your_password
-POSTGRES_DB=events2go
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=your_password
+DB_NAME=events2go
 
 # CORS Settings
 ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000

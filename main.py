@@ -9,9 +9,8 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
-from lifespan import lifespan
+from lifespan import lifespan, settings
 from routes import api_router
-from shared.core.config import settings
 from shared.core.request_context import request_context
 from shared.utils.execution_time import ExecutionTimeMiddleware
 

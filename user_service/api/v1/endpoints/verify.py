@@ -8,8 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 from starlette.responses import JSONResponse
 
+from lifespan import settings
 from shared.core.api_response import api_response
-from shared.core.config import settings
 from shared.core.logging_config import get_logger
 from shared.db.models import User, UserVerification
 from shared.db.sessions.database import get_db

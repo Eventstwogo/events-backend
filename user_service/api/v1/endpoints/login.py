@@ -13,8 +13,8 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from lifespan import PRIVATE_KEY, PUBLIC_KEY, settings
 from shared.core.api_response import api_response
-from shared.core.config import PRIVATE_KEY, PUBLIC_KEY, settings
 from shared.core.logging_config import get_logger
 from shared.db.models import User
 from shared.db.sessions.database import get_db

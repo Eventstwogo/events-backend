@@ -12,8 +12,8 @@ from admin_service.schemas.session import (
     SessionTerminateResponse,
 )
 from admin_service.services.session_management import SessionManager
+from lifespan import PUBLIC_KEY, settings
 from shared.core.api_response import api_response
-from shared.core.config import PUBLIC_KEY, settings
 from shared.core.logging_config import get_logger
 from shared.db.models import AdminUser, AdminUserDeviceSession
 from shared.db.sessions.database import get_db

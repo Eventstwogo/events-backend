@@ -25,20 +25,20 @@ class AppTestSettings(BaseSettings):
     )
 
     # === Database (isolated test DB) ===
-    POSTGRES_DRIVER: str = "asyncpg"
-    POSTGRES_SCHEME: str = "postgresql"
-    POSTGRES_HOST: str = "localhost"
-    POSTGRES_PORT: int = 5433
-    POSTGRES_USER: str = "postgres"
-    POSTGRES_PASSWORD: str = "postgres"
-    POSTGRES_DB: str = "events2go_testdb"
+    DB_DRIVER: str = "asyncpg"
+    DB_SCHEME: str = "postgresql"
+    DB_HOST: str = "localhost"
+    DB_PORT: int = 5433
+    DB_USER: str = "postgres"
+    DB_PASSWORD: str = "postgres"
+    DB_NAME: str = "events2go_testdb"
 
     @property
     def database_url(self) -> str:
         return (
-            f"{self.POSTGRES_SCHEME}+{self.POSTGRES_DRIVER}://"
-            f"{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
-            f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+            f"{self.DB_SCHEME}+{self.DB_DRIVER}://"
+            f"{self.DB_USER}:{self.DB_PASSWORD}"
+            f"@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
         )
 
     # === CORS ===
@@ -102,8 +102,8 @@ class AppTestSettings(BaseSettings):
     SPACES_REGION_NAME: str = "nyc3"
     SPACES_ENDPOINT_URL: str = "https://nyc3.digitaloceanspaces.com"
     SPACES_BUCKET_NAME: str = "events2go-test"
-    SPACES_ACCESS_KEY_ID: str = "test-access-key"
-    SPACES_SECRET_ACCESS_KEY: str = "test-secret-key"
+    SPACES_ACCESS_KEY: str = "test-access-key"
+    SPACES_SECRET_KEY: str = "test-secret-key"
 
     @property
     def spaces_public_url(self) -> str:

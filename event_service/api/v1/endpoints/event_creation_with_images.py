@@ -35,8 +35,8 @@ from event_service.services.response_builder import (
     unauthorized_to_update_event_response,
 )
 from event_service.utils.location_validator import validate_location_input
+from lifespan import settings
 from shared.core.api_response import api_response
-from shared.core.config import settings
 from shared.db.models import Event
 from shared.db.sessions.database import get_db
 from shared.utils.exception_handlers import exception_handler

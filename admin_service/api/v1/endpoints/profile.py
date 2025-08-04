@@ -6,8 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
 
 from admin_service.schemas.profile import UserProfile
+from lifespan import settings
 from shared.core.api_response import api_response
-from shared.core.config import settings
 from shared.db.models import AdminUser, Role
 from shared.db.sessions.database import get_db
 from shared.dependencies.admin import get_current_active_user

@@ -4,7 +4,7 @@ from urllib.parse import urljoin
 
 from fastapi import HTTPException, UploadFile, status
 
-from shared.core.config import settings
+from lifespan import settings
 from shared.core.logging_config import get_logger
 from shared.utils.format_validators import is_valid_filename, sanitize_filename
 from shared.utils.secure_filename import secure_filename

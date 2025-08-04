@@ -2,6 +2,10 @@ from typing import Dict
 
 import aiohttp
 
+VAULT_URL: str = "https://vault.events2go.com.au"
+VAULT_TOKEN: str = "hvs.ATZ5B71yX4RmAjAB9dIoT6U7"
+SECRET_PATH: str = "v1/kv/data/data"
+
 
 class VaultError(Exception):
     """Exception raised for errors in fetching secrets from Vault."""
@@ -11,9 +15,7 @@ class VaultError(Exception):
 
 
 # Function to fetch database credentials from Vault asynchronously
-async def fetch_secrets_from_vault(
-    vault_url: str, vault_token: str, secret_path: str
-) -> Dict[str, str]:
+async def fetch_secrets_from_vault() -> Dict[str, str]:
     """
     Fetches database credentials stored in HashiCorp Vault.
 
@@ -28,15 +30,18 @@ async def fetch_secrets_from_vault(
     Raises:
         VaultError: If there's an error in fetching the credentials or the response is invalid.
     """
+    if not VAULT_URL or not VAULT_TOKEN or not SECRET_PATH:
+        raise VaultError("Vault configuration is incomplete")
+
     try:
         # Define the headers for the Vault API request
         headers = {
-            "X-Vault-Token": vault_token,  # Vault authentication token
+            "X-Vault-Token": VAULT_TOKEN,  # Vault authentication token
             "Content-Type": "application/json",
         }
 
         # Construct the full URL for the Vault API
-        url = f"{vault_url}/{secret_path}"
+        url = f"{VAULT_URL}/{SECRET_PATH}"
 
         # Perform an async GET request to fetch the secret data
         async with aiohttp.ClientSession() as session:
@@ -52,16 +57,16 @@ async def fetch_secrets_from_vault(
 
                     # Return the extracted secrets in a structured dictionary
                     return {
-                        "DATABASE": secrets.get("DATABASE"),
+                        "DB_USER": secrets.get("DATABASE"),
                         "DB_HOST": secrets.get("DB_HOST"),
                         "DB_PASSWORD": secrets.get("DB_PASSWORD"),
                         "DB_PORT": secrets.get("DB_PORT"),
-                        "SOURCE_DB_NAME": secrets.get("SOURCE_DB_NAME"),
-                        "SENDER_EMAIL": secrets.get("SENDER_EMAIL"),
-                        "SENDER_PASSWORD": secrets.get("SENDER_PASSWORD"),
-                        "SMTP_LOGIN": secrets.get("SMTP_LOGIN"),
+                        "DB_NAME": secrets.get("SOURCE_DB_NAME"),
+                        "EMAIL_FROM": secrets.get("SENDER_EMAIL"),
+                        "SMTP_PASSWORD": secrets.get("SENDER_PASSWORD"),
+                        "SMTP_USER": secrets.get("SMTP_LOGIN"),
                         "SMTP_PORT": secrets.get("SMTP_PORT"),
-                        "SMTP_SERVER": secrets.get("SMTP_SERVER"),
+                        "SMTP_HOST": secrets.get("SMTP_SERVER"),
                         "SPACES_ACCESS_KEY": secrets.get("SPACES_ACCESS_KEY"),
                         "SPACES_BUCKET_NAME": secrets.get("SPACES_BUCKET_NAME"),
                         "SPACES_REGION_NAME": secrets.get("SPACES_REGION_NAME"),

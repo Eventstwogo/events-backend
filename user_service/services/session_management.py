@@ -5,7 +5,7 @@ from fastapi import Request
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from shared.core.config import PRIVATE_KEY, settings
+from lifespan import PRIVATE_KEY, settings
 from shared.core.logging_config import get_logger
 from shared.db.models import User, UserDeviceSession
 from shared.utils.device_info import (

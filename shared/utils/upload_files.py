@@ -6,7 +6,7 @@ import filetype
 from botocore.exceptions import ClientError
 from fastapi import HTTPException, UploadFile
 
-from shared.core.config import settings
+from lifespan import settings
 from shared.core.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -72,14 +72,33 @@ async def upload_file_to_s3(
         HTTPException: Raised if the upload fails.
     """
     content_type = file_type or get_mime_type_from_bytes(file_content)
+    if not all(
+        [
+            settings.SPACES_REGION_NAME,
+            settings.SPACES_ENDPOINT_URL,
+            settings.SPACES_ACCESS_KEY,
+            settings.SPACES_SECRET_KEY,
+        ]
+    ):
+        raise ValueError(
+            f" Please provide SPACES_REGION_NAME, SPACES_ENDPOINT_URL, SPACES_ACCESS_KEY and SPACES_SECRET_KEY in your .env file"
+        )
+
+    print(settings.SPACES_REGION_NAME)
+    print(settings.SPACES_ENDPOINT_URL)
+    print(settings.SPACES_ACCESS_KEY)
+    print(settings.SPACES_BUCKET_NAME)
+    print(settings.spaces_public_url)
+
+    print("File Path: ", file_path)
 
     session = aioboto3.Session()
     async with session.client(
         "s3",
         region_name=settings.SPACES_REGION_NAME,
         endpoint_url=settings.SPACES_ENDPOINT_URL,
-        aws_access_key_id=settings.SPACES_ACCESS_KEY_ID,
-        aws_secret_access_key=settings.SPACES_SECRET_ACCESS_KEY,
+        aws_access_key_id=settings.SPACES_ACCESS_KEY,
+        aws_secret_access_key=settings.SPACES_SECRET_KEY,
     ) as s3_client:
         try:
             await s3_client.put_object(
@@ -143,8 +162,8 @@ async def delete_file_from_s3(
         "s3",
         region_name=settings.SPACES_REGION_NAME,
         endpoint_url=settings.SPACES_ENDPOINT_URL,
-        aws_access_key_id=settings.SPACES_ACCESS_KEY_ID,
-        aws_secret_access_key=settings.SPACES_SECRET_ACCESS_KEY,
+        aws_access_key_id=settings.SPACES_ACCESS_KEY,
+        aws_secret_access_key=settings.SPACES_SECRET_KEY,
     ) as s3_client:
         try:
             if delete_folder:

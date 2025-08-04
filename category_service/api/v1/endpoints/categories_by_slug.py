@@ -22,8 +22,8 @@ from category_service.services.category_service import (
     validate_category_conflicts,
     validate_category_data,
 )
+from lifespan import settings
 from shared.core.api_response import api_response
-from shared.core.config import settings
 from shared.db.models import Category
 from shared.db.sessions.database import get_db
 from shared.utils.exception_handlers import exception_handler

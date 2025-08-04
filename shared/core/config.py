@@ -1,3 +1,12 @@
+import logging
+from logging import Logger
+
+from shared.core.secrets import fetch_secrets_from_vault
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger: Logger = logging.getLogger(__name__)
+
 import json
 import os
 from functools import lru_cache
@@ -9,8 +18,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from shared.keys.key_manager import KeyManager
 
-os.environ.pop("ENVIRONMENT", None)  # Prevent override
-load_dotenv(dotenv_path=".env.local", override=True)
+# os.environ.pop("ENVIRONMENT", None)  # Prevent override
+# load_dotenv(dotenv_path=".env.local", override=True)
 
 
 class Settings(BaseSettings):
@@ -34,22 +43,29 @@ class Settings(BaseSettings):
     )
 
     # === Database ===
-    POSTGRES_DRIVER: str = "asyncpg"
-    POSTGRES_SCHEME: str = "postgresql"
-    POSTGRES_HOST: str = "localhost"
-    POSTGRES_PORT: int = 5432
-    POSTGRES_USER: str = "postgres"
-    POSTGRES_PASSWORD: str = "postgres"
-    POSTGRES_DB: str = "events2go"
+    DB_DRIVER: str = "asyncpg"
+    DB_SCHEME: str = "postgresql"
+    DB_HOST: str = "localhost"
+    DB_PORT: int = 5432
+    DB_USER: str = "postgres"
+    DB_PASSWORD: str = "postgres"
+    DB_NAME: str = "events2go"
 
     @property
     def database_url(self) -> str:
         """Builds the SQLAlchemy-compatible database URL."""
         return (
-            f"{self.POSTGRES_SCHEME}+{self.POSTGRES_DRIVER}://"
-            f"{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
-            f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+            f"{self.DB_SCHEME}+{self.DB_DRIVER}://"
+            f"{self.DB_USER}:{self.DB_PASSWORD}"
+            f"@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
         )
+
+    # === Vault Configuration ===
+    VAULT_URL: str = os.getenv("VAULT_URL", "http://localhost:8200")
+    VAULT_TOKEN: str = os.getenv("VAULT_TOKEN", "")
+    VAULT_SECRET_PATH: str = os.getenv(
+        "VAULT_SECRET_PATH", "v1/kv/data/secrets"
+    )
 
     # === CORS ===
     ALLOWED_ORIGINS: str = "http://localhost,http://localhost:3000"
@@ -119,14 +135,14 @@ class Settings(BaseSettings):
     JWT_AUDIENCE: str = "e2g-clients"
 
     # === AES256 Encryption ===
-    FERNET_KEY: str = "fernet-key"
+    FERNET_KEY: str = "75ncwG_cPEC45F60cDCKTzfM_eVO1bYTz3ieIOWv3mQ="
 
     # === DigitalOcean Spaces ===
     SPACES_REGION_NAME: str = "nyc3"
     SPACES_ENDPOINT_URL: str = "https://nyc3.digitaloceanspaces.com"
     SPACES_BUCKET_NAME: str = "events2go"
-    SPACES_ACCESS_KEY_ID: str = "spaces-access-key-id"
-    SPACES_SECRET_ACCESS_KEY: str = "spaces-secret-access-key"
+    SPACES_ACCESS_KEY: str = "spaces-access-key-id"
+    SPACES_SECRET_KEY: str = "spaces-secret-access-key"
 
     @property
     def spaces_public_url(self) -> str:
@@ -140,9 +156,51 @@ class Settings(BaseSettings):
         extra="allow",
     )
 
+    async def load_vault_secrets(self):
+        global vault_url, vault_token, secret_path
+        vault_url = self.VAULT_URL
+        vault_token = self.VAULT_TOKEN
+        secret_path = self.VAULT_SECRET_PATH
+        logger.info(f"Fetching secrets from Vault: {vault_url}/{secret_path}")
+        secrets = await fetch_secrets_from_vault()
+        logger.info(f"Raw secrets from Vault: {secrets}")
+        self.DB_NAME = secrets.get("DB_NAME", self.DB_NAME)
+        self.DB_HOST = secrets.get("DB_HOST", self.DB_HOST)
+        self.DB_PASSWORD = secrets.get("DB_PASSWORD", self.DB_PASSWORD)
+        self.DB_PORT = int(secrets.get("DB_PORT", self.DB_PORT))
+        self.DB_USER = secrets.get("DB_USER", self.DB_USER)
+        if not self.DB_USER:
+            self.DB_USER = secrets.get("DB_USER", self.DB_USER)
+        if not all(
+            [self.DB_USER, self.DB_PASSWORD, self.DB_HOST, self.DB_NAME]
+        ):
+            raise ValueError(
+                f"Missing database credentials after Vault fetch: user={self.DB_USER}, host={self.DB_HOST}, port={self.DB_PORT}, db={self.DB_NAME}, secrets={secrets}"
+            )
+        self.SMTP_PORT = int(secrets.get("SMTP_PORT", self.SMTP_PORT))
+        self.SMTP_HOST = secrets.get("SMTP_HOST", self.SMTP_HOST)
+        self.SMTP_USER = secrets.get("SMTP_USER", self.SMTP_USER)
+        self.SMTP_PASSWORD = secrets.get("SMTP_PASSWORD", self.SMTP_PASSWORD)
+        self.EMAIL_FROM = secrets.get("EMAIL_FROM", self.EMAIL_FROM)
+        self.SPACES_REGION_NAME = secrets.get(
+            "SPACES_REGION_NAME", self.SPACES_REGION_NAME
+        )
+        self.SPACES_BUCKET_NAME = secrets.get(
+            "SPACES_BUCKET_NAME", self.SPACES_BUCKET_NAME
+        )
+        self.SPACES_ACCESS_KEY = secrets.get(
+            "SPACES_ACCESS_KEY", self.SPACES_ACCESS_KEY
+        )
+        self.SPACES_SECRET_KEY = secrets.get(
+            "SPACES_SECRET_KEY", self.SPACES_SECRET_KEY
+        )
+        logger.info(
+            f"Updated database settings: user={self.DB_USER}, host={self.DB_HOST}, port={self.DB_PORT}, db={self.DB_NAME}"
+        )
+
 
 # === Singleton accessor (ensures one instance only) ===
-@lru_cache()
+# @lru_cache()
 def get_settings() -> Settings:
     settings_instance = Settings()  # Renamed to avoid redefinition warning
 

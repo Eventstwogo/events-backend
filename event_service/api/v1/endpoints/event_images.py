@@ -6,8 +6,8 @@ from starlette.responses import JSONResponse
 
 from event_service.services.events import fetch_event_by_id
 from event_service.services.response_builder import event_not_found_response
+from lifespan import settings
 from shared.core.api_response import api_response
-from shared.core.config import settings
 from shared.db.sessions.database import get_db
 from shared.utils.exception_handlers import exception_handler
 from shared.utils.file_uploads import (
