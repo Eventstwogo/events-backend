@@ -90,10 +90,7 @@ async def upload_file_to_s3(
                 ACL="public-read",
             )
 
-            file_url = (
-                f"{settings.SPACES_ENDPOINT_URL}/"
-                f"{settings.SPACES_BUCKET_NAME}/{file_path}"
-            )
+            file_url = f"{settings.spaces_public_url}/{file_path}"
             logger.info(
                 "File uploaded successfully",
                 extra={

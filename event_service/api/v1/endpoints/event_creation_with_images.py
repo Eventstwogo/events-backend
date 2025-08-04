@@ -272,7 +272,7 @@ async def create_event_with_images(
     except Exception as e:
         # Clean up any uploaded files on failure
         for file_url in uploaded_files:
-            remove_file_if_exists(file_url)
+            await remove_file_if_exists(file_url)
         return api_response(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             message=f"Failed to upload images: {str(e)}",
@@ -529,7 +529,7 @@ async def update_event_with_images(
         if card_image:
             # Delete previous card image
             if event.card_image:
-                remove_file_if_exists(event.card_image)
+                await remove_file_if_exists(event.card_image)
 
             card_image_url = await save_uploaded_file(
                 card_image,
@@ -541,7 +541,7 @@ async def update_event_with_images(
         if banner_image:
             # Delete previous banner image
             if event.banner_image:
-                remove_file_if_exists(event.banner_image)
+                await remove_file_if_exists(event.banner_image)
 
             banner_image_url = await save_uploaded_file(
                 banner_image,
@@ -570,7 +570,7 @@ async def update_event_with_images(
 
             # Delete the determined images
             for old_image_url in images_to_delete:
-                remove_file_if_exists(old_image_url)
+                await remove_file_if_exists(old_image_url)
 
             # Upload new extra images
             new_extra_urls = []

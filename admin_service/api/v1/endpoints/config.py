@@ -185,7 +185,7 @@ async def update_config(
         )
         # Only remove old logo if it exists and is not None
         if old_logo_url:
-            remove_file_if_exists(old_logo_url)
+            await remove_file_if_exists(old_logo_url)
 
     await db.commit()
     await db.refresh(config)
@@ -240,7 +240,7 @@ async def update_logo(
 
     # Delete previous Logo using the utility function
     if config.logo_url:
-        remove_file_if_exists(config.logo_url)
+        await remove_file_if_exists(config.logo_url)
 
     # Update and save
     config.logo_url = uploaded_logo_url
