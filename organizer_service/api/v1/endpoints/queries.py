@@ -12,12 +12,14 @@ from organizer_service.schemas.queries import (
     CreateQueryRequest,
     QueryFilters,
     QueryResponse,
+    QueryStatisticsResponse,
     QueryStatsResponse,
     QueryStatus,
     ThreadMessage,
     UpdateQueryStatusRequest,
 )
 from organizer_service.services.queries import (
+    fetch_query_statistics,
     get_query_by_id,
     get_query_stats_service,
     get_user_by_id,
@@ -177,6 +179,39 @@ async def get_queries_list(
                 "has_prev": filters.page > 1,
             },
         },
+    )
+
+
+@router.get(
+    "/statistics",
+    status_code=status.HTTP_200_OK,
+    response_model=QueryStatisticsResponse,
+    summary="Get query statistics",
+)
+@exception_handler
+async def get_query_statistics(
+    db: AsyncSession = Depends(get_db),
+) -> JSONResponse:
+    """
+    Get simple query statistics for dashboard.
+
+    Returns:
+    - Open queries count
+    - Closed queries count
+    - Resolved queries count
+    - In-progress queries count
+    - Monthly growth percentage (current month vs previous month for open queries)
+    - Current month open queries count
+    - Previous month open queries count
+    """
+
+    # Fetch query statistics
+    stats_data = await fetch_query_statistics(db)
+
+    return api_response(
+        status_code=status.HTTP_200_OK,
+        message="Query statistics retrieved successfully",
+        data=stats_data,
     )
 
 

@@ -100,3 +100,22 @@ class AdminAnalyticsResponse(BaseModel):
         ..., description="Analytics for admin-created events"
     )
     user_statistics: UserStatistics = Field(..., description="User statistics")
+
+
+class EventStatsResponse(BaseModel):
+    """Schema for simple event statistics response"""
+
+    active_events_count: int = Field(..., description="Number of active events")
+    upcoming_events_count: int = Field(
+        ..., description="Number of upcoming events"
+    )
+    monthly_growth_percentage: float = Field(
+        ...,
+        description="Percentage change in events created this month vs last month",
+    )
+    current_month_events: int = Field(
+        ..., description="Number of events created in current month"
+    )
+    previous_month_events: int = Field(
+        ..., description="Number of events created in previous month"
+    )

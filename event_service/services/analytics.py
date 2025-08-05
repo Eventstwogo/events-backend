@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
 from sqlalchemy import and_, desc, func, select
@@ -276,4 +276,83 @@ def calculate_events_analytics(events: List[Event]) -> Dict:
             "active_slots": active_slots,
             "draft_slots": draft_slots,
         },
+    }
+
+
+async def fetch_event_statistics(db: AsyncSession) -> Dict:
+    """
+    Fetch simple event statistics including active events, upcoming events,
+    and monthly growth percentage.
+    """
+    logger.info("Fetching event statistics")
+
+    # Get current date and calculate date ranges
+    today = date.today()
+    current_month_start = today.replace(day=1)
+
+    # Calculate previous month start and end
+    if current_month_start.month == 1:
+        previous_month_start = current_month_start.replace(
+            year=current_month_start.year - 1, month=12
+        )
+    else:
+        previous_month_start = current_month_start.replace(
+            month=current_month_start.month - 1
+        )
+
+    # Get active events count (event_status = False means active)
+    active_events_query = select(func.count(Event.event_id)).filter(
+        Event.event_status == False
+    )
+    active_events_result = await db.execute(active_events_query)
+    active_events_count = active_events_result.scalar() or 0
+
+    # Get upcoming events count (active events with start_date >= today)
+    upcoming_events_query = select(func.count(Event.event_id)).filter(
+        and_(Event.event_status == False, Event.start_date >= today)
+    )
+    upcoming_events_result = await db.execute(upcoming_events_query)
+    upcoming_events_count = upcoming_events_result.scalar() or 0
+
+    # Get current month events count
+    current_month_events_query = select(func.count(Event.event_id)).filter(
+        Event.created_at >= current_month_start
+    )
+    current_month_events_result = await db.execute(current_month_events_query)
+    current_month_events = current_month_events_result.scalar() or 0
+
+    # Get previous month events count
+    previous_month_events_query = select(func.count(Event.event_id)).filter(
+        and_(
+            Event.created_at >= previous_month_start,
+            Event.created_at < current_month_start,
+        )
+    )
+    previous_month_events_result = await db.execute(previous_month_events_query)
+    previous_month_events = previous_month_events_result.scalar() or 0
+
+    # Calculate monthly growth percentage
+    if previous_month_events > 0:
+        monthly_growth_percentage = round(
+            (
+                (current_month_events - previous_month_events)
+                / previous_month_events
+            )
+            * 100,
+            2,
+        )
+    else:
+        # If no events in previous month, show 100% if current month has events, else 0%
+        monthly_growth_percentage = 100.0 if current_month_events > 0 else 0.0
+
+    logger.info(
+        f"Event statistics calculated: active={active_events_count}, upcoming={upcoming_events_count}, growth={monthly_growth_percentage}%"
+    )
+
+    return {
+        "active_events_count": active_events_count,
+        "upcoming_events_count": upcoming_events_count,
+        "monthly_growth_percentage": monthly_growth_percentage,
+        "current_month_events": current_month_events,
+        "previous_month_events": previous_month_events,
     }
