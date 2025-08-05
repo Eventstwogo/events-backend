@@ -130,8 +130,13 @@ class Settings(BaseSettings):
 
     @property
     def spaces_public_url(self) -> str:
-        """Returns public URL to access the DigitalOcean Spaces bucket."""
-        return f"https://{self.SPACES_BUCKET_NAME}.digitaloceanspaces.com"
+        """
+        Returns the public base URL to access the DigitalOcean Spaces bucket.
+        Combines endpoint and bucket name.
+        """
+        return (
+            f"{self.SPACES_ENDPOINT_URL.rstrip('/')}/{self.SPACES_BUCKET_NAME}"
+        )
 
     # === Meta Configuration for Pydantic ===
     model_config = SettingsConfigDict(

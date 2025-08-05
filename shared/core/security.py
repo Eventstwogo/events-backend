@@ -10,7 +10,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from shared.core.config import settings
 
 
-def get_or_generate_key() -> bytes:
+def get_or_generate_key_old() -> bytes:
     """
     Get the Fernet key from environment or generate a new one.
 
@@ -46,6 +46,32 @@ def get_or_generate_key() -> bytes:
     print("!" * 80 + "\n")
 
     return key
+
+
+def get_or_generate_key() -> bytes:
+    """
+    Get the Fernet key from environment or secure storage.
+
+    This function strictly expects the key to be set beforehand.
+    It will raise an error if the key is missing or invalid.
+
+    Returns:
+        bytes: A valid Fernet key (32 bytes, URL-safe base64-encoded)
+
+    Raises:
+        ValueError: If the key is not set or invalid.
+    """
+    key_str = settings.FERNET_KEY
+
+    if not key_str or key_str == "fernet-key":
+        raise ValueError("FERNET_KEY is not set in environment or config.")
+
+    try:
+        key = key_str.encode()
+        Fernet(key)  # Validate key
+        return key
+    except (ValueError, TypeError) as e:
+        raise ValueError("FERNET_KEY is invalid or corrupted.") from e
 
 
 # Initialize Fernet with a valid key

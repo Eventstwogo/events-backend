@@ -67,7 +67,7 @@ async def update_event_card_image(
 
     # Delete previous card image
     if event.card_image:
-        remove_file_if_exists(event.card_image)
+        await remove_file_if_exists(event.card_image)
 
     # Update and save
     event.card_image = uploaded_url
@@ -129,7 +129,7 @@ async def update_event_banner_image(
 
     # Delete previous banner image
     if event.banner_image:
-        remove_file_if_exists(event.banner_image)
+        await remove_file_if_exists(event.banner_image)
 
     # Update and save
     event.banner_image = uploaded_url
@@ -220,7 +220,7 @@ async def add_event_extra_images(
     # Delete the first N existing images (where N = number of new images)
     images_to_delete = existing_images[:num_new_images]
     for old_image_url in images_to_delete:
-        remove_file_if_exists(old_image_url)
+        await remove_file_if_exists(old_image_url)
 
     # Keep the remaining existing images
     remaining_images = existing_images[num_new_images:]
@@ -309,7 +309,7 @@ async def remove_event_extra_image(
 
     # Remove the image file and update the list
     image_to_remove = event.event_extra_images[image_index]
-    remove_file_if_exists(image_to_remove)
+    await remove_file_if_exists(image_to_remove)
 
     # Create a new list without the image at the specified index
     updated_images = event.event_extra_images.copy()
