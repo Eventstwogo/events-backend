@@ -111,7 +111,7 @@ def fetch_vault_secrets_sync() -> Dict[str, str]:
         for key, value in secrets.items():
             if value is not None:
                 os.environ[key] = str(value)
-                print(f"Injected {key}: {value}")
+
         return secrets
     except VaultError as e:
         if os.getenv("ENVIRONMENT", "development") != "production":

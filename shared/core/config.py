@@ -133,8 +133,10 @@ class Settings(BaseSettings):
     SUPPORT_EMAIL: str = "support@events2go.com"
 
     # === DigitalOcean Spaces ===
-    SPACES_REGION_NAME: str = "nyc3"
-    SPACES_ENDPOINT_URL: str = "https://nyc3.digitaloceanspaces.com"
+    SPACES_REGION_NAME: str = "syd1"
+    SPACES_ENDPOINT_URL: str = (
+        f"https://{SPACES_REGION_NAME}.digitaloceanspaces.com"
+    )
     SPACES_BUCKET_NAME: str = "events2go"
     SPACES_ACCESS_KEY_ID: str = "spaces-access-key-id"
     SPACES_SECRET_ACCESS_KEY: str = "spaces-secret-access-key"
