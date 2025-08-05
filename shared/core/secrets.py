@@ -1,8 +1,11 @@
 import os
 from typing import Dict
 
-import aiohttp
-import anyio
+import requests
+from dotenv import load_dotenv
+
+# Load environment variables from .env.production file
+load_dotenv(dotenv_path=".env.production")
 
 
 class VaultError(Exception):
@@ -12,90 +15,16 @@ class VaultError(Exception):
         super().__init__(message)
 
 
-# Function to fetch database credentials from Vault asynchronously
-async def fetch_secrets_from_vault(
-    vault_url: str, vault_token: str, secret_path: str
-) -> Dict[str, str]:
-    """
-    Fetches database credentials stored in HashiCorp Vault.
-
-    Parameters:
-        vault_url (str): The URL of the HashiCorp Vault server.
-        vault_token (str): The token used for authenticating with Vault.
-        secret_path (str): The path to the secret in Vault. Defaults to "v1/kv/data/shoudb".
-
-    Returns:
-        Dict[str, str]: A dictionary containing the database credentials.
-
-    Raises:
-        VaultError: If there's an error in fetching the credentials or the response is invalid.
-    """
-    try:
-        # Define the headers for the Vault API request
-        headers = {
-            "X-Vault-Token": vault_token,  # Vault authentication token
-            "Content-Type": "application/json",
-        }
-
-        # Construct the full URL for the Vault API
-        url = f"{vault_url}/v1/{secret_path}"
-
-        # Perform an async GET request to fetch the secret data
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=headers) as response:
-                # Check if the response status is successful (HTTP 200)
-                if response.status == 200:
-                    # Parse the JSON response
-                    response_data = await response.json()
-
-                    # Extract the `data` field containing secrets
-                    secrets = response_data["data"]["data"]
-                    # print("Vault Secrets: ", secrets)
-
-                    # Return the extracted secrets in a structured dictionary
-                    return {
-                        "DATABASE": secrets.get("DATABASE"),
-                        "DB_HOST": secrets.get("DB_HOST"),
-                        "DB_PASSWORD": secrets.get("DB_PASSWORD"),
-                        "DB_PORT": secrets.get("DB_PORT"),
-                        "SOURCE_DB_NAME": secrets.get("SOURCE_DB_NAME"),
-                        "SENDER_EMAIL": secrets.get("SENDER_EMAIL"),
-                        "SENDER_PASSWORD": secrets.get("SENDER_PASSWORD"),
-                        "SMTP_LOGIN": secrets.get("SMTP_LOGIN"),
-                        "SMTP_PORT": secrets.get("SMTP_PORT"),
-                        "SMTP_SERVER": secrets.get("SMTP_SERVER"),
-                        "SPACES_ACCESS_KEY": secrets.get("SPACES_ACCESS_KEY"),
-                        "SPACES_BUCKET_NAME": secrets.get("SPACES_BUCKET_NAME"),
-                        "SPACES_REGION_NAME": secrets.get("SPACES_REGION_NAME"),
-                        "SPACES_SECRET_KEY": secrets.get("SPACES_SECRET_KEY"),
-                    }
-
-                # Raise a specific error if the response status is not 200
-                raise VaultError(
-                    f"Failed to fetch secrets. HTTP Status: {response.status}"
-                )
-
-    except aiohttp.ClientError as e:
-        # Handle HTTP client errors specifically
-        raise VaultError(f"HTTP Client Error: {str(e)}")
-    except KeyError as e:
-        # Handle missing keys in the response data
-        raise VaultError(f"Missing expected key in Vault response: {str(e)}")
-    except Exception as e:
-        # Raise a VaultError for any other unexpected exceptions
-        raise VaultError(
-            f"Unexpected error fetching secrets from Vault: {str(e)}"
-        )
-
-
 def fetch_vault_secrets_sync() -> Dict[str, str]:
     """
-    Sync wrapper to call async Vault fetcher and normalize keys.
+    Fetch secrets from Vault synchronously using requests.
+
     Expects VAULT_URL, VAULT_TOKEN, and VAULT_SECRET_PATH as environment variables.
     """
     try:
+        # Read required environment variables
         vault_url = os.getenv("VAULT_URL", "https://vault.events2go.com.au")
-        vault_token = os.getenv("VAULT_TOKEN", "hvs.ATZ5B71yX4RmAjAB9dIoT6U7")
+        vault_token = os.getenv("VAULT_TOKEN", "hvs.")
         vault_secret_path = os.getenv("VAULT_SECRET_PATH", "kv/data/data")
 
         if not all([vault_url, vault_token, vault_secret_path]):
@@ -103,18 +32,55 @@ def fetch_vault_secrets_sync() -> Dict[str, str]:
                 "Vault URL, Token, or Secret Path is missing in environment variables"
             )
 
-        secrets = anyio.run(
-            fetch_secrets_from_vault, vault_url, vault_token, vault_secret_path
-        )
+        # Construct URL and headers
+        headers = {
+            "X-Vault-Token": vault_token,
+            "Content-Type": "application/json",
+        }
+        url = f"{vault_url}/v1/{vault_secret_path}"
 
-        # Inject into environment (optional)
+        # Send GET request to Vault
+        response = requests.get(url, headers=headers)
+
+        if response.status_code != 200:
+            raise VaultError(
+                f"Failed to fetch secrets. HTTP Status: {response.status_code}"
+            )
+
+        response_data = response.json()
+
+        # Extract secrets
+        secrets = response_data["data"]["data"]
+
+        # Optional: inject into os.environ
         for key, value in secrets.items():
             if value is not None:
                 os.environ[key] = str(value)
+                print(f"Injected {key}: {value}")
 
-        return secrets
-    except VaultError as e:
-        if os.getenv("ENVIRONMENT", "development") != "production":
-            print(f"Warning: Vault fetch failed, using .env fallback: {e}")
-            return {}
-        raise
+        return {
+            "DATABASE": secrets.get("DATABASE"),
+            "DB_HOST": secrets.get("DB_HOST"),
+            "DB_PASSWORD": secrets.get("DB_PASSWORD"),
+            "DB_PORT": secrets.get("DB_PORT"),
+            "SOURCE_DB_NAME": secrets.get("SOURCE_DB_NAME"),
+            "SENDER_EMAIL": secrets.get("SENDER_EMAIL"),
+            "SENDER_PASSWORD": secrets.get("SENDER_PASSWORD"),
+            "SMTP_LOGIN": secrets.get("SMTP_LOGIN"),
+            "SMTP_PORT": secrets.get("SMTP_PORT"),
+            "SMTP_SERVER": secrets.get("SMTP_SERVER"),
+            "SPACES_ACCESS_KEY": secrets.get("SPACES_ACCESS_KEY"),
+            "SPACES_BUCKET_NAME": secrets.get("SPACES_BUCKET_NAME"),
+            "SPACES_REGION_NAME": secrets.get("SPACES_REGION_NAME"),
+            "SPACES_SECRET_KEY": secrets.get("SPACES_SECRET_KEY"),
+            "FERNET_KEY": secrets.get("FERNET_KEY"),
+        }
+
+    except requests.RequestException as e:
+        raise VaultError(f"HTTP Request error: {str(e)}")
+    except KeyError as e:
+        raise VaultError(f"Missing expected key in Vault response: {str(e)}")
+    except Exception as e:
+        raise VaultError(
+            f"Unexpected error fetching secrets from Vault: {str(e)}"
+        )

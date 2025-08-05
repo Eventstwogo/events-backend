@@ -416,7 +416,9 @@ async def delete_query(
 @exception_handler
 async def get_all_queries_by_status(
     status_filter: Optional[QueryStatus] = Query(
-        None, alias="status", description="Query status to filter by (optional - use 'all' or omit to get all statuses)"
+        None,
+        alias="status",
+        description="Query status to filter by (optional - use 'all' or omit to get all statuses)",
     ),
     category: Optional[str] = Query(
         None, description="Optional category filter"
@@ -432,7 +434,7 @@ async def get_all_queries_by_status(
     """
     # Build query - no user restrictions since this is for all queries
     query_stmt = select(OrganizerQuery)
-    
+
     # Apply status filter only if provided
     if status_filter:
         query_stmt = query_stmt.where(

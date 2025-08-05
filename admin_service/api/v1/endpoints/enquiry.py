@@ -40,7 +40,7 @@ async def create_enquiry(
     # Check if enquiry with same email and message already exists
     existing_enquiry_stmt = select(Enquiry).where(
         Enquiry.email == enquiry_data.email,
-        Enquiry.message == enquiry_data.message
+        Enquiry.message == enquiry_data.message,
     )
     result = await db.execute(existing_enquiry_stmt)
     existing_enquiry = result.scalar_one_or_none()
@@ -200,7 +200,11 @@ async def update_enquiry(
     )
 
 
-@router.delete("/{enquiry_id}", response_model=EnquiryDeleteResponse, status_code=status.HTTP_200_OK)
+@router.delete(
+    "/{enquiry_id}",
+    response_model=EnquiryDeleteResponse,
+    status_code=status.HTTP_200_OK,
+)
 @exception_handler
 async def delete_enquiry(
     enquiry_id: int,
@@ -235,7 +239,5 @@ async def delete_enquiry(
 
     return api_response(
         status_code=status.HTTP_200_OK,
-        data=EnquiryDeleteResponse(
-            message="Enquiry deleted successfully"
-        ),
+        data=EnquiryDeleteResponse(message="Enquiry deleted successfully"),
     )

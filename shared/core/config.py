@@ -60,6 +60,7 @@ class VaultSettingsSource(PydanticBaseSettingsSource):
             "SPACES_BUCKET_NAME": "SPACES_BUCKET_NAME",
             "SPACES_REGION_NAME": "SPACES_REGION_NAME",
             "SPACES_SECRET_ACCESS_KEY": "SPACES_SECRET_KEY",
+            "FERNET_KEY": "FERNET_KEY",
         }
 
         vault_key = vault_key_mapping.get(field_name)
@@ -89,6 +90,7 @@ class VaultSettingsSource(PydanticBaseSettingsSource):
             "SPACES_BUCKET_NAME": vault_data.get("SPACES_BUCKET_NAME"),
             "SPACES_REGION_NAME": vault_data.get("SPACES_REGION_NAME"),
             "SPACES_SECRET_ACCESS_KEY": vault_data.get("SPACES_SECRET_KEY"),
+            "FERNET_KEY": vault_data.get("FERNET_KEY"),
         }
 
 
@@ -178,11 +180,11 @@ class Settings(BaseSettings):
     JWT_AUDIENCE: str = "e2g-clients"
 
     # === AES256 Encryption ===
-    FERNET_KEY: str = "75ncwG_cPEC45F60cDCKTzfM_eVO1bYTz3ieIOWv3mQ="
+    FERNET_KEY: str = "fernet-key"
 
     # === Pydantic config ===
     model_config = SettingsConfigDict(
-        env_file=".env.local",  # for local testing only
+        env_file=".env.production",
         env_file_encoding="utf-8",
         extra="allow",
     )
@@ -197,7 +199,7 @@ class Settings(BaseSettings):
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> Tuple[PydanticBaseSettingsSource, ...]:
         return (
-            VaultSettingsSource(settings_cls),  # 👈 comes from Vault
+            VaultSettingsSource(settings_cls),
             init_settings,
             env_settings,
             dotenv_settings,

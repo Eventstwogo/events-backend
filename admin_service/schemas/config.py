@@ -17,6 +17,10 @@ class ConfigOut(BaseModel):
         description="URL to the uploaded logo image.",
         examples=["config/logo/abcd1234.png"],
     )
+    default_password: Optional[str] = Field(
+        default=None,
+        title="Default Password",
+    )
     global_180_day_flag: bool = Field(
         default=...,
         title="Global 180-Day Flag",

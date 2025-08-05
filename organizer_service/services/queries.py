@@ -298,7 +298,7 @@ async def update_query_status_service(
 
     # Permission validation
     can_update = False
-    
+
     # Special handling for closing queries
     if request.query_status == QueryStatus.QUERY_CLOSED:
         if user_role in ["admin", "superadmin"]:
