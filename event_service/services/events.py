@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import List, Optional, Tuple
 
 from sqlalchemy import and_, asc, desc, func, or_, select
@@ -246,6 +246,114 @@ async def fetch_limited_events_without_filters(
     total = total_result.scalar()
 
     # Execute query
+    result = await db.execute(query)
+    events = list(result.scalars().all())
+    total = total if total is not None else 0
+
+    return events, total
+
+
+async def fetch_upcoming_events(
+    db: AsyncSession,
+) -> Tuple[List[Event], int]:
+    """
+    Fetch upcoming events based on start_date and end_date.
+    Returns events where:
+    - start_date >= today (events starting today or in the future)
+    - OR end_date >= today (events that are still ongoing)
+    - Only active events (event_status = false)
+    """
+    today = date.today()
+
+    # Build base query with relations
+    query = (
+        select(Event)
+        .options(
+            selectinload(Event.category),
+            selectinload(Event.subcategory),
+            selectinload(Event.organizer),
+        )
+        .filter(
+            and_(
+                # Only active events (event_status = false means published/active)
+                Event.event_status == False,
+                # Events that are upcoming or ongoing
+                or_(
+                    Event.start_date >= today,  # Events starting today or later
+                    Event.end_date >= today,  # Events that are still ongoing
+                ),
+            )
+        )
+        .order_by(asc(Event.start_date))
+    )  # Order by start date ascending
+
+    # Get total count with same filters
+    count_query = select(func.count(Event.event_id)).filter(
+        and_(
+            Event.event_status == False,
+            or_(Event.start_date >= today, Event.end_date >= today),
+        )
+    )
+
+    total_result = await db.execute(count_query)
+    total = total_result.scalar()
+
+    # Execute query
+    result = await db.execute(query)
+    events = list(result.scalars().all())
+    total = total if total is not None else 0
+
+    return events, total
+
+
+async def fetch_limited_events_with_filter(
+    db: AsyncSession, event_type: str = "all"
+) -> Tuple[List[Event], int]:
+    """
+    Fetch limited events based on event_type filter.
+
+    Args:
+        db: Database session
+        event_type: "all" for all events, "upcoming" for upcoming events only
+
+    Returns:
+        Tuple of (events_list, total_count)
+    """
+    today = date.today()
+
+    # Build base query with relations
+    query = select(Event).options(
+        selectinload(Event.category),
+        selectinload(Event.subcategory),
+        selectinload(Event.organizer),
+    )
+
+    # Build count query
+    count_query = select(func.count(Event.event_id))
+
+    # Apply filters based on event_type
+    if event_type == "upcoming":
+        # Filter for upcoming events only
+        filters = and_(
+            # Only active events (event_status = false means published/active)
+            Event.event_status == False,
+            # Events that are upcoming or ongoing
+            or_(
+                Event.start_date >= today,  # Events starting today or later
+                Event.end_date >= today,  # Events that are still ongoing
+            ),
+        )
+        query = query.filter(filters).order_by(asc(Event.start_date))
+        count_query = count_query.filter(filters)
+    else:
+        # For "all" or any other value, return all events
+        query = query.order_by(desc(Event.created_at))
+
+    # Get total count
+    total_result = await db.execute(count_query)
+    total = total_result.scalar()
+
+    # Execute main query
     result = await db.execute(query)
     events = list(result.scalars().all())
     total = total if total is not None else 0

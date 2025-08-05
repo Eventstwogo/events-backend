@@ -197,7 +197,6 @@ APP_NAME=Events2Go API
 VERSION=1.0.0
 ENVIRONMENT=development
 DEBUG=true
-FRONTEND_URL=http://localhost:3000
 
 # Database Configuration
 POSTGRES_HOST=localhost

@@ -92,14 +92,11 @@ async def forgot_password(
         expires_at=expires_at,
     )
 
-    # Step 6: Create the reset link
-    reset_link = f"{settings.FRONTEND_URL}/reset-password?email={email}&token={reset_token}"
-
     # Step 7: Send the password reset email
     send_admin_password_reset_email(
         email=user.email,
         username=user.username,
-        reset_link=reset_link,
+        reset_token=reset_token,
         expiry_minutes=60,  # 1 hour expiry
         ip_address=ip_address,
         request_time=datetime.now(timezone.utc).isoformat(),

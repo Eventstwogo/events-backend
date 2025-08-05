@@ -15,12 +15,13 @@ logger = get_logger(__name__)
 def send_admin_password_reset_email(
     email: EmailStr,
     username: str,
-    reset_link: str,
+    reset_token: str,
     ip_address: Optional[str] = None,
     request_time: Optional[str] = None,
     expiry_minutes: int = 60,  # Default to 1 hour
 ) -> bool:
     """Send admin password reset email."""
+    reset_link = f"{settings.ADMIN_FRONTEND_URL}/reset-password?email={email}&token={reset_token}"
     context = {
         "username": username,
         "email": email,
@@ -58,7 +59,7 @@ def send_admin_welcome_email(
         "email": email,
         "password": password,
         "role": role,
-        "welcome_url": f"{settings.FRONTEND_URL}/admin",
+        "welcome_url": f"{settings.ADMIN_FRONTEND_URL}/",
         "year": str(datetime.now(tz=timezone.utc).year),
         "logo_url": logo,
     }
@@ -85,7 +86,7 @@ def send_organizer_verification_email(
 ) -> bool:
     """Send verification email to organizer with token."""
     verification_link = (
-        f"{settings.FRONTEND_URL}/emailconfirmation?email={email}"
+        f"{settings.ORGANIZER_FRONTEND_URL}/emailconfirmation?email={email}"
         f"&token={verification_token}"
     )
 
@@ -135,7 +136,7 @@ def send_organizer_onboarding_email(
         "reference_number": reference_number,
         "status": status,
         "vendor_portal_url": organizer_portal_url
-        or f"{settings.FRONTEND_URL}/organizer",
+        or f"{settings.ORGANIZER_FRONTEND_URL}",
         "creation_date": datetime.now(tz=timezone.utc).strftime(
             "%B %d, %Y at %I:%M %p UTC"
         ),

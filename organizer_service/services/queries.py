@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from fastapi import HTTPException, Query, status
@@ -373,3 +373,113 @@ async def update_query_status_service(
             message=f"Failed to update query status: {str(e)}",
             log_error=True,
         )
+
+
+async def fetch_query_statistics(db: AsyncSession) -> Dict:
+    """
+    Fetch simple query statistics including counts by status and monthly growth.
+    """
+    from shared.core.logging_config import get_logger
+
+    logger = get_logger(__name__)
+    logger.info("Fetching query statistics")
+
+    # Get current date and calculate date ranges
+    today = date.today()
+    current_month_start = today.replace(day=1)
+
+    # Calculate previous month start
+    if current_month_start.month == 1:
+        previous_month_start = current_month_start.replace(
+            year=current_month_start.year - 1, month=12
+        )
+    else:
+        previous_month_start = current_month_start.replace(
+            month=current_month_start.month - 1
+        )
+
+    # Get counts for each query status
+    open_queries_query = select(func.count(OrganizerQuery.id)).filter(
+        OrganizerQuery.query_status == QueryStatus.QUERY_OPEN
+    )
+    open_queries_result = await db.execute(open_queries_query)
+    open_queries_count = open_queries_result.scalar() or 0
+
+    closed_queries_query = select(func.count(OrganizerQuery.id)).filter(
+        OrganizerQuery.query_status == QueryStatus.QUERY_CLOSED
+    )
+    closed_queries_result = await db.execute(closed_queries_query)
+    closed_queries_count = closed_queries_result.scalar() or 0
+
+    resolved_queries_query = select(func.count(OrganizerQuery.id)).filter(
+        OrganizerQuery.query_status == QueryStatus.QUERY_ANSWERED
+    )
+    resolved_queries_result = await db.execute(resolved_queries_query)
+    resolved_queries_count = resolved_queries_result.scalar() or 0
+
+    in_progress_queries_query = select(func.count(OrganizerQuery.id)).filter(
+        OrganizerQuery.query_status == QueryStatus.QUERY_IN_PROGRESS
+    )
+    in_progress_queries_result = await db.execute(in_progress_queries_query)
+    in_progress_queries_count = in_progress_queries_result.scalar() or 0
+
+    # Get current month open queries count
+    current_month_open_queries_query = select(
+        func.count(OrganizerQuery.id)
+    ).filter(
+        and_(
+            OrganizerQuery.query_status == QueryStatus.QUERY_OPEN,
+            OrganizerQuery.created_at >= current_month_start,
+        )
+    )
+    current_month_open_queries_result = await db.execute(
+        current_month_open_queries_query
+    )
+    current_month_open_queries = current_month_open_queries_result.scalar() or 0
+
+    # Get previous month open queries count
+    previous_month_open_queries_query = select(
+        func.count(OrganizerQuery.id)
+    ).filter(
+        and_(
+            OrganizerQuery.query_status == QueryStatus.QUERY_OPEN,
+            OrganizerQuery.created_at >= previous_month_start,
+            OrganizerQuery.created_at < current_month_start,
+        )
+    )
+    previous_month_open_queries_result = await db.execute(
+        previous_month_open_queries_query
+    )
+    previous_month_open_queries = (
+        previous_month_open_queries_result.scalar() or 0
+    )
+
+    # Calculate monthly growth percentage for open queries
+    if previous_month_open_queries > 0:
+        monthly_growth_percentage = round(
+            (
+                (current_month_open_queries - previous_month_open_queries)
+                / previous_month_open_queries
+            )
+            * 100,
+            2,
+        )
+    else:
+        # If no open queries in previous month, show 100% if current month has queries, else 0%
+        monthly_growth_percentage = (
+            100.0 if current_month_open_queries > 0 else 0.0
+        )
+
+    logger.info(
+        f"Query statistics calculated: open={open_queries_count}, closed={closed_queries_count}, resolved={resolved_queries_count}, in_progress={in_progress_queries_count}, growth={monthly_growth_percentage}%"
+    )
+
+    return {
+        "open_queries_count": open_queries_count,
+        "closed_queries_count": closed_queries_count,
+        "resolved_queries_count": resolved_queries_count,
+        "in_progress_queries_count": in_progress_queries_count,
+        "monthly_growth_percentage": monthly_growth_percentage,
+        "current_month_open_queries": current_month_open_queries,
+        "previous_month_open_queries": previous_month_open_queries,
+    }

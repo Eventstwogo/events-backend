@@ -15,7 +15,7 @@ from shared.utils.validators import (
 
 class ThreadMessage(BaseModel):
     type: Literal["query", "response", "followup"]
-    sender_type: Literal["organizer", "admin"]
+    sender_type: str  # Literal["organizer", "admin", "superadmin"]
     user_id: str
     username: Optional[str] = None
     message: str
@@ -241,3 +241,28 @@ class QueryStatsResponse(BaseModel):
     closed_queries: int
     my_queries: int
     assigned_to_me: int
+
+
+class QueryStatisticsResponse(BaseModel):
+    """Schema for simple query statistics response"""
+
+    open_queries_count: int = Field(..., description="Number of open queries")
+    closed_queries_count: int = Field(
+        ..., description="Number of closed queries"
+    )
+    resolved_queries_count: int = Field(
+        ..., description="Number of resolved queries"
+    )
+    in_progress_queries_count: int = Field(
+        ..., description="Number of in-progress queries"
+    )
+    monthly_growth_percentage: float = Field(
+        ...,
+        description="Percentage change in open queries created this month vs last month",
+    )
+    current_month_open_queries: int = Field(
+        ..., description="Number of open queries created in current month"
+    )
+    previous_month_open_queries: int = Field(
+        ..., description="Number of open queries created in previous month"
+    )

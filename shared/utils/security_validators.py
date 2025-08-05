@@ -102,16 +102,14 @@ def sanitize_input(content: Optional[str]) -> str | JSONResponse:
     """
     Validates user input:
     - Rejects if any HTML tags are present
-    - Rejects if dangerous SQL patterns
-    (quotes, semicolons, comments, or combined keywords) are present
-
-    Allows safe natural words like "drop", "select" in non-malicious contexts.
+    - Rejects if dangerous SQL patterns are present
+    - Allows natural use of apostrophes, quotes in normal text, and SQL keywords when not part of malicious patterns
 
     Args:
         content (Optional[str]): Raw user input
 
     Returns:
-        str: Trimmed valid string, raises HTTPException if invalid
+        str: Trimmed valid string, or JSONResponse with 400 status if invalid
     """
     if not content:
         return ""
@@ -126,18 +124,27 @@ def sanitize_input(content: Optional[str]) -> str | JSONResponse:
             log_error=False,
         )
 
-    # Check for common SQL injection characters and patterns
+    # Check for SQL injection patterns - more specific to avoid false positives
     forbidden_patterns = [
-        r"--",  # SQL comment
-        r";",  # SQL statement separator
-        r"'",
-        r'"',
-        r"`",
-        (
-            r"\b(SELECT|INSERT|UPDATE|DELETE|DROP|UNION|ALTER|CREATE|EXEC|TRUNCATE)\b"
-            r".*\b(FROM|TABLE|INTO|WHERE)\b"
-        ),
+        r"--\s*$",  # SQL comment at end of line
+        r"--\s+",  # SQL comment with space after
+        r";\s*(SELECT|INSERT|UPDATE|DELETE|DROP|UNION|ALTER|CREATE|EXEC|TRUNCATE)",  # Semicolon followed by SQL command
+        r"'\s*(OR|AND)\s+",  # Quote followed by logical operators
+        r'"\s*(OR|AND)\s+',  # Double quote followed by logical operators
+        r"'\s*=\s*'",  # Quote equals quote pattern
+        r'"\s*=\s*"',  # Double quote equals double quote pattern
+        r"'\s*(OR|AND)\s+.*\s*=",  # Classic injection: ' OR 1=1
+        r'"\s*(OR|AND)\s+.*\s*=',  # Classic injection: " OR 1=1
+        r"\bUNION\s+SELECT\b",  # Union-based injection
+        r"\bDROP\s+TABLE\b",  # Table dropping
+        r";\s*DROP\s+",  # Semicolon followed by DROP
+        r";\s*DELETE\s+",  # Semicolon followed by DELETE
+        r";\s*INSERT\s+",  # Semicolon followed by INSERT
+        r";\s*UPDATE\s+",  # Semicolon followed by UPDATE
+        r"'\s*;\s*",  # Quote followed by semicolon
+        r'"\s*;\s*',  # Double quote followed by semicolon
     ]
+
     for pattern in forbidden_patterns:
         if re.search(pattern, content, re.IGNORECASE):
             return api_response(

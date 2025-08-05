@@ -420,6 +420,13 @@ async def hard_delete_user(
     if not user:
         return user_not_found_response()
 
+    if user.role.role_name.lower() == "superadmin":
+        return api_response(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message="Superadmins cannot be permanently deleted.",
+            log_error=True,
+        )
+
     await db.delete(user)
     await db.commit()
 

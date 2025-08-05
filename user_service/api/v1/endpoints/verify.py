@@ -9,11 +9,10 @@ from sqlalchemy.orm import joinedload, selectinload
 from starlette.responses import JSONResponse
 
 from shared.core.api_response import api_response
-from shared.core.config import settings
 from shared.core.logging_config import get_logger
 from shared.db.models import User, UserVerification
 from shared.db.sessions.database import get_db
-from shared.utils.email import email_sender
+from shared.utils.email_utils.user_emails import send_email_verification_resend
 from shared.utils.exception_handlers import exception_handler
 from shared.utils.otp_and_tokens import (
     generate_otps,
@@ -203,24 +202,11 @@ async def resend_email_token(
 
     await db.commit()
 
-    # Create verification link
-    verification_link = (
-        f"{settings.FRONTEND_URL}/VerifyEmail?email={user.email}"
-        f"&token={verification_token}"
-    )
-
-    # Send verification email
-    email_context = {
-        "username": user.username,
-        "verification_link": verification_link,
-        "year": str(datetime.now(tz=timezone.utc).year),
-    }
-
-    email_sent = email_sender.send_email(
-        to=user.email,
-        subject="Verify Your Email Address",
-        template_file="user/email_verification.html",
-        context=email_context,
+    # Send verification email using the utility function
+    email_sent = send_email_verification_resend(
+        email=user.email,
+        username=user.username,
+        verification_token=verification_token,
     )
 
     if not email_sent:

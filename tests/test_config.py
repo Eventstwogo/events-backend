@@ -19,7 +19,6 @@ class AppTestSettings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     ENVIRONMENT: Literal["testing"] = "testing"
     DEBUG: bool = True
-    FRONTEND_URL: str = "http://localhost:3000"
     DESCRIPTION: str = (
         "Events2Go application for managing events and users, built with FastAPI."
     )
