@@ -7,7 +7,8 @@ FROM python:3.10.11-slim AS builder
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         build-essential \
-        libpq-dev && \
+        libpq-dev \
+        gettext-base && \
     rm -rf /var/lib/apt/lists/*
 
 # Set working directory for the builder stage
@@ -15,6 +16,9 @@ WORKDIR /app
 
 # Copy the requirements file first to leverage Docker layer caching
 COPY requirements.txt .
+
+# Clean NULL bytes and non-UTF-8 characters from requirements.txt
+RUN tr -d '\000' < requirements.txt | iconv -f utf-8 -t utf-8 -c > cleaned.txt && mv cleaned.txt requirements.txt
 
 # Upgrade pip and install Python dependencies globally (no virtualenv used)
 RUN pip install --upgrade pip && \
@@ -52,7 +56,7 @@ RUN useradd -m appuser && \
     chown -R appuser:appuser /app
 USER appuser
 
-# # Expose the port on which the FastAPI app will run
+# Expose the port on which the FastAPI app will run (optional)
 # EXPOSE 8000
 
 # Command to start the FastAPI application using uvicorn
