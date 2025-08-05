@@ -258,9 +258,7 @@ async def add_message_to_query(
         if not query.receiver_user_id:
             query.receiver_user_id = request.user_id
     else:
-        return api_response(
-            status.HTTP_403_FORBIDDEN, "Invalid user role", log_error=True
-        )
+        sender_type = user_role
 
     new_message = ThreadMessage(
         type=request.message_type,

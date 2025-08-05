@@ -107,6 +107,7 @@ async def reject_organizer(
 
     # Update values
     organizer.is_verified = 0
+    organizer.is_deleted = True
     business_profile.is_approved = ONBOARDING_REJECTED
     business_profile.reviewer_comment = reviewer_comment.strip()
 

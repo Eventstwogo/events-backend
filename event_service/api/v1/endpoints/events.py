@@ -18,7 +18,9 @@ from event_service.services.events import (
     fetch_events_grouped_by_subcategory,
     fetch_events_without_filters,
     fetch_latest_event_from_each_category,
+    fetch_limited_events_with_filter,
     fetch_limited_events_without_filters,
+    fetch_upcoming_events,
     update_event_status,
 )
 from event_service.services.response_builder import (
@@ -58,6 +60,33 @@ async def list_events(
 
 
 @router.get(
+    "/upcoming",
+    status_code=status.HTTP_200_OK,
+    response_model=EventListResponse,
+)
+@exception_handler
+async def list_upcoming_events(
+    db: AsyncSession = Depends(get_db),
+):
+    """List upcoming events based on start date and end date"""
+
+    # Fetch upcoming events
+    events, total = await fetch_upcoming_events(db)
+
+    # Convert to response format
+    event_responses = [EventResponse.model_validate(event) for event in events]
+
+    return api_response(
+        status_code=status.HTTP_200_OK,
+        message="Upcoming events retrieved successfully",
+        data={
+            "events": event_responses,
+            "total": total,
+        },
+    )
+
+
+@router.get(
     "/limited-list",
     status_code=status.HTTP_200_OK,
     response_model=LimitedEventListResponse,
@@ -82,6 +111,54 @@ async def limited_list_events(
     return api_response(
         status_code=status.HTTP_200_OK,
         message="Events retrieved successfully",
+        data={
+            "events": event_responses,
+            "total": total,
+        },
+    )
+
+
+@router.get(
+    "/limited-list/filter",
+    status_code=status.HTTP_200_OK,
+    response_model=LimitedEventListResponse,
+)
+@exception_handler
+async def limited_list_events_with_filter(
+    event_type: str = Query(
+        default="all",
+        description="Filter events by type: 'all' for all events, 'upcoming' for upcoming events only",
+        regex="^(all|upcoming)$",
+    ),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Get limited events with filter option.
+
+    Query Parameters:
+    - event_type: "all" (default) for all events, "upcoming" for upcoming events only
+
+    Returns limited event data: event_id, event_title, slug, card_image, dates, location, etc.
+    """
+
+    # Fetch events based on filter
+    events, total = await fetch_limited_events_with_filter(db, event_type)
+
+    # Convert to response format
+    event_responses = [
+        LimitedEventResponse.model_validate(event) for event in events
+    ]
+
+    # Determine message based on filter
+    message = (
+        "All events retrieved successfully"
+        if event_type == "all"
+        else "Upcoming events retrieved successfully"
+    )
+
+    return api_response(
+        status_code=status.HTTP_200_OK,
+        message=message,
         data={
             "events": event_responses,
             "total": total,

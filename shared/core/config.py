@@ -108,8 +108,9 @@ class Settings(BaseSettings):
     APP_HOST: str = "0.0.0.0"  # nosec B104
     APP_PORT: int = 8000
     LOG_LEVEL: str = "info"
-    DEBUG: bool = True
-    FRONTEND_URL: str = "http://localhost:3000"
+    ADMIN_FRONTEND_URL: str = "https://admin.events2go.com.au"
+    ORGANIZER_FRONTEND_URL: str = "https://organizer.events2go.com.au"
+    USERS_APPLICATION_FRONTEND_URL: str = "https://events2go.com.au"
     DESCRIPTION: str = (
         "Events2Go application for managing events and users, built with FastAPI."
     )

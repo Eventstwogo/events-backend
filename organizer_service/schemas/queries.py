@@ -15,7 +15,7 @@ from shared.utils.validators import (
 
 class ThreadMessage(BaseModel):
     type: Literal["query", "response", "followup"]
-    sender_type: Literal["organizer", "admin"]
+    sender_type: str  # Literal["organizer", "admin", "superadmin"]
     user_id: str
     username: Optional[str] = None
     message: str

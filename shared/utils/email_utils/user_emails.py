@@ -15,12 +15,13 @@ logger = get_logger(__name__)
 def send_password_reset_email(
     email: EmailStr,
     username: str,
-    reset_link: str,
+    reset_token: str,
     ip_address: Optional[str] = None,
     request_time: Optional[str] = None,
     expiry_minutes: int = 24,
 ) -> bool:
     """Send a password reset email to a user."""
+    reset_link = f"{settings.USERS_APPLICATION_FRONTEND_URL}/reset-password?email={email}&token={reset_token}"
     context = {
         "username": username,
         "email": email,
@@ -65,7 +66,7 @@ def send_user_verification_email(
         bool: True if email was sent successfully, False otherwise
     """
     verification_link = (
-        f"{settings.FRONTEND_URL}/VerifyEmail?email={email}"
+        f"{settings.USERS_APPLICATION_FRONTEND_URL}/VerifyEmail?email={email}"
         f"&token={verification_token}"
     )
 
@@ -73,7 +74,7 @@ def send_user_verification_email(
         "username": username,
         "email": email,
         "verification_link": verification_link,
-        "welcome_url": f"{settings.FRONTEND_URL}",
+        "welcome_url": f"{settings.USERS_APPLICATION_FRONTEND_URL}",
         "year": str(datetime.now(tz=timezone.utc).year),
         "expires_in_minutes": expires_in_minutes,
     }
@@ -87,5 +88,45 @@ def send_user_verification_email(
 
     if not success:
         logger.warning("Failed to send welcome email to %s", email)
+
+    return success
+
+
+def send_email_verification_resend(
+    email: EmailStr,
+    username: str,
+    verification_token: str,
+) -> bool:
+    """
+    Send a resend verification email to a user.
+
+    Args:
+        email: User's email address
+        username: User's username
+        verification_token: Email verification token
+
+    Returns:
+        bool: True if email was sent successfully, False otherwise
+    """
+    verification_link = (
+        f"{settings.USERS_APPLICATION_FRONTEND_URL}/VerifyEmail?email={email}"
+        f"&token={verification_token}"
+    )
+
+    email_context = {
+        "username": username,
+        "verification_link": verification_link,
+        "year": str(datetime.now(tz=timezone.utc).year),
+    }
+
+    success = email_sender.send_email(
+        to=email,
+        subject="Verify Your Email Address",
+        template_file="user/email_verification.html",
+        context=email_context,
+    )
+
+    if not success:
+        logger.warning("Failed to send verification resend email to %s", email)
 
     return success
