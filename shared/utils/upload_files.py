@@ -122,22 +122,25 @@ async def upload_file_to_s3(
 
 
 async def delete_file_from_s3(
-    file_path: str, delete_folder: bool = False
+    relative_path: str, delete_folder: bool = False
 ) -> bool:
     """
-    Delete a file or all files under a folder prefix in DigitalOcean Spaces.
+    Delete a file or folder from DigitalOcean Spaces using a relative path only.
 
     Args:
-        file_path (str): The S3 key or prefix to delete.
-        delete_folder (bool): If True, deletes all files under the
-        folder prefix.
+        relative_path (str): Relative S3 key (e.g., 'uploads/images/file.jpg').
+        delete_folder (bool): If True, deletes all files under that folder prefix.
 
     Returns:
-        bool: True if deletion was successful, False if no files matched.
+        bool: True if deleted successfully, False if nothing found (folder delete).
 
     Raises:
-        HTTPException: Raised if deletion fails.
+        HTTPException: If deletion fails due to an error.
     """
+    key = relative_path.strip("/\\")
+    if not key:
+        raise HTTPException(status_code=400, detail="Invalid file path")
+
     session = aioboto3.Session()
     async with session.client(
         "s3",
@@ -148,10 +151,10 @@ async def delete_file_from_s3(
     ) as s3_client:
         try:
             if delete_folder:
-                prefix = file_path.rstrip("/") + "/"
-                logger.info("Deleting all objects under folder: %s", prefix)
+                prefix = key.rstrip("/") + "/"
+                logger.info("Deleting all files under: %s", prefix)
                 continuation_token = None
-                deleted_any = False
+                deleted = False
 
                 while True:
                     list_kwargs = {
@@ -174,30 +177,33 @@ async def delete_file_from_s3(
                         Delete={"Objects": delete_keys},
                     )
                     logger.info(
-                        "Deleted %d files from %s", len(delete_keys), prefix
+                        "Deleted %d objects under %s", len(delete_keys), prefix
                     )
-                    deleted_any = True
+                    deleted = True
 
                     if not response.get("IsTruncated"):
                         break
                     continuation_token = response.get("NextContinuationToken")
 
-                return deleted_any
+                return deleted
 
+            # Delete a single file
+            logger.info("Attempting to delete file: %s", key)
             await s3_client.delete_object(
                 Bucket=settings.SPACES_BUCKET_NAME,
-                Key=file_path,
+                Key=key,
             )
-            logger.info("File deleted: %s", file_path)
+            logger.info("File deleted successfully: %s", key)
             return True
 
         except ClientError as e:
-            logger.error("S3 deletion error: %s", e)
+            logger.error("S3 ClientError: %s", e)
             raise HTTPException(
-                status_code=500, detail=f"Failed to delete file: {str(e)}"
-            ) from e
+                status_code=500,
+                detail=f"DigitalOcean Spaces deletion error: {str(e)}",
+            )
         except Exception as e:
-            logger.error("Unexpected error during deletion: %s", e)
+            logger.error("Unexpected error: %s", e)
             raise HTTPException(
                 status_code=500, detail="Unexpected error during file deletion."
-            ) from e
+            )
