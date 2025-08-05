@@ -1,6 +1,8 @@
+import os
 from typing import Dict
 
 import aiohttp
+import anyio
 
 
 class VaultError(Exception):
@@ -36,7 +38,7 @@ async def fetch_secrets_from_vault(
         }
 
         # Construct the full URL for the Vault API
-        url = f"{vault_url}/{secret_path}"
+        url = f"{vault_url}/v1/{secret_path}"
 
         # Perform an async GET request to fetch the secret data
         async with aiohttp.ClientSession() as session:
@@ -84,3 +86,35 @@ async def fetch_secrets_from_vault(
         raise VaultError(
             f"Unexpected error fetching secrets from Vault: {str(e)}"
         )
+
+
+def fetch_vault_secrets_sync() -> Dict[str, str]:
+    """
+    Sync wrapper to call async Vault fetcher and normalize keys.
+    Expects VAULT_URL, VAULT_TOKEN, and VAULT_SECRET_PATH as environment variables.
+    """
+    try:
+        vault_url = os.getenv("VAULT_URL", "https://vault.events2go.com.au")
+        vault_token = os.getenv("VAULT_TOKEN", "hvs.ATZ5B71yX4RmAjAB9dIoT6U7")
+        vault_secret_path = os.getenv("VAULT_SECRET_PATH", "kv/data/data")
+
+        if not all([vault_url, vault_token, vault_secret_path]):
+            raise VaultError(
+                "Vault URL, Token, or Secret Path is missing in environment variables"
+            )
+
+        secrets = anyio.run(
+            fetch_secrets_from_vault, vault_url, vault_token, vault_secret_path
+        )
+
+        # Inject into environment (optional)
+        for key, value in secrets.items():
+            if value is not None:
+                os.environ[key] = str(value)
+                print(f"Injected {key}: {value}")
+        return secrets
+    except VaultError as e:
+        if os.getenv("ENVIRONMENT", "development") != "production":
+            print(f"Warning: Vault fetch failed, using .env fallback: {e}")
+            return {}
+        raise

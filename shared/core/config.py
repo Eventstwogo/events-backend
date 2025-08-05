@@ -1,16 +1,95 @@
 import json
 import os
 from functools import lru_cache
-from typing import List, Literal
+from typing import Any, Dict, List, Literal, Tuple, Type
 
 from dotenv import load_dotenv
 from pydantic import SecretBytes
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import (
+    BaseSettings,
+    PydanticBaseSettingsSource,
+    SettingsConfigDict,
+)
 
+from shared.core.secrets import fetch_vault_secrets_sync
 from shared.keys.key_manager import KeyManager
 
-os.environ.pop("ENVIRONMENT", None)  # Prevent override
-load_dotenv(dotenv_path=".env.local", override=True)
+# # Development only
+# os.environ.pop("ENVIRONMENT", None)
+# load_dotenv(dotenv_path=".env.local", override=True)
+
+
+class VaultSettingsSource(PydanticBaseSettingsSource):
+    """
+    A custom Pydantic settings source that loads values from Vault.
+    Maps Vault keys to app settings keys.
+    """
+
+    def __init__(self, settings_cls: Type[BaseSettings]) -> None:
+        super().__init__(settings_cls)
+        self._vault_data = None
+
+    def _get_vault_data(self) -> Dict[str, Any]:
+        """Lazy load vault data to avoid multiple calls."""
+        if self._vault_data is None:
+            self._vault_data = fetch_vault_secrets_sync()
+        return self._vault_data
+
+    def get_field_value(
+        self, field: Any, field_name: str
+    ) -> Tuple[Any, str, bool]:
+        """
+        Get field value from Vault data.
+        Returns: (value, key, is_complex)
+        """
+        vault_data = self._get_vault_data()
+
+        # Map field names to vault keys
+        vault_key_mapping = {
+            "POSTGRES_USER": "DATABASE",
+            "POSTGRES_HOST": "DB_HOST",
+            "POSTGRES_PASSWORD": "DB_PASSWORD",
+            "POSTGRES_PORT": "DB_PORT",
+            "POSTGRES_DB": "SOURCE_DB_NAME",
+            "EMAIL_FROM": "SENDER_EMAIL",
+            "SMTP_PASSWORD": "SENDER_PASSWORD",
+            "SMTP_USER": "SMTP_LOGIN",
+            "SMTP_PORT": "SMTP_PORT",
+            "SMTP_HOST": "SMTP_SERVER",
+            "SPACES_ACCESS_KEY_ID": "SPACES_ACCESS_KEY",
+            "SPACES_BUCKET_NAME": "SPACES_BUCKET_NAME",
+            "SPACES_REGION_NAME": "SPACES_REGION_NAME",
+            "SPACES_SECRET_ACCESS_KEY": "SPACES_SECRET_KEY",
+        }
+
+        vault_key = vault_key_mapping.get(field_name)
+        if vault_key and vault_key in vault_data:
+            value = vault_data[vault_key]
+            return value, field_name, False
+
+        # Return None if field not found in vault
+        return None, field_name, False
+
+    def __call__(self) -> Dict[str, Any]:
+        """Legacy method for backward compatibility."""
+        vault_data = self._get_vault_data()
+
+        return {
+            "POSTGRES_USER": vault_data.get("DATABASE"),
+            "POSTGRES_HOST": vault_data.get("DB_HOST"),
+            "POSTGRES_PASSWORD": vault_data.get("DB_PASSWORD"),
+            "POSTGRES_PORT": vault_data.get("DB_PORT"),
+            "POSTGRES_DB": vault_data.get("SOURCE_DB_NAME"),
+            "EMAIL_FROM": vault_data.get("SENDER_EMAIL"),
+            "SMTP_PASSWORD": vault_data.get("SENDER_PASSWORD"),
+            "SMTP_USER": vault_data.get("SMTP_LOGIN"),
+            "SMTP_PORT": vault_data.get("SMTP_PORT"),
+            "SMTP_HOST": vault_data.get("SMTP_SERVER"),
+            "SPACES_ACCESS_KEY_ID": vault_data.get("SPACES_ACCESS_KEY"),
+            "SPACES_BUCKET_NAME": vault_data.get("SPACES_BUCKET_NAME"),
+            "SPACES_REGION_NAME": vault_data.get("SPACES_REGION_NAME"),
+            "SPACES_SECRET_ACCESS_KEY": vault_data.get("SPACES_SECRET_KEY"),
+        }
 
 
 class Settings(BaseSettings):
@@ -42,37 +121,26 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str = "postgres"
     POSTGRES_DB: str = "events2go"
 
-    @property
-    def database_url(self) -> str:
-        """Builds the SQLAlchemy-compatible database URL."""
-        return (
-            f"{self.POSTGRES_SCHEME}+{self.POSTGRES_DRIVER}://"
-            f"{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
-            f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
-        )
+    # === Email ===
+    SMTP_TLS: bool = True
+    SMTP_PORT: int = 587
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_USER: str = "your-email@gmail.com"
+    SMTP_PASSWORD: str = "your-smtp-password"
+    EMAIL_FROM: str = "your-email@gmail.com"
+    EMAIL_FROM_NAME: str = "Events2Go API"
+    EMAIL_TEMPLATES_DIR: str = "shared/templates"
+    SUPPORT_EMAIL: str = "support@events2go.com"
+
+    # === DigitalOcean Spaces ===
+    SPACES_REGION_NAME: str = "nyc3"
+    SPACES_ENDPOINT_URL: str = "https://nyc3.digitaloceanspaces.com"
+    SPACES_BUCKET_NAME: str = "events2go"
+    SPACES_ACCESS_KEY_ID: str = "spaces-access-key-id"
+    SPACES_SECRET_ACCESS_KEY: str = "spaces-secret-access-key"
 
     # === CORS ===
     ALLOWED_ORIGINS: str = "http://localhost,http://localhost:3000"
-
-    @property
-    def cors_origins(self) -> List[str]:
-        """
-        Parses ALLOWED_ORIGINS from either:
-        - A JSON list (e.g., '["http://localhost", "http://localhost:3000"]')
-        - Or a plain comma-separated string (e.g., 'http://localhost,http://localhost:3000')
-        """
-        try:
-            parsed = json.loads(self.ALLOWED_ORIGINS)
-            if isinstance(parsed, list):
-                return parsed
-        except json.JSONDecodeError:
-            pass
-
-        return [
-            origin.strip()
-            for origin in self.ALLOWED_ORIGINS.split(",")
-            if origin.strip()
-        ]
 
     # === Media ===
     MEDIA_ROOT: str = "media/"
@@ -99,17 +167,6 @@ class Settings(BaseSettings):
     EVENT_BANNER_IMAGE_UPLOAD_PATH: str = "events/{event_id}/banner_image"
     EVENT_EXTRA_IMAGES_UPLOAD_PATH: str = "events/{event_id}/extra_images"
 
-    # === Email ===
-    SMTP_TLS: bool = True
-    SMTP_PORT: int = 587
-    SMTP_HOST: str = "smtp.gmail.com"
-    SMTP_USER: str = "your-email@gmail.com"
-    SMTP_PASSWORD: str = "your-smtp-password"
-    EMAIL_FROM: str = "your-email@gmail.com"
-    EMAIL_FROM_NAME: str = "Events2Go API"
-    EMAIL_TEMPLATES_DIR: str = "shared/templates"
-    SUPPORT_EMAIL: str = "support@events2go.com"
-
     # === JWT ===
     JWT_ALGORITHM: str = "RS256"
     JWT_ACCESS_TOKEN_EXPIRE_SECONDS: int = 3600
@@ -119,31 +176,60 @@ class Settings(BaseSettings):
     JWT_AUDIENCE: str = "e2g-clients"
 
     # === AES256 Encryption ===
-    FERNET_KEY: str = "fernet-key"
+    FERNET_KEY: str = "75ncwG_cPEC45F60cDCKTzfM_eVO1bYTz3ieIOWv3mQ="
 
-    # === DigitalOcean Spaces ===
-    SPACES_REGION_NAME: str = "nyc3"
-    SPACES_ENDPOINT_URL: str = "https://nyc3.digitaloceanspaces.com"
-    SPACES_BUCKET_NAME: str = "events2go"
-    SPACES_ACCESS_KEY_ID: str = "spaces-access-key-id"
-    SPACES_SECRET_ACCESS_KEY: str = "spaces-secret-access-key"
+    # === Pydantic config ===
+    model_config = SettingsConfigDict(
+        env_file=".env.local",  # for local testing only
+        env_file_encoding="utf-8",
+        extra="allow",
+    )
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: Type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> Tuple[PydanticBaseSettingsSource, ...]:
+        return (
+            VaultSettingsSource(settings_cls),  # 👈 comes from Vault
+            init_settings,
+            env_settings,
+            dotenv_settings,
+            file_secret_settings,
+        )
 
     @property
     def spaces_public_url(self) -> str:
-        """
-        Returns the public base URL to access the DigitalOcean Spaces bucket.
-        Combines endpoint and bucket name.
-        """
         return (
             f"{self.SPACES_ENDPOINT_URL.rstrip('/')}/{self.SPACES_BUCKET_NAME}"
         )
 
-    # === Meta Configuration for Pydantic ===
-    model_config = SettingsConfigDict(
-        env_file=".env.local",
-        env_file_encoding="utf-8",
-        extra="allow",
-    )
+    @property
+    def database_url(self) -> str:
+        return (
+            f"{self.POSTGRES_SCHEME}+{self.POSTGRES_DRIVER}://"
+            f"{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
+            f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        )
+
+    @property
+    def cors_origins(self) -> List[str]:
+        try:
+            parsed = json.loads(self.ALLOWED_ORIGINS)
+            if isinstance(parsed, list):
+                return parsed
+        except json.JSONDecodeError:
+            pass
+
+        return [
+            origin.strip()
+            for origin in self.ALLOWED_ORIGINS.split(",")
+            if origin.strip()
+        ]
 
 
 # === Singleton accessor (ensures one instance only) ===
