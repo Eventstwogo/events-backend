@@ -2,6 +2,7 @@
 
 from datetime import datetime, timezone
 from typing import Optional
+from urllib.parse import quote
 
 from pydantic import EmailStr
 
@@ -21,7 +22,8 @@ def send_password_reset_email(
     expiry_minutes: int = 24,
 ) -> bool:
     """Send a password reset email to a user."""
-    reset_link = f"{settings.USERS_APPLICATION_FRONTEND_URL}/reset-password?email={email}&token={reset_token}"
+    encoded_email = quote(email, safe="")
+    reset_link = f"{settings.USERS_APPLICATION_FRONTEND_URL}/reset-password?email={encoded_email}&token={reset_token}"
     context = {
         "username": username,
         "email": email,
@@ -50,7 +52,6 @@ def send_user_verification_email(
     email: EmailStr,
     username: str,
     verification_token: str,
-    user_id: str,
     expires_in_minutes: int = 60,
 ) -> bool:
     """
@@ -65,8 +66,9 @@ def send_user_verification_email(
     Returns:
         bool: True if email was sent successfully, False otherwise
     """
+    encoded_email = quote(email, safe="")
     verification_link = (
-        f"{settings.USERS_APPLICATION_FRONTEND_URL}/VerifyEmail?email={email}"
+        f"{settings.USERS_APPLICATION_FRONTEND_URL}/VerifyEmail?email={encoded_email}"
         f"&token={verification_token}"
     )
 
@@ -108,8 +110,9 @@ def send_email_verification_resend(
     Returns:
         bool: True if email was sent successfully, False otherwise
     """
+    encoded_email = quote(email, safe="")
     verification_link = (
-        f"{settings.USERS_APPLICATION_FRONTEND_URL}/VerifyEmail?email={email}"
+        f"{settings.USERS_APPLICATION_FRONTEND_URL}/VerifyEmail?email={encoded_email}"
         f"&token={verification_token}"
     )
 

@@ -2,11 +2,24 @@ import json
 from datetime import date
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, File, Form, Path, UploadFile, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    Form,
+    Path,
+    UploadFile,
+    status,
+)
 from slugify import slugify
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
 
+from admin_service.services.user_service import (
+    get_user_by_id,
+    get_user_role_name,
+)
 from event_service.services.events import (
     check_category_and_subcategory_exists_using_joins,
     check_category_exists,
@@ -16,6 +29,7 @@ from event_service.services.events import (
     check_event_title_unique_for_update,
     check_organizer_exists,
     check_subcategory_exists,
+    fetch_category_by_id,
     fetch_event_by_id,
     update_event,
 )
@@ -39,6 +53,7 @@ from shared.core.api_response import api_response
 from shared.core.config import settings
 from shared.db.models import Event
 from shared.db.sessions.database import get_db
+from shared.utils.email_utils.admin_emails import send_event_creation_email
 from shared.utils.exception_handlers import exception_handler
 from shared.utils.file_uploads import (
     get_media_url,
@@ -656,6 +671,7 @@ async def update_event_with_images(
 )
 @exception_handler
 async def update_event_details(
+    background_tasks: BackgroundTasks,
     user_id: str = Form(..., description="User ID of the organizer"),
     event_id: str = Path(..., description="Event ID"),
     # Event details fields
@@ -692,6 +708,15 @@ async def update_event_details(
     Returns:
         JSONResponse: Success message with updated event data
     """
+    # Get user information for the email
+    user = await get_user_by_id(db, user_id)
+    if not user:
+        return api_response(
+            status_code=status.HTTP_404_NOT_FOUND,
+            message="User not found",
+            log_error=True,
+        )
+
     # Fetch the event and verify ownership
     event = await fetch_event_by_id(db, event_id)
     if not event:
@@ -771,6 +796,72 @@ async def update_event_details(
             message=f"Failed to update event: {str(e)}",
             log_error=True,
         )
+
+    # Send event creation email only if the event originally had no start_date and end_date
+    # and now both dates are being added for the first time
+    should_send_email = False
+
+    # Check if event originally had no dates and now has both dates after update
+    if (
+        updated_event.start_date
+        and updated_event.end_date
+        and ("start_date" in update_data or "end_date" in update_data)
+    ):
+
+        # Only send email if the event originally had no start_date AND no end_date
+        # This means dates are being added for the first time, not just updated
+        original_had_no_start_date = event.start_date is None
+        original_had_no_end_date = event.end_date is None
+
+        # Send email only if both dates were originally missing
+        should_send_email = (
+            original_had_no_start_date and original_had_no_end_date
+        )
+
+    if should_send_email:
+
+        try:
+            # Get user role to determine if admin or organizer
+            user_role_name = await get_user_role_name(db, user_id)
+            created_by_role = (
+                "organizer"
+                if user_role_name and user_role_name.lower() == "organizer"
+                else "admin"
+            )
+
+            organizer_email = user.email
+            organizer_name = user.username
+
+            # Get category information
+            event_category = "General"
+            if updated_event.category_id:
+                category = await fetch_category_by_id(
+                    db, updated_event.category_id
+                )
+                if category:
+                    event_category = category.category_name
+
+            # Format dates and times for email
+            event_start_date = updated_event.start_date.strftime("%B %d, %Y")
+            event_end_date = updated_event.end_date.strftime("%B %d, %Y")
+
+            # Add background task to send email
+            background_tasks.add_task(
+                send_event_creation_email,
+                email=organizer_email,
+                organizer_name=organizer_name,
+                event_title=updated_event.event_title,
+                event_id=updated_event.event_id,
+                event_start_date=event_start_date,
+                event_end_date=event_end_date,
+                event_location=updated_event.location,
+                event_category=event_category,
+                created_by_role=created_by_role,
+            )
+
+        except Exception as email_error:
+            # Log the error but don't fail the update operation
+            print(f"Failed to queue event creation email: {str(email_error)}")
 
     # Prepare response data
     response_data = {

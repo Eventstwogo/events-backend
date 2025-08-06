@@ -298,7 +298,7 @@
 
         <!-- Content -->
         <div class="content">
-            <p class="greeting">Hi {{ organizer_name }},</p>
+            <p class="greeting">Hi <strong>{{ organizer_name }}</strong>,</p>
 
             <p class="message">
                 Congratulations! Your organizer account has been approved and is now active. You can start creating and managing events on Events2Go.
@@ -307,20 +307,16 @@
             <div class="account-details">
                 <div class="details-title">Account Information</div>
                 <div class="detail-item">
-                    <span class="detail-label">Name:</span>
+                    <span class="detail-label"><strong>Name:</strong></span>
                     <span class="detail-value">{{ organizer_name }}</span>
                 </div>
                 <div class="detail-item">
-                    <span class="detail-label">Email:</span>
+                    <span class="detail-label"><strong>Email:</strong></span>
                     <span class="detail-value">{{ organizer_email }}</span>
                 </div>
                 <div class="detail-item">
-                    <span class="detail-label">Account Type:</span>
+                    <span class="detail-label"><strong>Account Type:</strong></span>
                     <span class="detail-value">Event Organizer</span>
-                </div>
-                <div class="detail-item">
-                    <span class="detail-label">Status:</span>
-                    <span class="detail-value">Active</span>
                 </div>
             </div>
 

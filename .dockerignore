@@ -13,8 +13,8 @@ env/
 .venv/
 
 # Environment and configuration files (sensitive data)
-.env
-*.env
+# .env
+# *.env
 
 # Log files (avoid transferring logs)
 *.log

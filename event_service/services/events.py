@@ -522,48 +522,99 @@ async def search_events(
     return events, total
 
 
-async def fetch_events_grouped_by_subcategory(
-    db: AsyncSession, category_slug: str, page: int = 1, per_page: int = 10
-) -> Tuple[List[Tuple[SubCategory, List[Event]]], int, int]:
+async def fetch_events_by_slug_comprehensive(
+    db: AsyncSession, slug: str, page: int = 1, per_page: int = 10
+) -> Tuple[List[Event], List[Event], int, int, Optional[str], Optional[str]]:
     """
-    Fetch events grouped by subcategories for a given category slug.
-    Returns only active events (event_status = false).
+    Comprehensive slug-based event fetching that checks both category and subcategory tables.
+
+    Logic:
+    - If event has both category_id and subcategory_id → goes to subcategory events
+    - If event has only category_id (no subcategory_id) → goes to category events
+
+    Args:
+        db: Database session
+        slug: The slug to search for in both category and subcategory tables
+        page: Page number for pagination
+        per_page: Items per page
 
     Returns:
-        - List[Tuple[SubCategory, List[Event]]]: List of (subcategory, events) tuples
-        - int: total_events
-        - int: total_subcategories
+        Tuple containing:
+        - List[Event]: Category events (events with only category_id, no subcategory_id)
+        - List[Event]: Subcategory events (events with subcategory_id)
+        - int: Total category events count
+        - int: Total subcategory events count
+        - Optional[str]: Matched category_id (if slug found in category table)
+        - Optional[str]: Matched subcategory_id (if slug found in subcategory table)
     """
 
-    # First check if category exists
+    slug_lower = slug.lower()
+    category_events = []
+    subcategory_events = []
+    total_category_events = 0
+    total_subcategory_events = 0
+    matched_category_id = None
+    matched_subcategory_id = None
+
+    # Calculate offset for pagination
+    offset = (page - 1) * per_page
+
+    # Step 1: Check if slug exists in category table
     category_query = select(Category).filter(
-        Category.category_slug == category_slug.lower()
+        Category.category_slug == slug_lower
     )
     category_result = await db.execute(category_query)
     category = category_result.scalars().first()
 
-    if not category:
-        return [], 0, 0
+    if category:
+        matched_category_id = category.category_id
 
-    # Get all subcategories for this category
-    subcategories_query = (
-        select(SubCategory)
-        .filter(SubCategory.category_id == category.category_id)
-        .order_by(SubCategory.subcategory_name)
+        # Get events that belong to this category but have NO subcategory (category_id only)
+        category_events_query = (
+            select(Event)
+            .options(
+                selectinload(Event.category),
+                selectinload(Event.subcategory),
+                selectinload(Event.organizer),
+                selectinload(Event.slots),
+            )
+            .filter(Event.category_id == category.category_id)
+            .filter(
+                Event.subcategory_id.is_(None)
+            )  # Only events without subcategory
+            .filter(Event.event_status.is_(False))  # Only active events
+            .order_by(desc(Event.created_at))
+            .offset(offset)
+            .limit(per_page)
+        )
+
+        category_events_result = await db.execute(category_events_query)
+        category_events = list(category_events_result.scalars().all())
+
+        # Get total count for category events (only those without subcategory)
+        category_count_query = (
+            select(func.count(Event.event_id))
+            .filter(Event.category_id == category.category_id)
+            .filter(
+                Event.subcategory_id.is_(None)
+            )  # Only events without subcategory
+            .filter(Event.event_status.is_(False))
+        )
+        category_count_result = await db.execute(category_count_query)
+        total_category_events = category_count_result.scalar() or 0
+
+    # Step 2: Check if slug exists in subcategory table
+    subcategory_query = select(SubCategory).filter(
+        SubCategory.subcategory_slug == slug_lower
     )
-    subcategories_result = await db.execute(subcategories_query)
-    subcategories = list(subcategories_result.scalars().all())
+    subcategory_result = await db.execute(subcategory_query)
+    subcategory = subcategory_result.scalars().first()
 
-    if not subcategories:
-        return [], 0, 0
+    if subcategory:
+        matched_subcategory_id = subcategory.subcategory_id
 
-    # Get active events for each subcategory
-    subcategory_events_list = []
-    total_events = 0
-
-    for subcategory in subcategories:
-        # Query active events for this subcategory
-        events_query = (
+        # Get all events for this subcategory (events with subcategory_id)
+        subcategory_events_query = (
             select(Event)
             .options(
                 selectinload(Event.category),
@@ -572,22 +623,76 @@ async def fetch_events_grouped_by_subcategory(
                 selectinload(Event.slots),
             )
             .filter(Event.subcategory_id == subcategory.subcategory_id)
+            .filter(Event.event_status.is_(False))  # Only active events
             .order_by(desc(Event.created_at))
+            .offset(offset)
+            .limit(per_page)
         )
 
-        # Apply active events filter (event_status = false)
-        events_query = events_query.filter(Event.event_status.is_(False))
+        subcategory_events_result = await db.execute(subcategory_events_query)
+        subcategory_events = list(subcategory_events_result.scalars().all())
 
-        events_result = await db.execute(events_query)
-        events = list(events_result.scalars().all())
+        # Get total count for subcategory events
+        subcategory_count_query = (
+            select(func.count(Event.event_id))
+            .filter(Event.subcategory_id == subcategory.subcategory_id)
+            .filter(Event.event_status.is_(False))
+        )
+        subcategory_count_result = await db.execute(subcategory_count_query)
+        total_subcategory_events = subcategory_count_result.scalar() or 0
 
-        if events:  # Only include subcategories that have active events
-            subcategory_events_list.append((subcategory, events))
-            total_events += len(events)
+    # If slug matches category, also get subcategory events for that category
+    if category and not subcategory:
+        # Get all subcategory events for this category (events with both category_id and subcategory_id)
+        category_subcategory_events_query = (
+            select(Event)
+            .options(
+                selectinload(Event.category),
+                selectinload(Event.subcategory),
+                selectinload(Event.organizer),
+                selectinload(Event.slots),
+            )
+            .filter(Event.category_id == category.category_id)
+            .filter(
+                Event.subcategory_id.is_not(None)
+            )  # Only events WITH subcategory
+            .filter(Event.event_status.is_(False))  # Only active events
+            .order_by(desc(Event.created_at))
+            .offset(offset)
+            .limit(per_page)
+        )
 
-    total_subcategories = len(subcategory_events_list)
+        category_subcategory_events_result = await db.execute(
+            category_subcategory_events_query
+        )
+        subcategory_events = list(
+            category_subcategory_events_result.scalars().all()
+        )
 
-    return subcategory_events_list, total_events, total_subcategories
+        # Get total count for subcategory events within this category
+        category_subcategory_count_query = (
+            select(func.count(Event.event_id))
+            .filter(Event.category_id == category.category_id)
+            .filter(
+                Event.subcategory_id.is_not(None)
+            )  # Only events WITH subcategory
+            .filter(Event.event_status.is_(False))
+        )
+        category_subcategory_count_result = await db.execute(
+            category_subcategory_count_query
+        )
+        total_subcategory_events = (
+            category_subcategory_count_result.scalar() or 0
+        )
+
+    return (
+        category_events,
+        subcategory_events,
+        total_category_events,
+        total_subcategory_events,
+        matched_category_id,
+        matched_subcategory_id,
+    )
 
 
 async def fetch_events_by_category_or_subcategory_slug(

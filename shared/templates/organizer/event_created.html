@@ -233,38 +233,33 @@
         <div class="content">
             <div class="success-badge">✓ Event Published</div>
 
-            <p class="greeting">Hi {{ organizer_name }},</p>
+            <p class="greeting">Hi <strong>{{ organizer_name }}</strong>,</p>
 
             <p class="message">
                 Great news! Your event has been successfully created and is now live on Events2Go. People can start discovering and registering for your event.
             </p>
 
             <div class="event-details">
-                <div class="event-title">{{ event_title }}</div>
+                <div class="event-title"><strong>{{ event_title }}</strong></div>
 
                 <div class="detail-item">
-                    <span class="detail-label">Event Date:</span>
+                    <span class="detail-label"><strong>Event Start Date:</strong></span>
                     <span class="detail-value">{{ event_date }}</span>
                 </div>
 
                 <div class="detail-item">
-                    <span class="detail-label">Event Time:</span>
-                    <span class="detail-value">{{ event_time }}</span>
+                    <span class="detail-label"><strong>Event End Date:</strong></span>
+                    <span class="detail-value">{{ event_date }}</span>
                 </div>
 
                 <div class="detail-item">
-                    <span class="detail-label">Location:</span>
+                    <span class="detail-label"><strong>Location:</strong></span>
                     <span class="detail-value">{{ event_location }}</span>
                 </div>
 
                 <div class="detail-item">
-                    <span class="detail-label">Category:</span>
+                    <span class="detail-label"><strong>Event Category:</strong></span>
                     <span class="detail-value">{{ event_category }}</span>
-                </div>
-
-                <div class="detail-item">
-                    <span class="detail-label">Event ID:</span>
-                    <span class="detail-value">#{{ event_id }}</span>
                 </div>
             </div>
 
@@ -272,9 +267,6 @@
             <div class="cta-container">
                 <a href="{{ event_url }}" class="cta-button">
                     View Event Page
-                </a>
-                <a href="{{ dashboard_url }}" class="cta-button secondary">
-                    Manage Event
                 </a>
             </div>
 
