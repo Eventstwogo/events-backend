@@ -1,5 +1,5 @@
 import json
-from datetime import date
+from datetime import date, timedelta
 from typing import List, Optional
 
 from fastapi import (
@@ -797,28 +797,34 @@ async def update_event_details(
             log_error=True,
         )
 
-    # Send event creation email only if the event originally had no start_date and end_date
-    # and now both dates are being added for the first time
     should_send_email = False
 
-    # Check if event originally had no dates and now has both dates after update
+    # print(f"Checking if sending email for event ID: {event_id}, should_send_email: {should_send_email}")
+
+    # Check if updated values include start_date/end_date AND they are now both present
     if (
         updated_event.start_date
         and updated_event.end_date
         and ("start_date" in update_data or "end_date" in update_data)
     ):
+        # Compare created_at and updated_at timestamps
+        created_at = event.created_at
+        updated_at = event.updated_at
 
-        # Only send email if the event originally had no start_date AND no end_date
-        # This means dates are being added for the first time, not just updated
-        original_had_no_start_date = event.start_date is None
-        original_had_no_end_date = event.end_date is None
+        # Compute the time difference
+        time_diff = updated_at - created_at
 
-        # Send email only if both dates were originally missing
-        should_send_email = (
-            original_had_no_start_date and original_had_no_end_date
-        )
+        # Check if it's within 2 minutes (you can adjust this window)
+        is_first_update = time_diff < timedelta(minutes=3)
+
+        # print(f"created_at: {created_at}, updated_at: {updated_at}, time_diff: {time_diff}")
+        # print(f"is_first_update: {is_first_update}")
+
+        should_send_email = is_first_update
+        # print(f"Should send email: {should_send_email}")
 
     if should_send_email:
+        # print(f"Sending event creation email for event ID: {event_id}, should_send_email: {should_send_email}")
 
         try:
             # Get user role to determine if admin or organizer
