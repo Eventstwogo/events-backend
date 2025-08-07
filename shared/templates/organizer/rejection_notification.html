@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Organizer Application Update - Events2Go</title>
+    <!--[if mso]>
+    <noscript>
+        <xml>
+            <o:OfficeDocumentSettings>
+                <o:PixelsPerInch>96</o:PixelsPerInch>
+            </o:OfficeDocumentSettings>
+        </xml>
+    </noscript>
+    <![endif]-->
+    <style>
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #24292f;
+            background-color: #f6f8fa;
+            margin: 0;
+            padding: 0;
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+
+        table {
+            border-collapse: collapse;
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
+        }
+
+        img {
+            border: 0;
+            height: auto;
+            line-height: 100%;
+            outline: none;
+            text-decoration: none;
+            -ms-interpolation-mode: bicubic;
+        }
+
+        /* Container */
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border: 1px solid #d1d9e0;
+            border-radius: 6px;
+        }
+
+        /* Header */
+        .header {
+            background-color: #ffffff;
+            padding: 32px 32px 0;
+            text-align: center;
+            border-bottom: 1px solid #d1d9e0;
+        }
+
+        .logo {
+            max-width: 120px;
+            height: auto;
+            margin-bottom: 16px;
+        }
+
+        .header-title {
+            color: #24292f;
+            font-size: 20px;
+            font-weight: 600;
+            margin: 0 0 32px 0;
+        }
+
+        /* Status Badge */
+        .status-badge {
+            display: inline-block;
+            background-color: #fef2f2;
+            color: #dc2626;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+            border: 1px solid #fecaca;
+        }
+
+        /* Content */
+        .content {
+            padding: 32px;
+            background-color: #ffffff;
+        }
+
+        .greeting {
+            font-size: 16px;
+            color: #24292f;
+            margin-bottom: 16px;
+        }
+
+        .message {
+            font-size: 14px;
+            color: #656d76;
+            line-height: 1.5;
+            margin-bottom: 24px;
+        }
+
+        .important-message {
+            background-color: #fef2f2;
+            border: 1px solid #fecaca;
+            border-left: 4px solid #dc2626;
+            border-radius: 6px;
+            padding: 16px;
+            margin: 24px 0;
+            font-size: 14px;
+            color: #991b1b;
+        }
+
+        /* CTA Button */
+        .cta-container {
+            text-align: center;
+            margin: 32px 0;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background-color: #0969da;
+            color: #ffffff !important;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 14px;
+            border: 1px solid rgba(27, 31, 36, 0.15);
+        }
+
+        .cta-button:hover {
+            background-color: #0550ae;
+        }
+
+        .cta-button.secondary {
+            background-color: #6f42c1;
+            margin-left: 8px;
+        }
+
+        .cta-button.secondary:hover {
+            background-color: #5a2d91;
+        }
+
+        /* Account Details */
+        .account-details {
+            background-color: #f6f8fa;
+            border: 1px solid #d1d9e0;
+            border-radius: 6px;
+            padding: 16px;
+            margin: 24px 0;
+        }
+
+        .details-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #24292f;
+            margin-bottom: 12px;
+        }
+
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+
+        .detail-label {
+            color: #656d76;
+        }
+
+        .detail-value {
+            color: #24292f;
+            font-weight: 500;
+        }
+
+        /* Admin Message */
+        .admin-message {
+            background-color: #fff7ed;
+            border: 1px solid #fed7aa;
+            border-left: 4px solid #ea580c;
+            border-radius: 6px;
+            padding: 16px;
+            margin: 24px 0;
+        }
+
+        .admin-message-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #c2410c;
+            margin-bottom: 8px;
+        }
+
+        .admin-message-text {
+            font-size: 12px;
+            color: #c2410c;
+            line-height: 1.4;
+        }
+
+        /* Improvement Tips */
+        .tips-section {
+            margin: 24px 0;
+        }
+
+        .tips-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #24292f;
+            margin-bottom: 16px;
+        }
+
+        .tips-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .tip-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 12px;
+            padding: 12px;
+            background-color: #f6f8fa;
+            border-radius: 6px;
+            border-left: 3px solid #0969da;
+        }
+
+        .tip-icon {
+            background-color: #0969da;
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 12px;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .tip-content {
+            flex: 1;
+        }
+
+        .tip-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #24292f;
+            margin-bottom: 4px;
+        }
+
+        .tip-desc {
+            font-size: 12px;
+            color: #656d76;
+            line-height: 1.4;
+        }
+
+        /* Info Section */
+        .info-section {
+            background-color: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-left: 3px solid #0ea5e9;
+            border-radius: 6px;
+            padding: 16px;
+            margin: 24px 0;
+        }
+
+        .info-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #24292f;
+            margin-bottom: 8px;
+        }
+
+        .info-text {
+            font-size: 12px;
+            color: #656d76;
+            line-height: 1.4;
+        }
+
+        /* Footer */
+        .footer {
+            background-color: #f6f8fa;
+            color: #656d76;
+            padding: 24px 32px;
+            text-align: center;
+            border-top: 1px solid #d1d9e0;
+            font-size: 12px;
+        }
+
+        .footer-text {
+            margin-bottom: 8px;
+        }
+
+        .footer-link {
+            color: #0969da;
+            text-decoration: none;
+        }
+
+        .footer-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive */
+        @media only screen and (max-width: 600px) {
+            .email-container {
+                width: 100% !important;
+                border-radius: 0 !important;
+                border-left: none !important;
+                border-right: none !important;
+            }
+
+            .header, .content, .footer {
+                padding-left: 16px !important;
+                padding-right: 16px !important;
+            }
+
+            .cta-button {
+                padding: 10px 16px !important;
+                font-size: 13px !important;
+                margin: 4px !important;
+                display: block !important;
+                margin-left: 0 !important;
+            }
+
+            .detail-item {
+                flex-direction: column;
+                gap: 4px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            {% if logo_url %}
+            <img src="{{ logo_url }}" alt="Events2Go" class="logo">
+            {% else %}
+            <img src="https://drive.google.com/uc?export=view&id=11A_iCjfgjonUXMhjptwsNk6FvzIqZRvi" alt="Events2Go" class="logo">
+            {% endif %}
+            <div class="status-badge">Application Update</div>
+            <h1 class="header-title">Organizer Application Status</h1>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <p class="greeting">Hi <strong>{{ organizer_name }}</strong>,</p>
+
+            <p class="message">
+                Thank you for your interest in becoming an organizer on Events2Go. After careful review of your application, we regret to inform you that we cannot approve your organizer account at this time.
+            </p>
+
+            <div class="important-message">
+                <strong>This decision is not final.</strong> We encourage you to review the feedback below and reapply once you've addressed the mentioned areas.
+            </div>
+
+            <div class="account-details">
+                <div class="details-title">Application Details</div>
+                <div class="detail-item">
+                    <span class="detail-label"><strong>Applicant Name:</strong></span>
+                    <span class="detail-value">{{ organizer_name }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label"><strong>Email:</strong></span>
+                    <span class="detail-value">{{ organizer_email }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label"><strong>Application Date:</strong></span>
+                    <span class="detail-value">{{ application_date }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label"><strong>Review Date:</strong></span>
+                    <span class="detail-value">{{ review_date }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label"><strong>Reviewed By:</strong></span>
+                    <span class="detail-value">{{ admin_name }}</span>
+                </div>
+            </div>
+
+            {% if admin_message %}
+            <div class="admin-message">
+                <div class="admin-message-title">Feedback from Admin</div>
+                <div class="admin-message-text">{{ admin_message }}</div>
+            </div>
+            {% endif %}
+
+            <!-- CTA Buttons -->
+            <div class="cta-container">
+                <a href="{{ reapply_url }}" class="cta-button">
+                    Submit New Application
+                </a>
+                <a href="{{ guidelines_url }}" class="cta-button secondary">
+                    View Guidelines
+                </a>
+            </div>
+
+            <!-- Improvement Tips -->
+            <div class="tips-section">
+                <h2 class="tips-title">Tips for Your Next Application</h2>
+                <ul class="tips-list">
+                    <li class="tip-item">
+                        <div class="tip-icon">💡</div>
+                        <div class="tip-content">
+                            <div class="tip-title">Complete your profile thoroughly</div>
+                            <div class="tip-desc">Provide detailed information about your organization, experience, and event planning background.</div>
+                        </div>
+                    </li>
+                    <li class="tip-item">
+                        <div class="tip-icon">📋</div>
+                        <div class="tip-content">
+                            <div class="tip-title">Include relevant experience</div>
+                            <div class="tip-desc">Share examples of events you've organized or your involvement in event management.</div>
+                        </div>
+                    </li>
+                    <li class="tip-item">
+                        <div class="tip-icon">🎯</div>
+                        <div class="tip-content">
+                            <div class="tip-title">Clarify your event goals</div>
+                            <div class="tip-desc">Explain what types of events you plan to create and how they'll benefit the community.</div>
+                        </div>
+                    </li>
+                    <li class="tip-item">
+                        <div class="tip-icon">📞</div>
+                        <div class="tip-content">
+                            <div class="tip-title">Provide valid contact information</div>
+                            <div class="tip-desc">Ensure all contact details are current and professional.</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="info-section">
+                <div class="info-title">Need Help?</div>
+                <div class="info-text">
+                    If you have questions about this decision or need guidance on improving your application, please don't hesitate to contact our support team. We're here to help you succeed.
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <div class="footer-text">
+                Questions? Contact our <a href="{{ support_url }}" class="footer-link">support team</a> for assistance.
+            </div>
+            <div class="footer-text">
+                © {{ year }} Events2Go. All rights reserved.
+            </div>
+        </div>
+    </div>
+</body>
+</html>

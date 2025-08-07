@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,6 +13,11 @@ from shared.constants import (
 from shared.core.api_response import api_response
 from shared.db.models import AdminUser, BusinessProfile
 from shared.db.sessions.database import get_db
+from shared.utils.email_utils.admin_emails import (
+    send_organizer_approval_notification,
+    send_organizer_rejection_notification,
+    send_organizer_review_notification,
+)
 from shared.utils.exception_handlers import exception_handler
 
 router = APIRouter()
@@ -22,6 +27,7 @@ router = APIRouter()
 @exception_handler
 async def approve_organizer(
     user_id: str,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
     # Fetch organizer
@@ -58,6 +64,16 @@ async def approve_organizer(
     db.add_all([organizer, business_profile])
     await db.commit()
 
+    # Send approval notification email in background
+    background_tasks.add_task(
+        send_organizer_approval_notification,
+        email=organizer.email,
+        organizer_name=organizer.username,
+        application_date=business_profile.timestamp.strftime("%B %d, %Y"),
+        admin_name="Events2Go Admin Team",
+        admin_message="Congratulations! Your application has been approved. Welcome to Events2Go!",
+    )
+
     return api_response(
         status_code=status.HTTP_200_OK,
         message="Organizer approved successfully",
@@ -69,6 +85,7 @@ async def approve_organizer(
 async def reject_organizer(
     user_id: str,
     reviewer_comment: str,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
     reviewer_comment = reviewer_comment.strip()
@@ -114,6 +131,16 @@ async def reject_organizer(
     db.add_all([organizer, business_profile])
     await db.commit()
 
+    # Send rejection notification email in background
+    background_tasks.add_task(
+        send_organizer_rejection_notification,
+        email=organizer.email,
+        organizer_name=organizer.username,
+        application_date=business_profile.timestamp.strftime("%B %d, %Y"),
+        admin_name="Events2Go Admin Team",
+        admin_message=reviewer_comment,
+    )
+
     return api_response(
         status_code=status.HTTP_200_OK,
         message="Organizer approval rejected successfully",
@@ -124,6 +151,7 @@ async def reject_organizer(
 @exception_handler
 async def under_review_organizer(
     user_id: str,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
     # Fetch organizer
@@ -155,6 +183,17 @@ async def under_review_organizer(
     business_profile.is_approved = ONBOARDING_UNDER_REVIEW
     db.add(business_profile)
     await db.commit()
+
+    # Send review notification email in background
+    background_tasks.add_task(
+        send_organizer_review_notification,
+        email=organizer.email,
+        organizer_name=organizer.username,
+        application_id=business_profile.ref_number,
+        application_date=business_profile.timestamp.strftime("%B %d, %Y"),
+        review_timeframe="1-2 business days",
+    )
+
     return api_response(status_code=status.HTTP_200_OK, message="Under review")
 
 

@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Application Under Review - Events2Go</title>
+    <!--[if mso]>
+    <noscript>
+        <xml>
+            <o:OfficeDocumentSettings>
+                <o:PixelsPerInch>96</o:PixelsPerInch>
+            </o:OfficeDocumentSettings>
+        </xml>
+    </noscript>
+    <![endif]-->
+    <style>
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #24292f;
+            background-color: #f6f8fa;
+            margin: 0;
+            padding: 0;
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+
+        table {
+            border-collapse: collapse;
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
+        }
+
+        img {
+            border: 0;
+            height: auto;
+            line-height: 100%;
+            outline: none;
+            text-decoration: none;
+            -ms-interpolation-mode: bicubic;
+        }
+
+        /* Container */
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border: 1px solid #d1d9e0;
+            border-radius: 6px;
+        }
+
+        /* Header */
+        .header {
+            background-color: #ffffff;
+            padding: 32px 32px 0;
+            text-align: center;
+            border-bottom: 1px solid #d1d9e0;
+        }
+
+        .logo {
+            max-width: 120px;
+            height: auto;
+            margin-bottom: 16px;
+        }
+
+        .header-title {
+            color: #24292f;
+            font-size: 20px;
+            font-weight: 600;
+            margin: 0 0 32px 0;
+        }
+
+        /* Status Badge */
+        .status-badge {
+            display: inline-block;
+            background-color: #fef3c7;
+            color: #d97706;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+            border: 1px solid #fbbf24;
+        }
+
+        /* Content */
+        .content {
+            padding: 32px;
+            background-color: #ffffff;
+        }
+
+        .greeting {
+            font-size: 16px;
+            color: #24292f;
+            margin-bottom: 16px;
+        }
+
+        .message {
+            font-size: 14px;
+            color: #656d76;
+            line-height: 1.5;
+            margin-bottom: 24px;
+        }
+
+        .highlight-message {
+            background-color: #fef3c7;
+            border: 1px solid #fbbf24;
+            border-left: 4px solid #f59e0b;
+            border-radius: 6px;
+            padding: 16px;
+            margin: 24px 0;
+            font-size: 14px;
+            color: #92400e;
+        }
+
+        /* Account Details */
+        .account-details {
+            background-color: #f6f8fa;
+            border: 1px solid #d1d9e0;
+            border-radius: 6px;
+            padding: 16px;
+            margin: 24px 0;
+        }
+
+        .details-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #24292f;
+            margin-bottom: 12px;
+        }
+
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+
+        .detail-label {
+            color: #656d76;
+        }
+
+        .detail-value {
+            color: #24292f;
+            font-weight: 500;
+        }
+
+        /* Timeline */
+        .timeline-section {
+            margin: 24px 0;
+        }
+
+        .timeline-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #24292f;
+            margin-bottom: 16px;
+        }
+
+        .timeline-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .timeline-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 12px;
+            padding: 12px;
+            background-color: #f6f8fa;
+            border-radius: 6px;
+            border-left: 3px solid #f59e0b;
+        }
+
+        .timeline-item.completed {
+            border-left-color: #16a34a;
+            background-color: #f0fdf4;
+        }
+
+        .timeline-item.current {
+            border-left-color: #f59e0b;
+            background-color: #fef3c7;
+        }
+
+        .timeline-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 12px;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .timeline-item.completed .timeline-icon {
+            background-color: #16a34a;
+            color: white;
+        }
+
+        .timeline-item.current .timeline-icon {
+            background-color: #f59e0b;
+            color: white;
+        }
+
+        .timeline-item.pending .timeline-icon {
+            background-color: #d1d5db;
+            color: #6b7280;
+        }
+
+        .timeline-content {
+            flex: 1;
+        }
+
+        .timeline-step-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #24292f;
+            margin-bottom: 4px;
+        }
+
+        .timeline-step-desc {
+            font-size: 12px;
+            color: #656d76;
+            line-height: 1.4;
+        }
+
+        /* Info Section */
+        .info-section {
+            background-color: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-left: 3px solid #0ea5e9;
+            border-radius: 6px;
+            padding: 16px;
+            margin: 24px 0;
+        }
+
+        .info-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #24292f;
+            margin-bottom: 8px;
+        }
+
+        .info-text {
+            font-size: 12px;
+            color: #656d76;
+            line-height: 1.4;
+        }
+
+        /* Footer */
+        .footer {
+            background-color: #f6f8fa;
+            color: #656d76;
+            padding: 24px 32px;
+            text-align: center;
+            border-top: 1px solid #d1d9e0;
+            font-size: 12px;
+        }
+
+        .footer-text {
+            margin-bottom: 8px;
+        }
+
+        .footer-link {
+            color: #0969da;
+            text-decoration: none;
+        }
+
+        .footer-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive */
+        @media only screen and (max-width: 600px) {
+            .email-container {
+                width: 100% !important;
+                border-radius: 0 !important;
+                border-left: none !important;
+                border-right: none !important;
+            }
+
+            .header, .content, .footer {
+                padding-left: 16px !important;
+                padding-right: 16px !important;
+            }
+
+            .detail-item {
+                flex-direction: column;
+                gap: 4px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            {% if logo_url %}
+            <img src="{{ logo_url }}" alt="Events2Go" class="logo">
+            {% else %}
+            <img src="https://drive.google.com/uc?export=view&id=11A_iCjfgjonUXMhjptwsNk6FvzIqZRvi" alt="Events2Go" class="logo">
+            {% endif %}
+            <div class="status-badge">⏳ Under Review</div>
+            <h1 class="header-title">Application Under Review</h1>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <p class="greeting">Hi <strong>{{ organizer_name }}</strong>,</p>
+
+            <p class="message">
+                Thank you for submitting your organizer application to Events2Go. We have received your application and it is currently under review by our admin team.
+            </p>
+
+            <div class="highlight-message">
+                <strong>📋 Your application is being reviewed</strong><br>
+                Our team is carefully evaluating your application. We'll notify you of the decision within {{ review_timeframe | default("3-5 business days") }}.
+            </div>
+
+            <div class="account-details">
+                <div class="details-title">Application Details</div>
+                <div class="detail-item">
+                    <span class="detail-label"><strong>Applicant Name:</strong></span>
+                    <span class="detail-value">{{ organizer_name }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label"><strong>Email:</strong></span>
+                    <span class="detail-value">{{ organizer_email }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label"><strong>Application Date:</strong></span>
+                    <span class="detail-value">{{ application_date }}</span>
+                </div>
+                <!-- <div class="detail-item">
+                    <span class="detail-label"><strong>Application ID:</strong></span>
+                    <span class="detail-value">{{ application_id }}</span>
+                </div> -->
+                <div class="detail-item">
+                    <span class="detail-label"><strong>Expected Response:</strong></span>
+                    <span class="detail-value">{{ expected_response_date }}</span>
+                </div>
+            </div>
+
+            <!-- Review Timeline -->
+            <div class="timeline-section">
+                <h2 class="timeline-title">Review Process</h2>
+                <ul class="timeline-list">
+                    <li class="timeline-item completed">
+                        <div class="timeline-icon">✓</div>
+                        <div class="timeline-content">
+                            <div class="timeline-step-title">Application Submitted</div>
+                            <div class="timeline-step-desc">Your application has been successfully received and logged in our system.</div>
+                        </div>
+                    </li>
+                    <li class="timeline-item current">
+                        <div class="timeline-icon">⏳</div>
+                        <div class="timeline-content">
+                            <div class="timeline-step-title">Under Admin Review</div>
+                            <div class="timeline-step-desc">Our admin team is currently reviewing your application and credentials.</div>
+                        </div>
+                    </li>
+                    <li class="timeline-item pending">
+                        <div class="timeline-icon">3</div>
+                        <div class="timeline-content">
+                            <div class="timeline-step-title">Decision & Notification</div>
+                            <div class="timeline-step-desc">You'll receive an email notification with the final decision.</div>
+                        </div>
+                    </li>
+                    <li class="timeline-item pending">
+                        <div class="timeline-icon">4</div>
+                        <div class="timeline-content">
+                            <div class="timeline-step-title">Account Activation (if approved)</div>
+                            <div class="timeline-step-desc">If approved, your organizer account will be activated immediately.</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="info-section">
+                <div class="info-title">What happens next?</div>
+                <div class="info-text">
+                    <strong>No action required from you.</strong> Our admin team will review your application and contact you with the decision. If we need any additional information, we'll reach out to you directly.
+                </div>
+            </div>
+
+            <div class="info-section">
+                <div class="info-title">Review Criteria</div>
+                <div class="info-text">
+                    We evaluate applications based on completeness of information, event planning experience, organization credibility, and alignment with our community guidelines. All applications are reviewed fairly and thoroughly.
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <div class="footer-text">
+                Questions about your application? Contact our <a href="{{ support_url }}" class="footer-link">support team</a>.
+            </div>
+            <div class="footer-text">
+                © {{ year }} Events2Go. All rights reserved.
+            </div>
+        </div>
+    </div>
+</body>
+</html>

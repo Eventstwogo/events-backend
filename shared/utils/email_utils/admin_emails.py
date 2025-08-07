@@ -1,6 +1,6 @@
 """Admin email functions for Events2Go."""
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from urllib.parse import quote
 
@@ -224,6 +224,185 @@ def send_event_creation_email(
             "Failed to send event creation email to %s for event %s",
             email,
             event_id,
+        )
+
+    return success
+
+
+def send_organizer_approval_notification(
+    email: EmailStr,
+    organizer_name: str,
+    application_date: str,
+    admin_name: str,
+    admin_message: Optional[str] = None,
+    dashboard_url: Optional[str] = None,
+    support_url: Optional[str] = None,
+    logo_url: Optional[str] = None,
+) -> bool:
+    """
+    Send organizer application approval notification email.
+
+    Args:
+        email: Organizer's email address
+        organizer_name: Name of the organizer
+        application_date: Date when application was submitted
+        admin_name: Name of the admin who approved the application
+        admin_message: Optional message from admin
+        dashboard_url: URL to organizer dashboard
+        support_url: URL to support page
+        logo_url: URL to company logo
+
+    Returns:
+        bool: True if email sent successfully, False otherwise
+    """
+    context = {
+        "organizer_name": organizer_name,
+        "organizer_email": email,
+        "application_date": application_date,
+        "approval_date": datetime.now(tz=timezone.utc).strftime(
+            "%B %d, %Y at %I:%M %p UTC"
+        ),
+        "admin_name": admin_name,
+        "admin_message": admin_message,
+        "dashboard_url": dashboard_url
+        or f"{settings.ORGANIZER_FRONTEND_URL}/dashboard",
+        "support_url": support_url
+        or f"{settings.ORGANIZER_FRONTEND_URL}/support",
+        "logo_url": logo_url,
+        "year": str(datetime.now(tz=timezone.utc).year),
+    }
+
+    success = email_sender.send_email(
+        to=email,
+        subject="🎉 Organizer Application Approved - Events2Go",
+        template_file="organizer/approval_notification.html",
+        context=context,
+    )
+
+    if not success:
+        logger.warning(
+            "Failed to send organizer approval notification email to %s", email
+        )
+
+    return success
+
+
+def send_organizer_rejection_notification(
+    email: EmailStr,
+    organizer_name: str,
+    application_date: str,
+    admin_name: str,
+    admin_message: Optional[str] = None,
+    reapply_url: Optional[str] = None,
+    guidelines_url: Optional[str] = None,
+    support_url: Optional[str] = None,
+    logo_url: Optional[str] = None,
+) -> bool:
+    """
+    Send organizer application rejection notification email.
+
+    Args:
+        email: Organizer's email address
+        organizer_name: Name of the organizer
+        application_date: Date when application was submitted
+        admin_name: Name of the admin who reviewed the application
+        admin_message: Optional feedback message from admin
+        reapply_url: URL to reapply for organizer status
+        guidelines_url: URL to organizer guidelines
+        support_url: URL to support page
+        logo_url: URL to company logo
+
+    Returns:
+        bool: True if email sent successfully, False otherwise
+    """
+    context = {
+        "organizer_name": organizer_name,
+        "organizer_email": email,
+        "application_date": application_date,
+        "review_date": datetime.now(tz=timezone.utc).strftime(
+            "%B %d, %Y at %I:%M %p UTC"
+        ),
+        "admin_name": admin_name,
+        "admin_message": admin_message,
+        "reapply_url": reapply_url
+        or f"{settings.ORGANIZER_FRONTEND_URL}/apply",
+        "guidelines_url": guidelines_url
+        or f"{settings.ORGANIZER_FRONTEND_URL}/guidelines",
+        "support_url": support_url
+        or f"{settings.ORGANIZER_FRONTEND_URL}/support",
+        "logo_url": logo_url,
+        "year": str(datetime.now(tz=timezone.utc).year),
+    }
+
+    success = email_sender.send_email(
+        to=email,
+        subject="Organizer Application Update - Events2Go",
+        template_file="organizer/rejection_notification.html",
+        context=context,
+    )
+
+    if not success:
+        logger.warning(
+            "Failed to send organizer rejection notification email to %s", email
+        )
+
+    return success
+
+
+def send_organizer_review_notification(
+    email: EmailStr,
+    organizer_name: str,
+    application_id: str,
+    application_date: str,
+    review_timeframe: str = "3-5 business days",
+    expected_response_date: Optional[str] = None,
+    support_url: Optional[str] = None,
+    logo_url: Optional[str] = None,
+) -> bool:
+    """
+    Send organizer application under review notification email.
+
+    Args:
+        email: Organizer's email address
+        organizer_name: Name of the organizer
+        application_id: Unique identifier for the application
+        application_date: Date when application was submitted
+        review_timeframe: Expected timeframe for review completion
+        expected_response_date: Expected date for response
+        support_url: URL to support page
+        logo_url: URL to company logo
+
+    Returns:
+        bool: True if email sent successfully, False otherwise
+    """
+    # Calculate expected response date if not provided
+    if not expected_response_date:
+        expected_date = datetime.now(tz=timezone.utc) + timedelta(days=2)
+        expected_response_date = expected_date.strftime("%B %d, %Y")
+
+    context = {
+        "organizer_name": organizer_name,
+        "organizer_email": email,
+        "application_id": application_id,
+        "application_date": application_date,
+        "review_timeframe": review_timeframe,
+        "expected_response_date": expected_response_date,
+        "support_url": support_url
+        or f"{settings.ORGANIZER_FRONTEND_URL}/support",
+        "logo_url": logo_url,
+        "year": str(datetime.now(tz=timezone.utc).year),
+    }
+
+    success = email_sender.send_email(
+        to=email,
+        subject="Application Received - Under Review | Events2Go",
+        template_file="organizer/review_notification.html",
+        context=context,
+    )
+
+    if not success:
+        logger.warning(
+            "Failed to send organizer review notification email to %s", email
         )
 
     return success
