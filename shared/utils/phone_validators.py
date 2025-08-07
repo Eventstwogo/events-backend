@@ -113,14 +113,14 @@ class PhoneValidator:
     """
 
     @staticmethod
-    def validate(phone_number: str, country: str = "US") -> str:
+    def validate(phone_number: str, country: str = "AU") -> str:
         """
         Validates the given phone number based on format, length,
         and country code.
 
         Args:
             phone_number (str): The input phone number.
-            country (str): The country code (default is "US").
+            country (str): The country code (default is "AU").
 
         Returns:
             str: The formatted phone number if valid.

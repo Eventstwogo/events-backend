@@ -36,7 +36,7 @@ from .categories import Category, SubCategory
 # Import models in dependency order to avoid circular imports at runtime
 # Models with no model dependencies
 from .config import Config
-from .enquiry import Enquiry, EnquiryStatus
+from .contact_us import ContactUs, ContactUsStatus
 from .events import Event, EventBooking, EventSlot
 
 # Models that depend on Organization Profile
@@ -78,9 +78,9 @@ __all__ = [
     "UserVerification",
     "UserPasswordReset",
     "UserDeviceSession",
-    # Enquiry Form
-    "Enquiry",
-    "EnquiryStatus",
+    # ContactUs Form
+    "ContactUs",
+    "ContactUsStatus",
     # Organizer Queries
     "OrganizerQuery",
     "QueryStatus",

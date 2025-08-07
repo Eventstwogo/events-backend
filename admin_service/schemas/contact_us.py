@@ -3,7 +3,7 @@ from typing import Optional
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
-from shared.db.models.enquiry import EnquiryStatus
+from shared.db.models.contact_us import ContactUsStatus
 from shared.utils.email_validators import EmailValidator
 from shared.utils.phone_validators import PhoneValidator
 from shared.utils.security_validators import contains_xss
@@ -15,87 +15,87 @@ from shared.utils.validators import (
 )
 
 
-class EnquiryResponse(BaseModel):
-    enquiry_id: int = Field(
+class ContactUsResponse(BaseModel):
+    contact_us_id: int = Field(
         ...,
-        title="Enquiry ID",
-        description="Unique identifier for the enquiry.",
+        title="ContactUs ID",
+        description="Unique identifier for the contact_us.",
     )
     firstname: str = Field(
         ...,
         title="First Name",
-        description="First name of the person making the enquiry.",
+        description="First name of the person making the contact_us.",
     )
     lastname: str = Field(
         ...,
         title="Last Name",
-        description="Last name of the person making the enquiry.",
+        description="Last name of the person making the contact_us.",
     )
     email: str = Field(
         ...,
         title="Email Address",
-        description="Email address of the person making the enquiry.",
+        description="Email address of the person making the contact_us.",
     )
     phone_number: Optional[str] = Field(
         None,
         title="Phone Number",
-        description="Phone number of the person making the enquiry.",
+        description="Phone number of the person making the contact_us.",
     )
     message: str = Field(
         ...,
         title="Message",
-        description="The enquiry message content.",
+        description="The contact_us message content.",
     )
-    enquiry_status: EnquiryStatus = Field(
+    contact_us_status: ContactUsStatus = Field(
         ...,
-        title="Enquiry Status",
-        description="Current status of the enquiry.",
+        title="ContactUs Status",
+        description="Current status of the contact_us.",
     )
     created_at: datetime = Field(
         ...,
         title="Created At",
-        description="Timestamp when the enquiry was created.",
+        description="Timestamp when the contact_us was created.",
     )
     updated_at: datetime = Field(
         ...,
         title="Updated At",
-        description="Timestamp when the enquiry was last updated.",
+        description="Timestamp when the contact_us was last updated.",
     )
 
     class Config:
         from_attributes = True
 
 
-class EnquiryCreateRequest(BaseModel):
+class ContactUsCreateRequest(BaseModel):
     firstname: str = Field(
         ...,
         title="First Name",
-        description="First name of the person making the enquiry.",
+        description="First name of the person making the contact_us.",
         min_length=1,
         max_length=100,
     )
     lastname: str = Field(
         ...,
         title="Last Name",
-        description="Last name of the person making the enquiry.",
+        description="Last name of the person making the contact_us.",
         min_length=1,
         max_length=100,
     )
     email: EmailStr = Field(
         ...,
         title="Email Address",
-        description="Email address of the person making the enquiry.",
+        description="Email address of the person making the contact_us.",
     )
     phone_number: Optional[str] = Field(
         None,
         title="Phone Number",
-        description="Phone number of the person making the enquiry.",
+        description="Phone number of the person making the contact_us.",
         max_length=20,
     )
     message: str = Field(
         ...,
         title="Message",
-        description="The enquiry message content.",
+        description="The contact_us message content.",
         min_length=1,
     )
 
@@ -167,7 +167,7 @@ class EnquiryCreateRequest(BaseModel):
             return None
         try:
             # Use PhoneValidator to validate and format the phone number
-            validated_phone = PhoneValidator.validate(v)
+            validated_phone = PhoneValidator.validate(v, country="AU")
             return validated_phone
         except Exception as e:
             # Convert HTTPException to ValueError for Pydantic
@@ -186,16 +186,16 @@ class EnquiryCreateRequest(BaseModel):
         return v
 
 
-class EnquiryUpdateRequest(BaseModel):
-    enquiry_status: Optional[EnquiryStatus] = Field(
+class ContactUsUpdateRequest(BaseModel):
+    contact_us_status: Optional[ContactUsStatus] = Field(
         None,
-        title="Enquiry Status",
-        description="New status for the enquiry.",
+        title="ContactUs Status",
+        description="New status for the contact_us.",
     )
 
-    @field_validator("enquiry_status")
+    @field_validator("contact_us_status")
     @classmethod
-    def validate_enquiry_status(cls, v):
-        if v is not None and v not in EnquiryStatus:
-            raise ValueError("Invalid enquiry status.")
+    def validate_contact_us_status(cls, v):
+        if v is not None and v not in ContactUsStatus:
+            raise ValueError("Invalid contact_us status.")
         return v

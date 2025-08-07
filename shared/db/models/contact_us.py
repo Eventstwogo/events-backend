@@ -8,19 +8,19 @@ from sqlalchemy.orm import Mapped, mapped_column
 from shared.db.models.base import EventsBase
 
 
-# Enum for enquiry status
-class EnquiryStatus(Enum):
+# Enum for contact_us status
+class ContactUsStatus(Enum):
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
     RESOLVED = "resolved"
     CLOSED = "closed"
 
 
-# Enquiry model
-class Enquiry(EventsBase):
-    __tablename__ = "e2genquiries"
+# ContactUs model
+class ContactUs(EventsBase):
+    __tablename__ = "e2gcontactus"
 
-    enquiry_id: Mapped[int] = mapped_column(
+    contact_us_id: Mapped[int] = mapped_column(
         primary_key=True, autoincrement=True
     )
     firstname: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -28,9 +28,9 @@ class Enquiry(EventsBase):
     email: Mapped[str] = mapped_column(String(255), nullable=False)
     phone_number: Mapped[str] = mapped_column(String(20), nullable=True)
     message: Mapped[str] = mapped_column(Text, nullable=False)
-    enquiry_status: Mapped[EnquiryStatus] = mapped_column(
-        SQLAlchemyEnum(EnquiryStatus),
-        default=EnquiryStatus.PENDING,
+    contact_us_status: Mapped[ContactUsStatus] = mapped_column(
+        SQLAlchemyEnum(ContactUsStatus),
+        default=ContactUsStatus.PENDING,
         nullable=False,
     )
     created_at: Mapped[DateTime] = mapped_column(
