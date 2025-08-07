@@ -65,20 +65,127 @@ class SettingsAnalytics(MetricData):
     )
 
 
+class AdminUsersAnalytics(MetricData):
+    """Analytics data for admin users."""
+
+    added_this_week: int = Field(
+        ..., description="Number of admin users added this week"
+    )
+
+
+class EventsAnalytics(MetricData):
+    """Analytics data for events."""
+
+    total_bookings: int = Field(..., description="Total event bookings")
+    added_this_month: int = Field(
+        ..., description="Number of events added this month"
+    )
+
+
+class OrganizersAnalytics(MetricData):
+    """Analytics data for organizers."""
+
+    approved: int = Field(..., description="Number of approved organizers")
+    pending: int = Field(..., description="Number of pending organizers")
+    registered_this_month: int = Field(
+        ..., description="Number of organizers registered this month"
+    )
+
+
+class QueriesAnalytics(MetricData):
+    """Analytics data for queries."""
+
+    resolved: int = Field(..., description="Number of resolved queries")
+    pending: int = Field(..., description="Number of pending queries")
+    created_this_week: int = Field(
+        ..., description="Number of queries created this week"
+    )
+
+
+class ContactUsAnalytics(MetricData):
+    """Analytics data for contact us submissions."""
+
+    resolved: int = Field(..., description="Number of resolved submissions")
+    pending: int = Field(..., description="Number of pending submissions")
+    submitted_this_week: int = Field(
+        ..., description="Number of submissions this week"
+    )
+
+
 class DashboardAnalytics(BaseModel):
     """Complete dashboard analytics response."""
 
     categories: CategoriesAnalytics = Field(
         ..., description="Categories analytics data"
     )
+    admin_users: AdminUsersAnalytics = Field(
+        ..., description="Admin users analytics data"
+    )
     users: UsersAnalytics = Field(..., description="Users analytics data")
+    events: EventsAnalytics = Field(..., description="Events analytics data")
+    organizers: OrganizersAnalytics = Field(
+        ..., description="Organizers analytics data"
+    )
     revenue: RevenueAnalytics = Field(..., description="Revenue analytics data")
+    queries: QueriesAnalytics = Field(..., description="Queries analytics data")
+    contact_us: ContactUsAnalytics = Field(
+        ..., description="Contact us analytics data"
+    )
     settings: SettingsAnalytics = Field(
         ..., description="Settings analytics data"
     )
-    generated_at: datetime = Field(
+    generated_at: str = Field(
         ..., description="Timestamp when analytics were generated"
     )
+
+
+class RecentQuery(BaseModel):
+    """Recent query information."""
+
+    id: int = Field(..., description="Query ID")
+    title: str = Field(..., description="Query title")
+    category: str = Field(..., description="Query category")
+    status: str = Field(..., description="Query status")
+    created_at: Optional[str] = Field(None, description="Creation timestamp")
+    updated_at: Optional[str] = Field(None, description="Last update timestamp")
+
+
+class RecentQueriesResponse(BaseModel):
+    """Response for recent queries endpoint."""
+
+    queries: list[RecentQuery] = Field(
+        ..., description="List of recent queries"
+    )
+    total: int = Field(..., description="Total number of queries returned")
+
+
+class RecentContact(BaseModel):
+    """Recent contact us submission information."""
+
+    id: int = Field(..., description="Contact submission ID")
+    name: str = Field(..., description="Contact person name")
+    email: str = Field(..., description="Contact email")
+    status: str = Field(..., description="Submission status")
+    created_at: Optional[str] = Field(None, description="Creation timestamp")
+
+
+class RecentContactsResponse(BaseModel):
+    """Response for recent contact us submissions endpoint."""
+
+    contacts: list[RecentContact] = Field(
+        ..., description="List of recent contacts"
+    )
+    total: int = Field(..., description="Total number of contacts returned")
+
+
+class SystemHealth(BaseModel):
+    """System health status information."""
+
+    database: str = Field(..., description="Database connection status")
+    api_services: str = Field(..., description="API services status")
+    last_backup: str = Field(..., description="Last backup information")
+    overall_status: str = Field(..., description="Overall system status")
+    timestamp: str = Field(..., description="Health check timestamp")
 
     class Config:
         """Pydantic configuration."""

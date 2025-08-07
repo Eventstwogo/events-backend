@@ -1,11 +1,23 @@
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-from sqlalchemy import case, func, select
+from sqlalchemy import case, desc, func, select
 from sqlalchemy.engine.row import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from shared.db.models import AdminUser, Category, Config, Event, User
+from shared.db.models import (
+    AdminUser,
+    BusinessProfile,
+    Category,
+    Config,
+    ContactUs,
+    ContactUsStatus,
+    Event,
+    EventBooking,
+    OrganizerQuery,
+    QueryStatus,
+    User,
+)
 
 
 async def get_admin_user_analytics(
@@ -109,11 +121,35 @@ async def get_dashboard_analytics(db: AsyncSession) -> Dict[str, Any]:
         db, current_week_start, last_week_start
     )
 
+    # Get events analytics
+    events_data = await _get_events_analytics(
+        db, current_month_start, last_month_start
+    )
+
+    # Get organizer analytics
+    organizers_data = await _get_organizers_analytics(
+        db, current_month_start, last_month_start
+    )
+
+    # Get queries analytics
+    queries_data = await _get_queries_analytics(
+        db, current_week_start, last_week_start
+    )
+
+    # Get contact us analytics
+    contact_us_data = await _get_contact_us_analytics(
+        db, current_week_start, last_week_start
+    )
+
     return {
         "categories": categories_data,
         "admin_users": admin_users_data,
         "users": users_data,
+        "events": events_data,
+        "organizers": organizers_data,
         "revenue": revenue_data,
+        "queries": queries_data,
+        "contact_us": contact_us_data,
         "settings": settings_data,
         "generated_at": now.isoformat(),
     }
@@ -377,4 +413,363 @@ async def _get_settings_analytics(
             if percentage_change > 0
             else "down" if percentage_change < 0 else "stable"
         ),
+    }
+
+
+async def _get_events_analytics(
+    db: AsyncSession, current_month_start: datetime, last_month_start: datetime
+) -> Dict[str, Any]:
+    """Get events analytics data."""
+
+    # Get total active events count
+    total_result = await db.execute(
+        select(func.count(Event.event_id)).where(Event.event_status.is_(False))
+    )
+    total_events = total_result.scalar() or 0
+
+    # Get events created this month
+    current_month_result = await db.execute(
+        select(func.count(Event.event_id)).where(
+            Event.created_at >= current_month_start,
+            Event.event_status.is_(False),
+        )
+    )
+    current_month_count = current_month_result.scalar() or 0
+
+    # Get events created last month
+    last_month_result = await db.execute(
+        select(func.count(Event.event_id)).where(
+            Event.created_at >= last_month_start,
+            Event.created_at < current_month_start,
+            Event.event_status.is_(False),
+        )
+    )
+    last_month_count = last_month_result.scalar() or 0
+
+    # Get total bookings
+    total_bookings_result = await db.execute(
+        select(func.count(EventBooking.booking_id))
+    )
+    total_bookings = total_bookings_result.scalar() or 0
+
+    # Calculate percentage change
+    if last_month_count > 0:
+        percentage_change = (
+            (current_month_count - last_month_count) / last_month_count
+        ) * 100
+    else:
+        percentage_change = 100.0 if current_month_count > 0 else 0.0
+
+    return {
+        "total": total_events,
+        "total_bookings": total_bookings,
+        "added_this_month": current_month_count,
+        "percentage_change": round(percentage_change, 1),
+        "trend": (
+            "up"
+            if percentage_change > 0
+            else "down" if percentage_change < 0 else "stable"
+        ),
+    }
+
+
+async def _get_organizers_analytics(
+    db: AsyncSession, current_month_start: datetime, last_month_start: datetime
+) -> Dict[str, Any]:
+    """Get organizers analytics data."""
+
+    # Get total business profiles
+    total_result = await db.execute(select(func.count(BusinessProfile.sno)))
+    total_organizers = total_result.scalar() or 0
+
+    # Get approved organizers
+    approved_result = await db.execute(
+        select(func.count(BusinessProfile.sno)).where(
+            BusinessProfile.is_approved == 1
+        )
+    )
+    approved_organizers = approved_result.scalar() or 0
+
+    # Get pending organizers
+    pending_result = await db.execute(
+        select(func.count(BusinessProfile.sno)).where(
+            BusinessProfile.is_approved == 0
+        )
+    )
+    pending_organizers = pending_result.scalar() or 0
+
+    # Get organizers registered this month
+    current_month_result = await db.execute(
+        select(func.count(BusinessProfile.sno)).where(
+            BusinessProfile.timestamp >= current_month_start
+        )
+    )
+    current_month_count = current_month_result.scalar() or 0
+
+    # Get organizers registered last month
+    last_month_result = await db.execute(
+        select(func.count(BusinessProfile.sno)).where(
+            BusinessProfile.timestamp >= last_month_start,
+            BusinessProfile.timestamp < current_month_start,
+        )
+    )
+    last_month_count = last_month_result.scalar() or 0
+
+    # Calculate percentage change
+    if last_month_count > 0:
+        percentage_change = (
+            (current_month_count - last_month_count) / last_month_count
+        ) * 100
+    else:
+        percentage_change = 100.0 if current_month_count > 0 else 0.0
+
+    return {
+        "total": total_organizers,
+        "approved": approved_organizers,
+        "pending": pending_organizers,
+        "registered_this_month": current_month_count,
+        "percentage_change": round(percentage_change, 1),
+        "trend": (
+            "up"
+            if percentage_change > 0
+            else "down" if percentage_change < 0 else "stable"
+        ),
+    }
+
+
+async def _get_queries_analytics(
+    db: AsyncSession, current_week_start: datetime, last_week_start: datetime
+) -> Dict[str, Any]:
+    """Get queries analytics data."""
+
+    # Get total queries count
+    total_result = await db.execute(select(func.count(OrganizerQuery.id)))
+    total_queries = total_result.scalar() or 0
+
+    # Get resolved queries
+    resolved_result = await db.execute(
+        select(func.count(OrganizerQuery.id)).where(
+            OrganizerQuery.query_status == QueryStatus.QUERY_ANSWERED
+        )
+    )
+    resolved_queries = resolved_result.scalar() or 0
+
+    # Get pending queries
+    pending_result = await db.execute(
+        select(func.count(OrganizerQuery.id)).where(
+            OrganizerQuery.query_status.in_(
+                [QueryStatus.QUERY_OPEN, QueryStatus.QUERY_IN_PROGRESS]
+            )
+        )
+    )
+    pending_queries = pending_result.scalar() or 0
+
+    # Get queries created this week
+    current_week_result = await db.execute(
+        select(func.count(OrganizerQuery.id)).where(
+            OrganizerQuery.created_at >= current_week_start
+        )
+    )
+    current_week_count = current_week_result.scalar() or 0
+
+    # Get queries created last week
+    last_week_result = await db.execute(
+        select(func.count(OrganizerQuery.id)).where(
+            OrganizerQuery.created_at >= last_week_start,
+            OrganizerQuery.created_at < current_week_start,
+        )
+    )
+    last_week_count = last_week_result.scalar() or 0
+
+    # Calculate percentage change
+    if last_week_count > 0:
+        percentage_change = (
+            (current_week_count - last_week_count) / last_week_count
+        ) * 100
+    else:
+        percentage_change = 100.0 if current_week_count > 0 else 0.0
+
+    return {
+        "total": total_queries,
+        "resolved": resolved_queries,
+        "pending": pending_queries,
+        "created_this_week": current_week_count,
+        "percentage_change": round(percentage_change, 1),
+        "trend": (
+            "up"
+            if percentage_change > 0
+            else "down" if percentage_change < 0 else "stable"
+        ),
+    }
+
+
+async def _get_contact_us_analytics(
+    db: AsyncSession, current_week_start: datetime, last_week_start: datetime
+) -> Dict[str, Any]:
+    """Get contact us analytics data."""
+
+    # Get total contact us submissions
+    total_result = await db.execute(select(func.count(ContactUs.contact_us_id)))
+    total_contacts = total_result.scalar() or 0
+
+    # Get resolved contact us submissions
+    resolved_result = await db.execute(
+        select(func.count(ContactUs.contact_us_id)).where(
+            ContactUs.contact_us_status == ContactUsStatus.RESOLVED
+        )
+    )
+    resolved_contacts = resolved_result.scalar() or 0
+
+    # Get pending contact us submissions
+    pending_result = await db.execute(
+        select(func.count(ContactUs.contact_us_id)).where(
+            ContactUs.contact_us_status.in_(
+                [ContactUsStatus.PENDING, ContactUsStatus.IN_PROGRESS]
+            )
+        )
+    )
+    pending_contacts = pending_result.scalar() or 0
+
+    # Get contact us submissions this week
+    current_week_result = await db.execute(
+        select(func.count(ContactUs.contact_us_id)).where(
+            ContactUs.created_at >= current_week_start
+        )
+    )
+    current_week_count = current_week_result.scalar() or 0
+
+    # Get contact us submissions last week
+    last_week_result = await db.execute(
+        select(func.count(ContactUs.contact_us_id)).where(
+            ContactUs.created_at >= last_week_start,
+            ContactUs.created_at < current_week_start,
+        )
+    )
+    last_week_count = last_week_result.scalar() or 0
+
+    # Calculate percentage change
+    if last_week_count > 0:
+        percentage_change = (
+            (current_week_count - last_week_count) / last_week_count
+        ) * 100
+    else:
+        percentage_change = 100.0 if current_week_count > 0 else 0.0
+
+    return {
+        "total": total_contacts,
+        "resolved": resolved_contacts,
+        "pending": pending_contacts,
+        "submitted_this_week": current_week_count,
+        "percentage_change": round(percentage_change, 1),
+        "trend": (
+            "up"
+            if percentage_change > 0
+            else "down" if percentage_change < 0 else "stable"
+        ),
+    }
+
+
+async def get_recent_queries(
+    db: AsyncSession, limit: int = 10
+) -> List[Dict[str, Any]]:
+    """Get recent queries for dashboard display."""
+
+    result = await db.execute(
+        select(
+            OrganizerQuery.id,
+            OrganizerQuery.title,
+            OrganizerQuery.category,
+            OrganizerQuery.query_status,
+            OrganizerQuery.created_at,
+            OrganizerQuery.updated_at,
+        )
+        .order_by(desc(OrganizerQuery.created_at))
+        .limit(limit)
+    )
+
+    queries = result.all()
+
+    return [
+        {
+            "id": query.id,
+            "title": query.title,
+            "category": query.category,
+            "status": (
+                query.query_status.value if query.query_status else "unknown"
+            ),
+            "created_at": (
+                query.created_at.isoformat() if query.created_at else None
+            ),
+            "updated_at": (
+                query.updated_at.isoformat() if query.updated_at else None
+            ),
+        }
+        for query in queries
+    ]
+
+
+async def get_recent_contact_us(
+    db: AsyncSession, limit: int = 10
+) -> List[Dict[str, Any]]:
+    """Get recent contact us submissions for dashboard display."""
+
+    result = await db.execute(
+        select(
+            ContactUs.contact_us_id,
+            ContactUs.firstname,
+            ContactUs.lastname,
+            ContactUs.email,
+            ContactUs.contact_us_status,
+            ContactUs.created_at,
+        )
+        .order_by(desc(ContactUs.created_at))
+        .limit(limit)
+    )
+
+    contacts = result.all()
+
+    return [
+        {
+            "id": contact.contact_us_id,
+            "name": f"{contact.firstname} {contact.lastname}",
+            "email": contact.email,
+            "status": (
+                contact.contact_us_status.value
+                if contact.contact_us_status
+                else "unknown"
+            ),
+            "created_at": (
+                contact.created_at.isoformat() if contact.created_at else None
+            ),
+        }
+        for contact in contacts
+    ]
+
+
+async def get_system_health(db: AsyncSession) -> Dict[str, Any]:
+    """Get system health status."""
+
+    try:
+        # Test database connection
+        await db.execute(select(1))
+        database_status = "connected"
+    except Exception:
+        database_status = "disconnected"
+
+    # Get latest backup info (placeholder - implement based on your backup strategy)
+    # This could query a backup_logs table or check file system
+    last_backup = "Not configured"  # Replace with actual backup check
+
+    # API services status (always running if this function executes)
+    api_status = "running"
+
+    # Overall status
+    overall_status = "online" if database_status == "connected" else "degraded"
+
+    return {
+        "database": database_status,
+        "api_services": api_status,
+        "last_backup": last_backup,
+        "overall_status": overall_status,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }

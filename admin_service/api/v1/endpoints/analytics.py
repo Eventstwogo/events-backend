@@ -1,13 +1,23 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
 
+from admin_service.schemas.analytics import (
+    DashboardAnalytics,
+    RecentContactsResponse,
+    RecentQueriesResponse,
+    SystemHealth,
+    UserAnalyticsResponse,
+)
 from admin_service.services.analytics import (
     get_admin_user_analytics,
     get_daily_registrations,
     get_dashboard_analytics,
+    get_recent_contact_us,
+    get_recent_queries,
+    get_system_health,
 )
 from shared.core.api_response import api_response
 from shared.db.models import AdminUser
@@ -53,7 +63,9 @@ async def user_analytics(
 
 
 @router.get(
-    "/dashboard", summary="Get dashboard analytics", response_model=None
+    "/dashboard",
+    summary="Get dashboard analytics",
+    response_model=DashboardAnalytics,
 )
 @exception_handler
 async def dashboard_analytics(
@@ -80,4 +92,91 @@ async def dashboard_analytics(
         status_code=status.HTTP_200_OK,
         message="Dashboard analytics fetched successfully.",
         data=analytics_data,
+    )
+
+
+@router.get(
+    "/queries/recent",
+    summary="Get recent queries",
+    response_model=RecentQueriesResponse,
+)
+@exception_handler
+async def recent_queries(
+    current_user: Annotated[AdminUser, Depends(get_current_active_user)],
+    db: AsyncSession = Depends(get_db),
+    limit: int = Query(
+        10, ge=1, le=50, description="Maximum number of queries to return"
+    ),
+) -> JSONResponse:
+    """
+    Get recent organizer queries for dashboard display.
+
+    Args:
+        limit: Maximum number of recent queries to return (default: 10)
+
+    Returns:
+        JSONResponse: List of recent queries with basic information
+    """
+    queries_data = await get_recent_queries(db, limit=limit)
+
+    return api_response(
+        status_code=status.HTTP_200_OK,
+        message="Recent queries fetched successfully.",
+        data={"queries": queries_data, "total": len(queries_data)},
+    )
+
+
+@router.get(
+    "/contact-us/recent",
+    summary="Get recent contact us submissions",
+    response_model=RecentContactsResponse,
+)
+@exception_handler
+async def recent_contact_us(
+    current_user: Annotated[AdminUser, Depends(get_current_active_user)],
+    db: AsyncSession = Depends(get_db),
+    limit: int = Query(
+        10, ge=1, le=50, description="Maximum number of submissions to return"
+    ),
+) -> JSONResponse:
+    """
+    Get recent contact us submissions for dashboard display.
+
+    Args:
+        limit: Maximum number of recent submissions to return (default: 10)
+
+    Returns:
+        JSONResponse: List of recent contact us submissions with basic information
+    """
+    contact_data = await get_recent_contact_us(db, limit=limit)
+
+    return api_response(
+        status_code=status.HTTP_200_OK,
+        message="Recent contact us submissions fetched successfully.",
+        data={"contacts": contact_data, "total": len(contact_data)},
+    )
+
+
+@router.get(
+    "/system/health",
+    summary="Get system health status",
+    response_model=SystemHealth,
+)
+@exception_handler
+async def system_health(
+    current_user: Annotated[AdminUser, Depends(get_current_active_user)],
+    db: AsyncSession = Depends(get_db),
+) -> JSONResponse:
+    """
+    Get system health status including database connectivity, API status, and backup information.
+
+    Returns:
+        JSONResponse: System health status information
+    """
+    health_data = await get_system_health(db)
+
+    return api_response(
+        status_code=status.HTTP_200_OK,
+        message="System health status fetched successfully.",
+        data=health_data,
     )
