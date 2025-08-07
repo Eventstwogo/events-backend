@@ -221,6 +221,10 @@ class Settings(BaseSettings):
             f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         )
 
+    # @property
+    # def database_url(self) -> str:
+    #     return "postgresql+asyncpg://postgres:postgres@localhost:5432/events2go"
+
     @property
     def cors_origins(self) -> List[str]:
         try:

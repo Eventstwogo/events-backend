@@ -11,7 +11,6 @@ from fastapi import (
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from shared.core.api_response import api_response
 from shared.core.config import PRIVATE_KEY, PUBLIC_KEY, settings
@@ -38,6 +37,7 @@ from user_service.services.response_builders import (
 from user_service.services.session_management import (
     SessionManager,
 )
+from user_service.services.user_service import fetch_user_by_email
 from user_service.utils.auth import (
     create_jwt_token,
     revoke_token,
@@ -46,14 +46,6 @@ from user_service.utils.auth import (
 logger = get_logger(__name__)
 
 router = APIRouter()
-
-
-async def fetch_user_by_email(db: AsyncSession, email: str) -> User | None:
-    query = User.by_email_query(email.lower()).options(
-        selectinload(User.verification)
-    )
-    result = await db.execute(query)
-    return result.scalar_one_or_none()
 
 
 # OAuth2 scheme for token authentication

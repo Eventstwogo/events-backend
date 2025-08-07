@@ -484,6 +484,37 @@ def is_valid_username(
     return bool(re.match(pattern, value))
 
 
+def is_valid_username_for_user(username: str) -> bool:
+    """
+    Validates a username based on rules:
+    - Length between 3 and 30 characters
+    - Starts with a letter
+    - Contains only letters, numbers, dots, underscores, and hyphens
+    - No consecutive special characters like __, .., --
+    - Cannot end with special character
+    - No reserved usernames
+    """
+
+    # Reserved usernames
+    RESERVED_USERNAMES = {"admin", "root", "support", "null", "api"}
+
+    # Trim and lowercase
+    username = username.strip().lower()
+
+    # Length check
+    if not (3 <= len(username) <= 32):
+        return False
+
+    # Reserved username check
+    if username in RESERVED_USERNAMES:
+        return False
+
+    # Regex: no consecutive symbols, must start with letter, only valid characters
+    USERNAME_REGEX = r"^(?!.*[_.-]{2})(?!.*[_.-]$)[a-zA-Z][a-zA-Z0-9_.-]{2,31}$"
+
+    return bool(re.fullmatch(USERNAME_REGEX, username))
+
+
 # =============================================================================
 # UTILITY FUNCTIONS
 # =============================================================================

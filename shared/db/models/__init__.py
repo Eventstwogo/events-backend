@@ -37,7 +37,7 @@ from .categories import Category, SubCategory
 # Models with no model dependencies
 from .config import Config
 from .enquiry import Enquiry, EnquiryStatus
-from .events import Event, EventSlot
+from .events import Event, EventBooking, EventSlot
 
 # Models that depend on Organization Profile
 from .organizer import BusinessProfile, OrganizerQuery, QueryStatus
@@ -60,6 +60,7 @@ __all__ = [
     "SubCategory",
     # Events
     "Event",
+    "EventBooking",
     "EventSlot",
     # Role-Based Access Control
     "Role",

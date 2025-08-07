@@ -29,15 +29,6 @@ admin_router.include_router(
     password.router, prefix="/admin", tags=["Admin Password Management"]
 )
 admin_router.include_router(
-    token.router, prefix="/admin/token", tags=["Admin Token Management"]
-)
-admin_router.include_router(
-    session.router, prefix="/admin/sessions", tags=["Admin Session Management"]
-)
-admin_router.include_router(
-    my_session.router, prefix="/admin/me/sessions", tags=["My Admin Session"]
-)
-admin_router.include_router(
     profile.router, prefix="/admin/profile", tags=["Admin Profile Management"]
 )
 admin_router.include_router(
@@ -50,4 +41,13 @@ admin_router.include_router(
 )
 admin_router.include_router(
     enquiry.router, prefix="/admin/enquiries", tags=["Admin Enquiry Management"]
+)
+admin_router.include_router(
+    token.router, prefix="/admin/token", tags=["Admin Token Management"]
+)
+admin_router.include_router(
+    session.router, prefix="/admin/sessions", tags=["Admin Session Management"]
+)
+admin_router.include_router(
+    my_session.router, prefix="/admin/me/sessions", tags=["My Admin Session"]
 )

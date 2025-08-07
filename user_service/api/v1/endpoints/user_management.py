@@ -65,8 +65,8 @@ async def get_app_users(
             user_id=user.user_id,
             username=user.username,
             email=user.email,
-            first_name=user.first_name,
-            last_name=user.last_name,
+            first_name=user.first_name or "",
+            last_name=user.last_name or "",
             profile_picture=user.profile_picture,
             is_deleted=user.is_deleted,
             days_180_flag=user.days_180_flag,
@@ -121,6 +121,8 @@ async def get_app_user_by_id(
     user_data = {
         "username": user.username,
         "email": user.email,
+        "first_name": user.first_name or "",
+        "last_name": user.last_name or "",
         "profile_picture": get_media_url(user.profile_picture),
         "status": user.is_deleted,
     }

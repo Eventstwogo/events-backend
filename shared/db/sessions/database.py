@@ -25,6 +25,8 @@ from shared.db.models import EventsBase
 logging.basicConfig(level=logging.INFO)
 logger: Logger = logging.getLogger(__name__)
 
+print(f"DB URL: {settings.database_url}")
+
 # Create async engine with optimized pool settings
 engine: AsyncEngine = create_async_engine(
     url=str(settings.database_url),

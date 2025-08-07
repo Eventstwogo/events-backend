@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from sqlalchemy import (
     Boolean,
@@ -21,6 +21,9 @@ from shared.core.security import generate_searchable_hash
 from shared.db.models.base import EventsBase
 from shared.db.types import EncryptedString
 
+if TYPE_CHECKING:
+    from shared.db.models.events import EventBooking
+
 
 # User Table
 class User(EventsBase):
@@ -33,16 +36,16 @@ class User(EventsBase):
     username_encrypted: Mapped[str] = mapped_column(
         EncryptedString(255), nullable=False
     )
-    first_name_encrypted: Mapped[str] = mapped_column(
-        EncryptedString(255), nullable=False
+    first_name_encrypted: Mapped[Optional[str]] = mapped_column(
+        EncryptedString(255), nullable=True
     )
-    last_name_encrypted: Mapped[str] = mapped_column(
-        EncryptedString(255), nullable=False
+    last_name_encrypted: Mapped[Optional[str]] = mapped_column(
+        EncryptedString(255), nullable=True
     )
     email_encrypted: Mapped[str] = mapped_column(
         EncryptedString(255), nullable=False
     )
-    phone_number_encrypted: Mapped[str] = mapped_column(
+    phone_number_encrypted: Mapped[Optional[str]] = mapped_column(
         EncryptedString(255), nullable=True, default="0"
     )
 
@@ -50,12 +53,16 @@ class User(EventsBase):
     username_hash: Mapped[str] = mapped_column(
         String(64), nullable=False, unique=True, index=True
     )
-    first_name_hash: Mapped[str] = mapped_column(String(64), nullable=False)
-    last_name_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    first_name_hash: Mapped[Optional[str]] = mapped_column(
+        String(64), nullable=True
+    )
+    last_name_hash: Mapped[Optional[str]] = mapped_column(
+        String(64), nullable=True
+    )
     email_hash: Mapped[str] = mapped_column(
         String(64), nullable=False, unique=True, index=True
     )
-    phone_number_hash: Mapped[str] = mapped_column(
+    phone_number_hash: Mapped[Optional[str]] = mapped_column(
         String(64),
         nullable=True,
     )
@@ -108,6 +115,9 @@ class User(EventsBase):
     device_sessions: Mapped[List["UserDeviceSession"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
+    event_bookings: Mapped[List["EventBooking"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
 
     # Properties for username, first_name, last_name, email, and phone_number.
     @property
@@ -122,26 +132,28 @@ class User(EventsBase):
         self.username_hash = generate_searchable_hash(value)
 
     @property
-    def first_name(self) -> str:
+    def first_name(self) -> Optional[str]:
         """Get the decrypted first name."""
         return self.first_name_encrypted
 
     @first_name.setter
-    def first_name(self, value: str) -> None:
+    def first_name(self, value: Optional[str]) -> None:
         """Set the first name and update its hash."""
         self.first_name_encrypted = value
-        self.first_name_hash = generate_searchable_hash(value)
+        self.first_name_hash = (
+            generate_searchable_hash(value) if value else None
+        )
 
     @property
-    def last_name(self) -> str:
+    def last_name(self) -> Optional[str]:
         """Get the decrypted last name."""
         return self.last_name_encrypted
 
     @last_name.setter
-    def last_name(self, value: str) -> None:
+    def last_name(self, value: Optional[str]) -> None:
         """Set the last name and update its hash."""
         self.last_name_encrypted = value
-        self.last_name_hash = generate_searchable_hash(value)
+        self.last_name_hash = generate_searchable_hash(value) if value else None
 
     @property
     def email(self) -> str:
@@ -155,15 +167,17 @@ class User(EventsBase):
         self.email_hash = generate_searchable_hash(value)
 
     @property
-    def phone_number(self) -> str:
+    def phone_number(self) -> Optional[str]:
         """Get the decrypted phone number."""
         return self.phone_number_encrypted
 
     @phone_number.setter
-    def phone_number(self, value: str) -> None:
+    def phone_number(self, value: Optional[str]) -> None:
         """Set the phone number and update its hash."""
         self.phone_number_encrypted = value
-        self.phone_number_hash = generate_searchable_hash(value)
+        self.phone_number_hash = (
+            generate_searchable_hash(value) if value else None
+        )
 
     @staticmethod
     def by_username_query(username: str):

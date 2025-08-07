@@ -20,11 +20,12 @@ from shared.utils.secure_filename import secure_filename
 from shared.utils.security_validators import contains_xss
 from shared.utils.validators import (
     has_excessive_repetition,
-    is_valid_username,
+    is_valid_username_for_user,
     normalize_whitespace,
     validate_length_range,
 )
 from user_service.schemas.profile import UpdateProfileRequest, UserProfile
+from user_service.services.user_validation import validate_profile_names
 
 router = APIRouter()
 
@@ -57,8 +58,8 @@ async def get_profile(
     profile_data = {
         "user_id": user.user_id,
         "username": user.username,
-        "first_name": user.first_name,
-        "last_name": user.last_name,
+        "first_name": user.first_name or "",
+        "last_name": user.last_name or "",
         "email": user.email,
         "profile_picture": (
             get_media_url(user.profile_picture)
@@ -104,71 +105,26 @@ async def update_profile(
         )
 
     # Validate first name and last name
-    new_first_name = normalize_whitespace(profile_data.first_name)
-    new_last_name = normalize_whitespace(profile_data.last_name)
+    error_response, new_first_name, new_last_name = validate_profile_names(
+        profile_data
+    )
 
-    # Check if first name and last name are the same
-    if new_first_name.lower() == new_last_name.lower():
-        return api_response(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            message="First name and last name cannot be the same.",
-            log_error=True,
-        )
-
-    # Validate first name
-    if not validate_length_range(new_first_name, 1, 255):
-        return api_response(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            message="First name must be 1–255 characters long.",
-            log_error=True,
-        )
-
-    if contains_xss(new_first_name):
-        return api_response(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            message="First name contains potentially malicious content.",
-            log_error=True,
-        )
-
-    if has_excessive_repetition(new_first_name, max_repeats=3):
-        return api_response(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            message="First name contains excessive repeated characters.",
-            log_error=True,
-        )
-
-    # Validate last name
-    if not validate_length_range(new_last_name, 1, 255):
-        return api_response(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            message="Last name must be 1–255 characters long.",
-            log_error=True,
-        )
-
-    if contains_xss(new_last_name):
-        return api_response(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            message="Last name contains potentially malicious content.",
-            log_error=True,
-        )
-
-    if has_excessive_repetition(new_last_name, max_repeats=3):
-        return api_response(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            message="Last name contains excessive repeated characters.",
-            log_error=True,
-        )
+    # If validation fails, return the error
+    if error_response:
+        return error_response
 
     # Validate username
     new_username = normalize_whitespace(profile_data.username)
     if new_username.lower() != user.username:
         # Validate username format
-        if not is_valid_username(
-            new_username, allow_spaces=True, allow_hyphens=True
-        ):
+        if not is_valid_username_for_user(new_username):
             return api_response(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                message="Username can only contain letters, numbers, spaces, and hyphens.",
+                message=(
+                    "Username must start with a letter and can only contain letters, "
+                    "numbers, dots, underscores, and hyphens. "
+                    "No consecutive or trailing special characters are allowed."
+                ),
                 log_error=True,
             )
 
@@ -243,8 +199,8 @@ async def update_profile(
         data={
             "user_id": user.user_id,
             "username": user.username,
-            "first_name": user.first_name,
-            "last_name": user.last_name,
+            "first_name": user.first_name or "",
+            "last_name": user.last_name or "",
             "email": user.email,
             "profile_picture": (
                 get_media_url(user.profile_picture)

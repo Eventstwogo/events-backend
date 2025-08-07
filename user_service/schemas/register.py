@@ -16,14 +16,14 @@ from shared.utils.password_validator import PasswordValidator
 from shared.utils.security_validators import contains_xss
 from shared.utils.validators import (
     has_excessive_repetition,
-    is_valid_username,
+    is_valid_username_for_user,
     normalize_whitespace,
     validate_length_range,
 )
 
 FIRST_LAST_NAME_MIN_LENGTH = 1
 FIRST_LAST_NAME_MAX_LENGTH = 100
-USERNAME_MIN_LENGTH = 4
+USERNAME_MIN_LENGTH = 3
 USERNAME_MAX_LENGTH = 32
 NAME_REGEX = re.compile(r"^[A-Za-z\s\-']+$")
 
@@ -55,29 +55,9 @@ def validate_person_name(value: str, field_name: str) -> str:
 
 
 class UserRegisterRequest(BaseModel):
-    first_name: str = Field(
-        ...,
-        min_length=1,
-        max_length=100,
-        title="First Name",
-        description=(
-            "The first name of the user. Only letters, "
-            "spaces, hyphens, and apostrophes are allowed."
-        ),
-    )
-    last_name: str = Field(
-        ...,
-        min_length=1,
-        max_length=100,
-        title="Last Name",
-        description=(
-            "The last name of the user. Only letters, spaces, "
-            "hyphens, and apostrophes are allowed."
-        ),
-    )
     username: str = Field(
         ...,
-        min_length=4,
+        min_length=3,
         max_length=32,
         title="Username",
         description=(
@@ -114,26 +94,13 @@ class UserRegisterRequest(BaseModel):
             raise ValueError("Password is required.")
         return values
 
-    @field_validator("first_name")
-    @classmethod
-    def validate_first_name(cls, v):
-        return validate_person_name(v, "First name")
-
-    @field_validator("last_name")
-    @classmethod
-    def validate_last_name(cls, v):
-        return validate_person_name(v, "Last name")
-
     @field_validator("username")
     @classmethod
     def validate_username(cls, v):
         v = normalize_whitespace(v)
         if not v:
             raise ValueError("Username cannot be empty.")
-        if not is_valid_username(v, allow_spaces=True, allow_hyphens=True):
-            raise ValueError(
-                "Username can only contain letters, numbers, spaces, and hyphens."
-            )
+        v = v.split("@", 1)[0].split("+", 1)[0]
         if not validate_length_range(
             v, USERNAME_MIN_LENGTH, USERNAME_MAX_LENGTH
         ):
@@ -144,11 +111,12 @@ class UserRegisterRequest(BaseModel):
             raise ValueError("Username contains potentially malicious content.")
         if has_excessive_repetition(v, max_repeats=3):
             raise ValueError("Username contains excessive repeated characters.")
-        if len(v) < 3 or not all(c.isalpha() for c in v[:3]):
+        if not is_valid_username_for_user(v):
             raise ValueError(
-                "First three characters of username must be letters."
+                "Username must start with a letter and can only contain letters, numbers, dots, underscores, and hyphens. "
+                "No consecutive or trailing special characters are allowed."
             )
-        return v
+        return v.lower().strip()
 
     @field_validator("email")
     @classmethod
@@ -221,7 +189,6 @@ class AddPhoneNumberRequest(BaseModel):
 
 
 class UserRegisterResponse(BaseModel):
-    user_id: str
     email: EmailStr
 
 
@@ -417,4 +384,48 @@ class PhoneOTPVerificationResponse(BaseModel):
     user_id: str
     phone_number: str
     verified: bool
+    message: str
+
+
+# Username availability check schemas
+class UsernameAvailabilityRequest(BaseModel):
+    username: str = Field(
+        ...,
+        min_length=3,
+        max_length=32,
+        title="Username",
+        description="Username to check for availability",
+    )
+
+    @field_validator("username")
+    @classmethod
+    def validate_username(cls, v):
+        v = normalize_whitespace(v)
+        if not v:
+            raise ValueError("Username cannot be empty.")
+
+        # Process username by removing email and plus parts
+        v = v.split("@", 1)[0].split("+", 1)[0]
+
+        if not validate_length_range(
+            v, USERNAME_MIN_LENGTH, USERNAME_MAX_LENGTH
+        ):
+            raise ValueError(
+                f"Username must be {USERNAME_MIN_LENGTH}-{USERNAME_MAX_LENGTH} characters long."
+            )
+        if contains_xss(v):
+            raise ValueError("Username contains potentially malicious content.")
+        if has_excessive_repetition(v, max_repeats=3):
+            raise ValueError("Username contains excessive repeated characters.")
+        if not is_valid_username_for_user(v):
+            raise ValueError(
+                "Username must start with a letter and can only contain letters, numbers, dots, underscores, and hyphens. "
+                "No consecutive or trailing special characters are allowed."
+            )
+        return v.lower().strip()
+
+
+class UsernameAvailabilityResponse(BaseModel):
+    username: str
+    available: bool
     message: str

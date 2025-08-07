@@ -179,10 +179,10 @@ class EnquiryCreateRequest(BaseModel):
         v = normalize_whitespace(v)
         if not v:
             raise ValueError("Message cannot be empty.")
-        if contains_xss(v):
-            raise ValueError("Message contains potentially malicious content.")
-        if has_excessive_repetition(v, max_repeats=5):
-            raise ValueError("Message contains excessive repeated characters.")
+        # if contains_xss(v):
+        #     raise ValueError("Message contains potentially malicious content.")
+        # if has_excessive_repetition(v, max_repeats=5):
+        #     raise ValueError("Message contains excessive repeated characters.")
         return v
 
 
@@ -199,11 +199,3 @@ class EnquiryUpdateRequest(BaseModel):
         if v is not None and v not in EnquiryStatus:
             raise ValueError("Invalid enquiry status.")
         return v
-
-
-class EnquiryDeleteResponse(BaseModel):
-    message: str = Field(
-        ...,
-        title="Message",
-        description="Success message for the deletion.",
-    )

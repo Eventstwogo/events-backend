@@ -7,7 +7,6 @@ from starlette.responses import JSONResponse
 
 from admin_service.schemas.enquiry import (
     EnquiryCreateRequest,
-    EnquiryDeleteResponse,
     EnquiryResponse,
     EnquiryUpdateRequest,
 )
@@ -37,20 +36,20 @@ async def create_enquiry(
     Returns:
         JSONResponse: The created enquiry details
     """
-    # Check if enquiry with same email and message already exists
-    existing_enquiry_stmt = select(Enquiry).where(
-        Enquiry.email == enquiry_data.email,
-        Enquiry.message == enquiry_data.message,
-    )
-    result = await db.execute(existing_enquiry_stmt)
-    existing_enquiry = result.scalar_one_or_none()
+    # # Check if enquiry with same email and message already exists
+    # existing_enquiry_stmt = select(Enquiry).where(
+    #     Enquiry.email == enquiry_data.email,
+    #     Enquiry.message == enquiry_data.message,
+    # )
+    # result = await db.execute(existing_enquiry_stmt)
+    # existing_enquiry = result.scalar_one_or_none()
 
-    if existing_enquiry:
-        return api_response(
-            status_code=status.HTTP_409_CONFLICT,
-            message="Enquiry already sent. An enquiry with the same email and message already exists.",
-            log_error=True,
-        )
+    # if existing_enquiry:
+    #     return api_response(
+    #         status_code=status.HTTP_409_CONFLICT,
+    #         message="Enquiry already sent. An enquiry with the same email and message already exists.",
+    #         log_error=True,
+    #     )
 
     # Create new enquiry
     new_enquiry = Enquiry(
@@ -202,7 +201,6 @@ async def update_enquiry(
 
 @router.delete(
     "/{enquiry_id}",
-    response_model=EnquiryDeleteResponse,
     status_code=status.HTTP_200_OK,
 )
 @exception_handler
@@ -239,5 +237,5 @@ async def delete_enquiry(
 
     return api_response(
         status_code=status.HTTP_200_OK,
-        data=EnquiryDeleteResponse(message="Enquiry deleted successfully"),
+        message="Enquiry deleted successfully",
     )

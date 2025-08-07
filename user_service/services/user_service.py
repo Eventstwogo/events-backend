@@ -1,5 +1,6 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from shared.core.logging_config import get_logger
 from shared.db.models import Config, Role, User
@@ -10,6 +11,14 @@ logger = get_logger(__name__)
 
 async def get_user_by_email(db: AsyncSession, email: str) -> User | None:
     query = User.by_email_query(email.lower())
+    result = await db.execute(query)
+    return result.scalar_one_or_none()
+
+
+async def fetch_user_by_email(db: AsyncSession, email: str) -> User | None:
+    query = User.by_email_query(email.lower()).options(
+        selectinload(User.verification)
+    )
     result = await db.execute(query)
     return result.scalar_one_or_none()
 
