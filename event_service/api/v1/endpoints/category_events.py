@@ -1,3 +1,5 @@
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,12 +29,26 @@ router = APIRouter()
 )
 @exception_handler
 async def get_categories_with_latest_events(
+    event_type: Literal["all", "ongoing", "upcoming"] = Query(
+        "upcoming",
+        description="Filter events by type: 'all' for all events, 'ongoing' for current events (current date between start_date and end_date), 'upcoming' for future events (end_date >= current date)",
+    ),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get all categories with their latest 5 events each (including events from subcategories)"""
+    """Get all categories with their latest 5 events each (including events from subcategories)
+
+    Args:
+        event_type: Filter events by type:
+            - 'all': Return all published events
+            - 'ongoing': Return events where current date is between start_date and end_date (inclusive)
+            - 'upcoming': Return events where end_date is greater than or equal to current date
+        db: Database session
+    """
 
     # Fetch categories with all their events (including subcategory events)
-    categories_data = await fetch_categories_with_all_events(db)
+    categories_data = await fetch_categories_with_all_events(
+        db, event_type=event_type
+    )
 
     # Convert to response format
     categories_response = [
@@ -42,10 +58,11 @@ async def get_categories_with_latest_events(
 
     return api_response(
         status_code=status.HTTP_200_OK,
-        message="Categories with latest events retrieved successfully",
+        message=f"Categories with latest {event_type} events retrieved successfully",
         data={
             "categories": [cat.model_dump() for cat in categories_response],
             "total_categories": len(categories_response),
+            "event_type": event_type,
         },
     )
 
@@ -62,6 +79,10 @@ async def get_events_by_category_or_subcategory_slug(
     limit: int = Query(
         10, ge=1, le=100, description="Number of events per page (max 100)"
     ),
+    event_type: Literal["all", "ongoing", "upcoming"] = Query(
+        "upcoming",
+        description="Filter events by type: 'all' for all events, 'ongoing' for current events (current date between start_date and end_date), 'upcoming' for future events (end_date >= current date)",
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     """Get paginated events by category slug or subcategory slug, unified under category context
@@ -76,6 +97,10 @@ async def get_events_by_category_or_subcategory_slug(
         slug: Category slug or subcategory slug
         page: Page number (default: 1)
         limit: Number of events per page (default: 10, max: 100)
+        event_type: Filter events by type:
+            - 'all': Return all published events
+            - 'ongoing': Return events where current date is between start_date and end_date (inclusive)
+            - 'upcoming': Return events where end_date is greater than or equal to current date
         db: Database session
 
     Returns:
@@ -92,6 +117,7 @@ async def get_events_by_category_or_subcategory_slug(
             slug=slug,
             page=page,
             limit=limit,
+            event_type=event_type,
         )
     )
 
@@ -141,7 +167,7 @@ async def get_events_by_category_or_subcategory_slug(
 
     return api_response(
         status_code=status.HTTP_200_OK,
-        message=f"Events for {slug_type} '{slug}' retrieved successfully under category context",
+        message=f"{event_type.capitalize()} events for {slug_type} '{slug}' retrieved successfully under category context",
         data={
             "events": [event.model_dump() for event in events_response],
             "pagination": pagination.model_dump(),
@@ -149,5 +175,6 @@ async def get_events_by_category_or_subcategory_slug(
             "total_events": total_count,
             "slug": slug,
             "slug_type": slug_type,
+            "event_type": event_type,
         },
     )

@@ -1,4 +1,5 @@
-from typing import Dict, List, Optional, Tuple
+from datetime import date
+from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -315,19 +316,46 @@ async def fetch_events_by_category_or_subcategory_slug(
 
 async def fetch_categories_with_all_events(
     db: AsyncSession,
+    event_type: str = "all",
 ) -> List[Dict]:
     """Fetch all categories with their latest 5 events each, including events from subcategories
 
     This function groups all events under their parent categories, regardless of whether
     they have subcategories or not. Events from subcategories are included under their
     parent category.
+
+    Args:
+        db: Database session
+        event_type: Filter events by type:
+            - 'all': Return all published events
+            - 'ongoing': Return events where current date is between start_date and end_date (inclusive)
+            - 'upcoming': Return events where end_date is greater than or equal to current date
     """
+
+    # Get current date for filtering
+    current_date = date.today()
+
+    # Build base event filter conditions
+    base_conditions: List[Any] = [
+        Event.event_status.is_(False)
+    ]  # Only published events
+
+    # Add date-based filtering conditions
+    if event_type == "ongoing":
+        # Events where current date is between start_date and end_date (inclusive)
+        base_conditions.extend(
+            [Event.start_date <= current_date, Event.end_date >= current_date]
+        )
+    elif event_type == "upcoming":
+        # Events where end_date is greater than or equal to current date
+        base_conditions.append(Event.end_date >= current_date)
+    # For 'all', no additional date filtering is needed
 
     # Get all categories that have events (either directly or through subcategories)
     categories_query = (
         select(Category)
         .join(Event, Category.category_id == Event.category_id)
-        .where(Event.event_status.is_(False))  # Only published events
+        .where(and_(*base_conditions))
         .distinct()
         .order_by(Category.category_name)
     )
@@ -339,14 +367,15 @@ async def fetch_categories_with_all_events(
 
     for category in categories:
         # Get latest 5 events for this category (including events from subcategories)
+        # Apply the same filtering conditions
+        events_conditions = [
+            Event.category_id == category.category_id,
+            *base_conditions,
+        ]
+
         events_query = (
             select(Event)
-            .where(
-                and_(
-                    Event.category_id == category.category_id,
-                    Event.event_status.is_(False),  # Only published events
-                )
-            )
+            .where(and_(*events_conditions))
             .order_by(desc(Event.created_at))
             .limit(5)
         )
@@ -391,6 +420,7 @@ async def fetch_events_by_category_slug_unified(
     slug: str,
     page: int = 1,
     limit: int = 10,
+    event_type: str = "all",
 ) -> Tuple[List[Dict], Optional[int], Optional[Dict]]:
     """Fetch paginated events by category slug or subcategory slug,
     always returning under category context
@@ -406,6 +436,10 @@ async def fetch_events_by_category_slug_unified(
         slug: Category slug or subcategory slug
         page: Page number (1-based)
         limit: Number of events per page
+        event_type: Filter events by type:
+            - 'all': Return all published events
+            - 'ongoing': Return events where current date is between start_date and end_date (inclusive)
+            - 'upcoming': Return events where end_date is greater than or equal to current date
 
     Returns:
         Tuple containing:
@@ -415,6 +449,25 @@ async def fetch_events_by_category_slug_unified(
     """
 
     offset = (page - 1) * limit
+
+    # Get current date for filtering
+    current_date = date.today()
+
+    # Build base event filter conditions
+    base_conditions: List[Any] = [
+        Event.event_status.is_(False)
+    ]  # Only published events
+
+    # Add date-based filtering conditions
+    if event_type == "ongoing":
+        # Events where current date is between start_date and end_date (inclusive)
+        base_conditions.extend(
+            [Event.start_date <= current_date, Event.end_date >= current_date]
+        )
+    elif event_type == "upcoming":
+        # Events where end_date is greater than or equal to current date
+        base_conditions.append(Event.end_date >= current_date)
+    # For 'all', no additional date filtering is needed
 
     # First, try to find by category slug
     category_query = select(Category).where(Category.category_slug == slug)
@@ -437,14 +490,15 @@ async def fetch_events_by_category_slug_unified(
 
     if category:
         # Fetch all events by category (including events from subcategories)
+        # Apply the same filtering conditions
+        events_conditions = [
+            Event.category_id == category.category_id,
+            *base_conditions,
+        ]
+
         events_query = (
             select(Event)
-            .where(
-                and_(
-                    Event.category_id == category.category_id,
-                    Event.event_status.is_(False),  # Only published events
-                )
-            )
+            .where(and_(*events_conditions))
             .order_by(desc(Event.created_at))
             .offset(offset)
             .limit(limit)
@@ -452,10 +506,7 @@ async def fetch_events_by_category_slug_unified(
 
         # Count query for all category events (including subcategory events)
         count_query = select(func.count(Event.event_id)).where(
-            and_(
-                Event.category_id == category.category_id,
-                Event.event_status.is_(False),
-            )
+            and_(*events_conditions)
         )
 
         events_result = await db.execute(events_query)
@@ -473,14 +524,15 @@ async def fetch_events_by_category_slug_unified(
 
     elif subcategory:
         # Fetch events by subcategory but present under parent category context
+        # Apply the same filtering conditions
+        events_conditions = [
+            Event.subcategory_id == subcategory.subcategory_id,
+            *base_conditions,
+        ]
+
         events_query = (
             select(Event)
-            .where(
-                and_(
-                    Event.subcategory_id == subcategory.subcategory_id,
-                    Event.event_status.is_(False),  # Only published events
-                )
-            )
+            .where(and_(*events_conditions))
             .order_by(desc(Event.created_at))
             .offset(offset)
             .limit(limit)
@@ -488,10 +540,7 @@ async def fetch_events_by_category_slug_unified(
 
         # Count query for subcategory events
         count_query = select(func.count(Event.event_id)).where(
-            and_(
-                Event.subcategory_id == subcategory.subcategory_id,
-                Event.event_status.is_(False),
-            )
+            and_(*events_conditions)
         )
 
         events_result = await db.execute(events_query)

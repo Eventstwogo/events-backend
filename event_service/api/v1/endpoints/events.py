@@ -1,3 +1,5 @@
+from typing import Literal
+
 from fastapi import APIRouter, Depends, Form, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -440,29 +442,43 @@ async def delete_event_by_id(
 @exception_handler
 async def get_latest_5_events_by_category_or_subcategory_slug(
     slug: str,
+    event_type: Literal["all", "ongoing", "upcoming"] = Query(
+        "upcoming",
+        description="Filter events by type: 'all' for all events, 'ongoing' for current events (current date between start_date and end_date), 'upcoming' for future events (end_date >= current date)",
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     """
     Get the latest 5 events by category slug or subcategory slug.
 
-    - Returns the latest 5 events ordered by creation date
-    - Only returns active events (event_status = false)
+    Args:
+        slug: Category slug or subcategory slug
+        event_type: Filter events by type:
+            - 'all': Return all published events
+            - 'ongoing': Return events where current date is between start_date and end_date (inclusive)
+            - 'upcoming': Return events where end_date is greater than or equal to current date
+        db: Database session
+
+    Returns:
+        - Latest 5 events ordered by creation date
+        - Only returns active events (event_status = false)
     """
 
     # Fetch latest 5 events by category or subcategory slug
     events, total, matched_slug, is_category = (
         await fetch_events_by_category_or_subcategory_slug(
-            db, slug.lower(), page=1, per_page=5
+            db, slug.lower(), page=1, per_page=5, event_type=event_type
         )
     )
 
     if not events:
         return api_response(
             status_code=status.HTTP_200_OK,
-            message=f"No active events found for '{slug}'",
+            message=f"No active {event_type} events found for '{slug}'",
             data={
                 "events": [],
                 "total": 0,
+                "event_type": event_type,
             },
         )
 
@@ -489,6 +505,7 @@ async def get_latest_5_events_by_category_or_subcategory_slug(
             ),
             "events": event_responses,
             "total": len(events),
+            "event_type": event_type,
         }
     else:
         # Subcategory slug provided - show subcategory info and events
@@ -505,11 +522,12 @@ async def get_latest_5_events_by_category_or_subcategory_slug(
             ),
             "events": event_responses,
             "total": len(events),
+            "event_type": event_type,
         }
 
     entity_type = "category" if is_category else "subcategory"
     message = (
-        f"Latest {len(events)} events retrieved successfully for "
+        f"Latest {len(events)} {event_type} events retrieved successfully for "
         f"{entity_type} '{matched_slug}'"
     )
     return api_response(
@@ -526,15 +544,28 @@ async def get_latest_5_events_by_category_or_subcategory_slug(
 )
 @exception_handler
 async def get_latest_events_from_each_category(
+    event_type: Literal["all", "ongoing", "upcoming"] = Query(
+        "upcoming",
+        description="Filter events by type: 'all' for all events, 'ongoing' for current events (current date between start_date and end_date), 'upcoming' for future events (end_date >= current date)",
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     """
     Get the latest event from each category with event_id, slug, title,
     banner_image, and description
+
+    Args:
+        event_type: Filter events by type:
+            - 'all': Return all published events
+            - 'ongoing': Return events where current date is between start_date and end_date (inclusive)
+            - 'upcoming': Return events where end_date is greater than or equal to current date
+        db: Database session
     """
 
     # Fetch latest events from each category
-    events, total = await fetch_latest_event_from_each_category(db)
+    events, total = await fetch_latest_event_from_each_category(
+        db, event_type=event_type
+    )
 
     # Convert to response format with description extraction
     event_responses = []
@@ -561,9 +592,10 @@ async def get_latest_events_from_each_category(
 
     return api_response(
         status_code=status.HTTP_200_OK,
-        message="Latest events from each category retrieved successfully",
+        message=f"Latest {event_type} events from each category retrieved successfully",
         data={
             "events": [event.model_dump() for event in event_responses],
             "total": total,
+            "event_type": event_type,
         },
     )
