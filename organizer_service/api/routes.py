@@ -40,7 +40,7 @@ organizer_router.include_router(
 )
 organizer_router.include_router(fetch_organizers.router, tags=["Organizers"])
 organizer_router.include_router(
-    analytics.router, prefix="/analytics", tags=["Organizer Analytics"]
+    analytics.router, prefix="/new-analytics", tags=["Organizer Analytics"]
 )
 organizer_router.include_router(
     users_management.router,

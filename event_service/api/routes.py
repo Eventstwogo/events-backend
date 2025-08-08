@@ -31,7 +31,7 @@ event_router.include_router(
 # )
 event_router.include_router(slots.router, prefix="/slots", tags=["Event Slots"])
 event_router.include_router(
-    analytics.router, prefix="/analytics", tags=["Analytics"]
+    analytics.router, prefix="/analytics", tags=["Event Analytics"]
 )
 event_router.include_router(
     bookings.router, prefix="/bookings", tags=["Event Bookings"]

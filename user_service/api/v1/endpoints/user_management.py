@@ -83,6 +83,70 @@ async def get_app_users(
     )
 
 
+@router.get(
+    "/for-admins", response_model=List[UserMeOut], summary="Get all users"
+)
+@exception_handler
+async def get_app_users_for_admins(
+    is_deleted: Optional[bool] = Query(
+        None,
+        description=(
+            "Filter by account status: false=active, true=inactive, omit=all"
+        ),
+    ),
+    db: AsyncSession = Depends(get_db),
+) -> JSONResponse:
+    """
+    Get a list of app users with optional filtering by account status.
+
+    Args:
+        current_user: The authenticated user making the request
+        is_deleted: Optional filter for account status
+
+    Returns:
+        JSONResponse: List of app users with their details
+    """
+    # Create a select statement with the columns we want
+    stmt = select(User)
+
+    if is_deleted is False:
+        stmt = stmt.where(User.is_deleted.is_(False))  # fetch active users
+    elif is_deleted is True:
+        stmt = stmt.where(User.is_deleted.is_(True))  # fetch inactive users
+
+    result = await db.execute(stmt)
+    users_data = result.scalars().all()
+    if not users_data:
+        return api_response(
+            status_code=status.HTTP_404_NOT_FOUND,
+            message="No app users found for the given status.",
+            log_error=True,
+        )
+
+    # Map the query result to UserResponse
+    users = [
+        UserMeOut(
+            user_id=user.user_id,
+            username=user.username,
+            email=user.email,
+            first_name=user.first_name or "",
+            last_name=user.last_name or "",
+            profile_picture=user.profile_picture,
+            is_deleted=user.is_deleted,
+            days_180_flag=user.days_180_flag,
+            last_login=user.last_login,
+            created_at=user.created_at,
+        )
+        for user in users_data
+    ]
+
+    return api_response(
+        status_code=status.HTTP_200_OK,
+        message="Admin users fetched successfully.",
+        data=users,
+    )
+
+
 @router.get("/{user_id}", summary="Get user by ID")
 @exception_handler
 async def get_app_user_by_id(
