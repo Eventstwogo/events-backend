@@ -191,7 +191,7 @@ async def update_role_permission(
 
 
 @router.patch(
-    "/{record_id}/status", summary="Update status of a role-permission"
+    "/status/{record_id}", summary="Update status of a role-permission"
 )
 @exception_handler
 async def update_role_permission_status(

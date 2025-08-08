@@ -193,7 +193,7 @@ async def update_permission(
     )
 
 
-@router.patch("/{permission_id}/status", summary="Update permission status")
+@router.patch("/status/{permission_id}", summary="Update permission status")
 @exception_handler
 async def update_permission_status(
     permission_id: str,

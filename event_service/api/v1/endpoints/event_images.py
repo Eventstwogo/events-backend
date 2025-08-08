@@ -19,7 +19,7 @@ from shared.utils.file_uploads import (
 router = APIRouter()
 
 
-@router.patch("/{event_id}/card-image", summary="Update event card image")
+@router.patch("/card-image/{event_id}", summary="Update event card image")
 @exception_handler
 async def update_event_card_image(
     user_id: str,
@@ -81,7 +81,7 @@ async def update_event_card_image(
     )
 
 
-@router.patch("/{event_id}/banner-image", summary="Update event banner image")
+@router.patch("/banner-image/{event_id}", summary="Update event banner image")
 @exception_handler
 async def update_event_banner_image(
     user_id: str,
@@ -144,7 +144,7 @@ async def update_event_banner_image(
 
 
 @router.patch(
-    "/{event_id}/extra-images", summary="Update extra images for event"
+    "/extra-images/{event_id}", summary="Update extra images for event"
 )
 @exception_handler
 async def add_event_extra_images(
@@ -259,7 +259,7 @@ async def add_event_extra_images(
 
 
 @router.delete(
-    "/{event_id}/extra-images/{image_index}",
+    "/extra-images/{event_id}/{image_index}",
     summary="Remove extra image from event",
 )
 @exception_handler
@@ -332,7 +332,7 @@ async def remove_event_extra_image(
     )
 
 
-@router.get("/{event_id}/images", summary="Get all event images")
+@router.get("/images/{event_id}", summary="Get all event images")
 @exception_handler
 async def get_event_images(
     event_id: Annotated[str, Path(..., description="Event ID")],

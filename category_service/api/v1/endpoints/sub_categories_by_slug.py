@@ -376,7 +376,7 @@ async def update_subcategory_by_slug(
     )
 
 
-@router.delete("/slug/{slug}/soft")
+@router.delete("/slug/soft/{slug}")
 @exception_handler
 async def soft_delete_subcategory_by_slug(
     slug: str, db: AsyncSession = Depends(get_db)
@@ -402,7 +402,7 @@ async def soft_delete_subcategory_by_slug(
     )
 
 
-@router.put("/slug/{slug}/restore")
+@router.put("/slug/restore/{slug}")
 @exception_handler
 async def restore_subcategory_by_slug(
     slug: str, db: AsyncSession = Depends(get_db)
@@ -426,7 +426,7 @@ async def restore_subcategory_by_slug(
     return api_response(status.HTTP_200_OK, "Subcategory restored successfully")
 
 
-@router.delete("/slug/{slug}/hard")
+@router.delete("/slug/hard/{slug}")
 @exception_handler
 async def hard_delete_subcategory_by_slug(
     slug: str, db: AsyncSession = Depends(get_db)

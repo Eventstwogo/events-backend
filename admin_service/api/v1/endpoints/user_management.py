@@ -326,7 +326,7 @@ async def update_username_and_role(
     )
 
 
-@router.patch("/{user_id}/deactivate")
+@router.patch("/deactivate/{user_id}")
 @exception_handler
 async def deactivate_user(
     user_id: str,
@@ -363,7 +363,7 @@ async def deactivate_user(
     )
 
 
-@router.patch("/{user_id}/reactivate")
+@router.patch("/reactivate/{user_id}")
 @exception_handler
 async def reactivate_user(
     user_id: str,

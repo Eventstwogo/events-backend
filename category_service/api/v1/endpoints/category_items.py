@@ -774,7 +774,7 @@ async def get_update_form_data(
     )
 
 
-@router.delete("/{item_id}/soft")
+@router.delete("/soft/{item_id}")
 @exception_handler
 async def soft_delete_category_or_subcategory(
     item_id: str, db: AsyncSession = Depends(get_db)
@@ -832,7 +832,7 @@ async def soft_delete_category_or_subcategory(
     )
 
 
-@router.put("/{item_id}/restore")
+@router.put("/restore/{item_id}")
 @exception_handler
 async def restore_category_or_subcategory(
     item_id: str, db: AsyncSession = Depends(get_db)

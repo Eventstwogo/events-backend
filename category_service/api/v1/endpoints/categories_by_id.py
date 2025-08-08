@@ -436,7 +436,7 @@ async def update_category(
     return await _process_category_update(category, params, category_id, db)
 
 
-@router.delete("/{category_id}/soft")
+@router.delete("/soft/{category_id}")
 @exception_handler
 async def soft_delete_category(
     category_id: str, db: AsyncSession = Depends(get_db)
@@ -473,7 +473,7 @@ async def soft_delete_category(
     )
 
 
-@router.put("/{category_id}/restore")
+@router.put("/restore/{category_id}")
 @exception_handler
 async def restore_category(
     category_id: str, db: AsyncSession = Depends(get_db)
@@ -510,7 +510,7 @@ async def restore_category(
     )
 
 
-@router.delete("/{category_id}/hard")
+@router.delete("/hard/{category_id}")
 @exception_handler
 async def hard_delete_category(
     category_id: str, db: AsyncSession = Depends(get_db)
