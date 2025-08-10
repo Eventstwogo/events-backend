@@ -571,7 +571,7 @@ async def verify_booking_constraints(
     if not event_slot:
         return False, "Event slot configuration not found"
 
-    if not event_slot.slot_status:
+    if event_slot.slot_status:
         return False, "Event slot is inactive"
 
     # Get total approved bookings for this event and slot
