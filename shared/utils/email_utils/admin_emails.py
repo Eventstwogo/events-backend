@@ -406,3 +406,89 @@ def send_organizer_review_notification(
         )
 
     return success
+
+
+def send_booking_success_email(
+    email: EmailStr,
+    user_name: str,
+    booking_id: int,
+    event_title: str,
+    event_date: str,
+    event_location: str,
+    event_category: str,
+    time_slot: str,
+    num_seats: int,
+    price_per_seat: float,
+    total_price: float,
+    booking_date: str,
+    event_url: Optional[str] = None,
+    my_bookings_url: Optional[str] = None,
+    support_url: Optional[str] = None,
+    help_center_url: Optional[str] = None,
+    logo_url: Optional[str] = None,
+) -> bool:
+    """
+    Send booking success confirmation email with digital ticket.
+
+    Args:
+        email: User's email address
+        user_name: Name of the user who made the booking
+        booking_id: Unique booking identifier
+        event_title: Title of the booked event
+        event_date: Event date (formatted string)
+        event_location: Event location/venue
+        event_category: Event category
+        time_slot: Booked time slot
+        num_seats: Number of seats booked
+        price_per_seat: Price per individual seat
+        total_price: Total amount paid
+        booking_date: Date when booking was made
+        event_url: URL to view event details
+        my_bookings_url: URL to user's bookings page
+        support_url: URL to support page
+        help_center_url: URL to help center
+        logo_url: URL to company logo
+
+    Returns:
+        bool: True if email sent successfully, False otherwise
+    """
+    context = {
+        "user_name": user_name,
+        "user_email": email,
+        "booking_id": booking_id,
+        "event_title": event_title,
+        "event_date": event_date,
+        "event_location": event_location,
+        "event_category": event_category,
+        "time_slot": time_slot,
+        "num_seats": num_seats,
+        "price_per_seat": f"{price_per_seat:.2f}",
+        "total_price": f"{total_price:.2f}",
+        "booking_date": booking_date,
+        "event_url": event_url
+        or f"{settings.USERS_APPLICATION_FRONTEND_URL}/events/view/{event_title.lower().replace(' ', '-')}",
+        "my_bookings_url": my_bookings_url
+        or f"{settings.USERS_APPLICATION_FRONTEND_URL}/my-bookings",
+        "support_url": support_url
+        or f"{settings.USERS_APPLICATION_FRONTEND_URL}/support",
+        "help_center_url": help_center_url
+        or f"{settings.USERS_APPLICATION_FRONTEND_URL}/help",
+        "logo_url": logo_url,
+        "year": str(datetime.now(tz=timezone.utc).year),
+    }
+
+    success = email_sender.send_email(
+        to=email,
+        subject=f"🎉 Booking Confirmed - {event_title} | Events2Go",
+        template_file="organizer/booking_success.html",
+        context=context,
+    )
+
+    if not success:
+        logger.warning(
+            "Failed to send booking success email to %s for booking %s",
+            email,
+            booking_id,
+        )
+
+    return success
