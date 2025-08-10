@@ -15,6 +15,7 @@ from event_service.schemas.bookings import (
     BookingWithEventListResponse,
     BookingWithUserListResponse,
     OrganizerBookingsResponse,
+    SimpleOrganizerBookingsResponse,
     UserBookingsListResponse,
 )
 from event_service.services.bookings import (
@@ -32,10 +33,15 @@ from event_service.services.bookings import (
     get_event_bookings,
     get_organizer_bookings,
     get_organizer_bookings_with_events_and_slots,
+    get_simple_organizer_bookings,
     get_user_bookings,
     mark_booking_as_paid,
     update_booking_status,
     verify_booking_constraints,
+)
+from event_service.services.slot_availability import (
+    update_slot_availability_on_booking_cancel,
+    update_slot_availability_on_booking_confirm,
 )
 from event_service.utils.paypal_client import paypal_client
 from shared.core.api_response import api_response
@@ -445,7 +451,7 @@ async def get_event_bookings_endpoint(
 @router.get(
     "/organizer/{organizer_id}",
     status_code=status.HTTP_200_OK,
-    response_model=OrganizerBookingsResponse,
+    response_model=SimpleOrganizerBookingsResponse,
 )
 @exception_handler
 async def get_organizer_bookings_endpoint(
@@ -462,7 +468,55 @@ async def get_organizer_bookings_endpoint(
     db: AsyncSession = Depends(get_db),
 ):
     """
+    Get all bookings for events organized by a specific organizer in a simple tabular format
+
+    - **organizer_id**: ID of the organizer
+    - **event_id**: Optional filter by specific event ID
+    - **status_filter**: Optional filter by booking status (failed, processing, approved, cancelled)
+    - **page**: Page number for pagination
+    - **per_page**: Number of items per page (max 100)
+
+    Returns a simple flat list of bookings with essential details for tabular display:
+    - Booking ID, Event Title, User Name/Email
+    - Slot Time, Booking Date, Number of Seats
+    - Total Price, Booking Status, Payment Status
+    """
+
+    response_data = await get_simple_organizer_bookings(
+        db, organizer_id, event_id, status_filter, page, per_page
+    )
+
+    return api_response(
+        message="Retrieved bookings for organizer",
+        data=response_data,
+        status_code=status.HTTP_200_OK,
+    )
+
+
+@router.get(
+    "/organizer/{organizer_id}/detailed",
+    status_code=status.HTTP_200_OK,
+    response_model=OrganizerBookingsResponse,
+)
+@exception_handler
+async def get_organizer_bookings_detailed_endpoint(
+    organizer_id: str,
+    event_id: Optional[str] = Query(
+        None, description="Optional filter by specific event ID"
+    ),
+    status_filter: Optional[BookingStatus] = Query(
+        None,
+        description="Filter by booking status (failed, processing, approved, cancelled)",
+    ),
+    page: int = Query(1, ge=1, description="Page number"),
+    per_page: int = Query(10, ge=1, le=100, description="Items per page"),
+    db: AsyncSession = Depends(get_db),
+):
+    """
     Get all bookings for events organized by a specific organizer with detailed event and slot structure
+
+    This endpoint provides the full nested structure with events, slots, and bookings.
+    Use the main /organizer/{organizer_id} endpoint for simple tabular data.
 
     - **organizer_id**: ID of the organizer
     - **event_id**: Optional filter by specific event ID
@@ -476,7 +530,7 @@ async def get_organizer_bookings_endpoint(
     )
 
     return api_response(
-        message="Retrieved bookings for organizer",
+        message="Retrieved detailed bookings for organizer",
         data=response_data,
         status_code=status.HTTP_200_OK,
     )

@@ -463,3 +463,37 @@ class AllBookingsListResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# Simple organizer bookings response for tabular view
+class SimpleOrganizerBookingItem(BaseModel):
+    """Simple booking item for organizer tabular view"""
+
+    booking_id: int
+    event_title: str
+    event_id: str
+    user_name: str
+    user_email: str
+    slot_time: str
+    booking_date: date
+    num_seats: int
+    total_price: float
+    booking_status: str
+    payment_status: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class SimpleOrganizerBookingsResponse(BaseModel):
+    """Simple response schema for organizer bookings tabular view"""
+
+    bookings: List[SimpleOrganizerBookingItem]
+    total_items: int
+    page: int
+    per_page: int
+    total_pages: int
+
+    class Config:
+        from_attributes = True

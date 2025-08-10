@@ -25,10 +25,17 @@ from event_service.schemas.bookings import (
     OrganizerEventsCount,
     OrganizerEventWithSlots,
     OrganizerSlotDetails,
+    SimpleOrganizerBookingItem,
+    SimpleOrganizerBookingsResponse,
     UserBookingItemResponse,
     UserBookingsListResponse,
 )
-from shared.db.models.events import BookingStatus, Event, EventBooking
+from shared.db.models.events import (
+    BookingStatus,
+    Event,
+    EventBooking,
+    EventSlot,
+)
 from shared.utils.file_uploads import get_media_url
 
 logger = logging.getLogger(__name__)
@@ -556,6 +563,17 @@ async def verify_booking_constraints(
     if event.end_date and event.end_date < datetime.now(timezone.utc).date():
         return False, "Event has already ended"
 
+    # Get event slot data to check capacity
+    slot_query = select(EventSlot).where(EventSlot.slot_id == event.slot_id)
+    slot_result = await db.execute(slot_query)
+    event_slot = slot_result.scalar_one_or_none()
+
+    if not event_slot:
+        return False, "Event slot configuration not found"
+
+    if not event_slot.slot_status:
+        return False, "Event slot is inactive"
+
     # Get total approved bookings for this event and slot
     approved_bookings_query = select(
         func.coalesce(func.sum(EventBooking.num_seats), 0)
@@ -570,11 +588,46 @@ async def verify_booking_constraints(
     approved_result = await db.execute(approved_bookings_query)
     total_booked_seats = approved_result.scalar() or 0
 
-    # Check if there are enough seats available
-    # Note: You might want to add a max_capacity field to Event model
-    # For now, we'll assume a default capacity or skip this check
-    # if event.max_capacity and (total_booked_seats + num_seats) > event.max_capacity:
-    #     return False, f"Not enough seats available. Only {event.max_capacity - total_booked_seats} seats left"
+    # Check slot capacity from JSONB data
+    slot_data = event_slot.slot_data or {}
+    slot_capacity = None
+
+    # Find the matching slot in JSONB data
+    for date_key, date_slots in slot_data.items():
+        for slot_key, slot_info in date_slots.items():
+            start_time = slot_info.get("start_time", "")
+            end_time = slot_info.get("end_time", "")
+
+            # Create possible time format combinations for matching
+            possible_formats = [
+                f"{start_time} - {end_time}",
+                f"{start_time}:00 - {end_time}:00",
+                f"{start_time} AM - {end_time} PM",
+                f"{start_time} PM - {end_time} PM",
+                f"{start_time} AM - {end_time} AM",
+            ]
+
+            if slot in possible_formats or (
+                start_time in slot and end_time in slot
+            ):
+                slot_capacity = slot_info.get("capacity", 0)
+                break
+
+        if slot_capacity is not None:
+            break
+
+    # If we found slot capacity, check availability
+    if slot_capacity is not None:
+        available_seats = slot_capacity - total_booked_seats
+        if available_seats < num_seats:
+            return (
+                False,
+                f"Not enough seats available. Only {available_seats} seats left for this slot",
+            )
+    else:
+        # Fallback: If no specific slot capacity found, allow booking but warn
+        # This maintains backward compatibility
+        pass
 
     return True, "Booking can be made"
 
@@ -1090,6 +1143,120 @@ async def get_all_bookings_with_details(
     total_pages = (total_bookings + per_page - 1) // per_page
 
     return AllBookingsListResponse(
+        bookings=booking_items,
+        total_items=total_bookings,
+        page=page,
+        per_page=per_page,
+        total_pages=total_pages,
+    )
+
+
+async def get_simple_organizer_bookings(
+    db: AsyncSession,
+    organizer_id: str,
+    event_id: Optional[str] = None,
+    status_filter: Optional[BookingStatus] = None,
+    page: int = 1,
+    per_page: int = 10,
+) -> SimpleOrganizerBookingsResponse:
+    """
+    Get organizer bookings in a simple flat structure for tabular display
+    """
+
+    # Base query for bookings with relationships
+    query = (
+        select(EventBooking)
+        .options(
+            selectinload(EventBooking.user),
+            selectinload(EventBooking.booked_event).selectinload(Event.slots),
+        )
+        .join(Event, EventBooking.event_id == Event.event_id)
+        .where(Event.organizer_id == organizer_id)
+    )
+
+    # Add event_id filter if provided
+    if event_id:
+        query = query.where(Event.event_id == event_id)
+
+    # Add status filter if provided
+    if status_filter:
+        query = query.where(EventBooking.booking_status == status_filter)
+
+    # Count total bookings
+    count_query = (
+        select(func.count(EventBooking.booking_id))
+        .join(Event, EventBooking.event_id == Event.event_id)
+        .where(Event.organizer_id == organizer_id)
+    )
+
+    if event_id:
+        count_query = count_query.where(Event.event_id == event_id)
+    if status_filter:
+        count_query = count_query.where(
+            EventBooking.booking_status == status_filter
+        )
+
+    total_result = await db.execute(count_query)
+    total_bookings = total_result.scalar() or 0
+
+    # Add pagination and ordering
+    query = query.order_by(desc(EventBooking.created_at))
+    query = query.offset((page - 1) * per_page).limit(per_page)
+
+    # Execute query
+    result = await db.execute(query)
+    bookings = result.scalars().all()
+
+    # Build simple response items
+    booking_items = []
+
+    for booking in bookings:
+        # Get slot time from event slots
+        slot_time = booking.slot  # Default to slot key
+
+        if booking.booked_event.slots:
+            for event_slot in booking.booked_event.slots:
+                if event_slot.slot_data:
+                    for date_key, date_slots in event_slot.slot_data.items():
+                        if (
+                            isinstance(date_slots, dict)
+                            and booking.slot in date_slots
+                        ):
+                            slot_details = date_slots[booking.slot]
+                            start_time = slot_details.get("start_time", "")
+                            end_time = slot_details.get("end_time", "")
+                            if start_time and end_time:
+                                slot_time = f"{start_time} - {end_time}"
+                            break
+
+        # Build user name
+        user_name = (
+            f"{booking.user.first_name} {booking.user.last_name}".strip()
+        )
+        if not user_name:
+            user_name = booking.user.username
+
+        booking_item = SimpleOrganizerBookingItem(
+            booking_id=booking.booking_id,
+            event_title=booking.booked_event.event_title,
+            event_id=booking.booked_event.event_id,
+            user_name=user_name,
+            user_email=booking.user.email,
+            slot_time=slot_time,
+            booking_date=booking.booking_date,
+            num_seats=booking.num_seats,
+            total_price=booking.total_price,
+            booking_status=str(booking.booking_status),
+            payment_status=booking.payment_status,
+            created_at=booking.created_at,
+        )
+
+        booking_items.append(booking_item)
+
+    # Calculate pagination
+    total_pages = (total_bookings + per_page - 1) // per_page
+
+    return SimpleOrganizerBookingsResponse(
         bookings=booking_items,
         total_items=total_bookings,
         page=page,
