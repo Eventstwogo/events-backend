@@ -1,9 +1,12 @@
 from datetime import date, datetime, timezone
 from typing import List, Optional, Tuple
 
-from sqlalchemy import and_, case, desc, func, select
+from fastapi import HTTPException
+from sqlalchemy import and_, case, desc, func, insert, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from sqlalchemy.sql import cast
+from sqlalchemy.types import String
 
 from event_service.schemas.bookings import (
     BookingCreateRequest,
@@ -14,112 +17,159 @@ from event_service.schemas.bookings import (
 )
 from shared.db.models.events import BookingStatus, Event, EventBooking
 from shared.db.models.users import User
+import logging
 
+logger = logging.getLogger(__name__)
 
 async def check_existing_booking(
-    db: AsyncSession, user_id: str, event_id: str, num_seats: int
+    db: AsyncSession, user_id: str, event_id: str, slot: str
 ) -> Tuple[bool, str, Optional[EventBooking]]:
     """
-    Check if user has existing booking for the same event with same number of seats.
+    Check if user has existing booking for the same event and slot.
     Returns (can_book, message, existing_booking)
     """
+    logger.info(f"Checking booking: user_id={user_id}, event_id={event_id}, slot={slot}, type={type(slot)}")
+    
+    query = text("""
+        SELECT booking_id, user_id, event_id, num_seats, price_per_seat, slot, 
+               booking_date, total_price, booking_status, paypal_order_id, 
+               payment_status, created_at, updated_at
+        FROM e2geventbookings
+        WHERE user_id = :user_id
+          AND event_id = :event_id
+          AND slot = :slot
+        ORDER BY created_at DESC
+    """)
+    result = await db.execute(query, {
+        "user_id": user_id,
+        "event_id": event_id,
+        "slot": str(slot)
+    })
+    existing_booking = result.mappings().first()
 
-    # Check for existing bookings with same user_id, event_id, and num_seats
-    existing_booking_query = (
-        select(EventBooking)
-        .where(
-            and_(
-                EventBooking.user_id == user_id,
-                EventBooking.event_id == event_id,
-                EventBooking.num_seats == num_seats,
-            )
-        )
-        .order_by(desc(EventBooking.created_at))
-    )
-
-    result = await db.execute(existing_booking_query)
-    existing_booking = result.scalar_one_or_none()
-
-    if not existing_booking:
-        return True, "No existing booking found", None
-
-    # Check the status of the existing booking
-    if existing_booking.booking_status == BookingStatus.APPROVED:
-        # User can book more tickets for the same event
-        return (
-            True,
-            "Previous booking approved, can book more tickets",
-            existing_booking,
-        )
-
-    elif existing_booking.booking_status == BookingStatus.PROCESSING:
+    if existing_booking:
+        logger.warning(f"Booking already exists: booking_id={existing_booking['booking_id']}")
         return (
             False,
-            "You have already booked this event and the booking status is under processing. Please wait for approval.",
-            existing_booking,
+            f"You already have a booking for this event and slot with status: {existing_booking['booking_status']}.",
+            EventBooking(**existing_booking)
         )
 
-    elif existing_booking.booking_status == BookingStatus.FAILED:
-        # Allow new booking for failed bookings
-        return (
-            True,
-            "Previous booking failed, can create new booking",
-            existing_booking,
-        )
-
-    elif existing_booking.booking_status == BookingStatus.CANCELLED:
-        # Allow new booking for cancelled bookings
-        return (
-            True,
-            "Previous booking cancelled, can create new booking",
-            existing_booking,
-        )
-
-    else:
-        # Fallback for any other status
-        return (
-            False,
-            f"You have an existing booking with status: {existing_booking.booking_status}",
-            existing_booking,
-        )
+    return True, "No existing booking found", None
 
 
-async def create_booking(
-    db: AsyncSession, booking_data: BookingCreateRequest
-) -> EventBooking:
-    """Create a new event booking"""
-
-    # Parse booking_date if provided, otherwise use current date
-    if booking_data.booking_date:
-        parsed_booking_date = datetime.strptime(
-            booking_data.booking_date, "%Y-%m-%d"
-        ).date()
-    else:
-        parsed_booking_date = datetime.now(timezone.utc).date()
-
-    # Round prices to 2 decimal places (already done in validation, but ensure consistency)
-    price_per_seat = round(booking_data.price_per_seat, 2)
-    total_price = round(booking_data.total_price, 2)
-
-    # Create booking instance
-    booking = EventBooking(
-        user_id=booking_data.user_id,
-        event_id=booking_data.event_id,
-        num_seats=booking_data.num_seats,
-        price_per_seat=price_per_seat,
-        total_price=total_price,
-        slot=booking_data.slot,
-        booking_date=parsed_booking_date,
-        booking_status=BookingStatus.PROCESSING,  # Always start with PROCESSING status
+async def mark_booking_as_paid(db: AsyncSession, booking_id: int) -> None:
+    # Fetch the booking
+    result = await db.execute(
+        select(EventBooking).where(EventBooking.booking_id == booking_id)
     )
+    booking = result.scalar_one_or_none()
 
-    db.add(booking)
+    if not booking:
+        raise ValueError(f"Booking with ID {booking_id} not found.")
+
+    if booking.payment_status == "COMPLETED":
+        # Already marked as paid, skip update
+        return
+
+    # Update booking status
+    booking.booking_status = BookingStatus.APPROVED
+    booking.payment_status = "COMPLETED"
     await db.commit()
     await db.refresh(booking)
 
+
+async def create_booking_record(db: AsyncSession, booking_data: BookingCreateRequest):
+    logger.info(f"Creating booking record: {booking_data.dict()}")
+    
+    # Convert booking_date string to date object
+    booking_date = None
+    if booking_data.booking_date:
+        try:
+            booking_date = datetime.strptime(booking_data.booking_date, "%Y-%m-%d").date()
+        except ValueError as e:
+            logger.error(f"Invalid booking_date format: {booking_data.booking_date}")
+            raise ValueError("Booking date must be in YYYY-MM-DD format")
+
+    query = insert(EventBooking).values(
+        user_id=booking_data.user_id,
+        event_id=booking_data.event_id,
+        num_seats=booking_data.num_seats,
+        price_per_seat=booking_data.price_per_seat,
+        total_price=booking_data.total_price,
+        slot=str(booking_data.slot),
+        booking_date=booking_date or func.current_date(),  # Use date object or default
+        booking_status=BookingStatus.PROCESSING
+    ).returning(EventBooking)
+    
+    try:
+        result = await db.execute(query)
+        await db.commit()
+        booking = result.scalars().first()
+        logger.info(f"Booking created: booking_id={booking.booking_id}")
+        return booking
+    except Exception as e:
+        logger.error(f"Failed to create booking: {str(e)}")
+        await db.rollback()
+        raise
+
+async def create_booking(db: AsyncSession, booking_data: BookingCreateRequest):
+    # Log the slot value for debugging
+    print(f"Received slot: {booking_data.slot}, type: {type(booking_data.slot)}")
+    
+    can_book, message, existing_booking = await check_existing_booking(
+        db, booking_data.user_id, booking_data.event_id, str(booking_data.slot)  # Ensure string
+    )
+    if not can_book:
+        raise HTTPException(status_code=400, detail=message)
+    
+    # Verify other constraints
+    can_book, message = await verify_booking_constraints(
+        db, booking_data.event_id, booking_data.num_seats, str(booking_data.slot)
+    )
+    if not can_book:
+        raise HTTPException(status_code=400, detail=message)
+
+    # Proceed to create the booking
+    booking = await create_booking_record(db, booking_data)  # Assuming this is the function
     return booking
 
 
+async def verify_booking_constraints(
+    db: AsyncSession, event_id: str, num_seats: int, slot: str
+) -> Tuple[bool, str]:
+    logger.info(f"Verifying constraints: event_id={event_id}, slot={slot}, type={type(slot)}")
+    
+    # Get event details
+    event_query = select(Event).where(Event.event_id == event_id)
+    event_result = await db.execute(event_query)
+    event = event_result.scalar_one_or_none()
+
+    if not event:
+        return False, "Event not found"
+
+    if event.event_status:
+        return False, "Event is inactive"
+
+    if event.end_date and event.end_date < datetime.now(timezone.utc).date():
+        return False, "Event has already ended"
+
+    # Check total approved bookings for this event and slot
+    approved_bookings_query = text("""
+        SELECT COALESCE(SUM(num_seats), 0)
+        FROM e2geventbookings
+        WHERE event_id = :event_id
+          AND slot = :slot
+          AND booking_status = :status
+    """)
+    result = await db.execute(approved_bookings_query, {
+        "event_id": event_id,
+        "slot": str(slot),
+        "status": BookingStatus.APPROVED.value
+    })
+    total_booked_seats = result.scalar() or 0
+
+    return True, "Booking can be made"
 async def get_booking_by_id(
     db: AsyncSession, booking_id: int, load_relations: bool = False
 ) -> Optional[EventBooking]:

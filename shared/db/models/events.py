@@ -6,7 +6,7 @@ from sqlalchemy import (
     Boolean,
     CheckConstraint,
     Date,
-    DateTime,
+    DateTime
 )
 from sqlalchemy import Enum as SQLAlchemyEnum
 from sqlalchemy import (
@@ -16,12 +16,14 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    UniqueConstraint
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
-
+from enum import Enum
 from shared.db.models.base import EventsBase
+from sqlalchemy.types import Enum as SQLAlchemyEnum
 
 if TYPE_CHECKING:
     from shared.db.models.admin_users import AdminUser
@@ -29,11 +31,11 @@ if TYPE_CHECKING:
     from shared.db.models.users import User
 
 
-class BookingStatus(IntEnum):
-    FAILED = -1
-    PROCESSING = 0
-    APPROVED = 1
-    CANCELLED = 2
+class BookingStatus(str, Enum):
+    PROCESSING = "PROCESSING"
+    APPROVED = "APPROVED"
+    CANCELLED = "CANCELLED"
+    FAILED = "FAILED"
 
     def __str__(self):
         return self.name.lower()
@@ -240,6 +242,14 @@ class EventBooking(EventsBase):
         index=True,
     )
 
+    paypal_order_id: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True, index=True
+    )
+
+    payment_status: Mapped[Optional[str]] = mapped_column(
+        String(20), nullable=True, index=True
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -283,14 +293,11 @@ class EventBooking(EventsBase):
         """Update the total_price field based on current num_seats and price_per_seat."""
         self.total_price = self.calculate_total_price()
 
-    # Business logic constraints and composite indexes
-    # Naming convention handled by base class
     __table_args__ = (
-        # Composite indexes for common query patterns
         Index("ix_user_booking_date", "user_id", "booking_date"),
         Index("ix_event_booking_date", "event_id", "booking_date"),
-        # Business logic constraints
         CheckConstraint("num_seats > 0", name="positive_seats"),
         CheckConstraint("price_per_seat >= 0", name="non_negative_price"),
         CheckConstraint("total_price >= 0", name="non_negative_total"),
+        UniqueConstraint("user_id", "event_id", "slot", name="uq_user_event_slot"),
     )
