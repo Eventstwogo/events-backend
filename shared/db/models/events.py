@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from enum import IntEnum
+from enum import Enum, IntEnum
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from sqlalchemy import (
@@ -16,10 +16,12 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
+from sqlalchemy.types import Enum as SQLAlchemyEnum
 
 from shared.db.models.base import EventsBase
 
@@ -29,11 +31,11 @@ if TYPE_CHECKING:
     from shared.db.models.users import User
 
 
-class BookingStatus(IntEnum):
-    FAILED = -1
-    PROCESSING = 0
-    APPROVED = 1
-    CANCELLED = 2
+class BookingStatus(str, Enum):
+    PROCESSING = "PROCESSING"
+    APPROVED = "APPROVED"
+    CANCELLED = "CANCELLED"
+    FAILED = "FAILED"
 
     def __str__(self):
         return self.name.lower()
@@ -55,16 +57,16 @@ class Event(EventsBase):
         ForeignKey("e2gsubcategories.subcategory_id", ondelete="SET NULL"),
         nullable=True,
     )
-    event_slug: Mapped[str] = mapped_column(String, nullable=False, unique=True)
-    event_title: Mapped[str] = mapped_column(
-        Text,
-        nullable=False,
-    )
     organizer_id: Mapped[str] = mapped_column(
         String(6),
         ForeignKey("e2gadminusers.user_id"),
         nullable=False,
         index=True,
+    )
+    event_slug: Mapped[str] = mapped_column(String, nullable=False, unique=True)
+    event_title: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
     )
     start_date: Mapped[date] = mapped_column(
         Date(), nullable=False, server_default=func.current_date()
@@ -240,6 +242,14 @@ class EventBooking(EventsBase):
         index=True,
     )
 
+    paypal_order_id: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True, index=True
+    )
+
+    payment_status: Mapped[Optional[str]] = mapped_column(
+        String(20), nullable=True, index=True
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -293,4 +303,7 @@ class EventBooking(EventsBase):
         CheckConstraint("num_seats > 0", name="positive_seats"),
         CheckConstraint("price_per_seat >= 0", name="non_negative_price"),
         CheckConstraint("total_price >= 0", name="non_negative_total"),
+        UniqueConstraint(
+            "user_id", "event_id", "slot", name="uq_user_event_slot"
+        ),
     )
