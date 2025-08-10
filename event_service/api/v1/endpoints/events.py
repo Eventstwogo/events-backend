@@ -6,11 +6,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from event_service.schemas.advanced_events import (
     CategoryEventListResponse,
     CategoryEventResponse,
+    ComprehensiveCategoryEventResponse,
     EventListResponse,
     EventMinimalResponse,
     EventResponse,
     LimitedEventListResponse,
     LimitedEventResponse,
+    SubcategoryEventGroup,
 )
 from event_service.services.events import (
     delete_event,
@@ -223,6 +225,7 @@ async def get_event_by_slug(
 @router.get(
     "/category-or-subcategory/{slug}",
     status_code=status.HTTP_200_OK,
+    response_model=ComprehensiveCategoryEventResponse,
 )
 @exception_handler
 async def get_events_by_category_or_subcategory_slug(
@@ -250,7 +253,7 @@ async def get_events_by_category_or_subcategory_slug(
     # Use comprehensive slug-based fetching
     (
         category_events,
-        subcategory_events,
+        subcategory_events_grouped,
         total_category_events,
         total_subcategory_events,
         matched_category_id,
@@ -267,55 +270,7 @@ async def get_events_by_category_or_subcategory_slug(
     has_next = page < total_pages
     has_prev = page > 1
 
-    # If no events found at all
-    if not category_events and not subcategory_events:
-        return api_response(
-            status_code=status.HTTP_200_OK,
-            message=f"No active events found for slug '{slug}'",
-            data={
-                "slug": slug,
-                "matched_category_id": matched_category_id,
-                "matched_subcategory_id": matched_subcategory_id,
-                "subcategory_events": {
-                    "events": [],
-                    "total": 0,
-                },
-                "category_events": {
-                    "events": [],
-                    "total": 0,
-                },
-                "total_events": 0,
-                "page": page,
-                "per_page": per_page,
-                "total_pages": 0,
-                "has_next": False,
-                "has_prev": False,
-            },
-        )
-
-    # Process subcategory events FIRST (as per requirement)
-    subcategory_events_data = []
-    subcategory_info = None
-
-    for event in subcategory_events:
-        event_data = EventMinimalResponse.model_validate(event)
-        subcategory_events_data.append(event_data.model_dump())
-
-        # Get subcategory info from first event if not already set
-        if (
-            subcategory_info is None
-            and hasattr(event, "subcategory")
-            and event.subcategory
-        ):
-            subcategory_info = {
-                "subcategory_id": event.subcategory.subcategory_id,
-                "subcategory_slug": event.subcategory.subcategory_slug,
-                "subcategory_name": getattr(
-                    event.subcategory, "subcategory_name", None
-                ),
-            }
-
-    # Process category events SECOND (events with only category_id, no subcategory_id)
+    # Process category events (events with only category_id, no subcategory_id)
     category_events_data = []
     category_info = None
 
@@ -335,42 +290,69 @@ async def get_events_by_category_or_subcategory_slug(
                 "category_name": getattr(event.category, "category_name", None),
             }
 
-    # Build comprehensive response - subcategory events FIRST, then category events
-    response_data = {
-        "slug": slug,
-        "matched_category_id": matched_category_id,
-        "matched_subcategory_id": matched_subcategory_id,
-        "subcategory_events": {
-            "events": subcategory_events_data,
-            "total": total_subcategory_events,
-            "subcategory_info": subcategory_info,
-        },
-        "category_events": {
+    # Process subcategory events (grouped by subcategory)
+    subcategory_groups = []
+
+    for subcategory_id, group_data in subcategory_events_grouped.items():
+        # Convert events to response format
+        events_data = []
+        for event in group_data["events"]:
+            event_data = EventMinimalResponse.model_validate(event)
+            events_data.append(event_data)
+
+        # Create SubCategoryInfo from the subcategory_info dict
+        from event_service.schemas.events import SubCategoryInfo
+
+        subcategory_info = SubCategoryInfo(**group_data["subcategory_info"])
+
+        # Create subcategory group
+        subcategory_group = SubcategoryEventGroup(
+            subcategory_info=subcategory_info,
+            events=events_data,
+            total=group_data["total"],
+        )
+        subcategory_groups.append(subcategory_group)
+
+    # Build comprehensive response
+    response_data = ComprehensiveCategoryEventResponse(
+        slug=slug,
+        matched_category_id=matched_category_id,
+        matched_subcategory_id=matched_subcategory_id,
+        category_events={
             "events": category_events_data,
             "total": total_category_events,
             "category_info": category_info,
         },
-        "total_events": total_events,
-        "page": page,
-        "per_page": per_page,
-        "total_pages": total_pages,
-        "has_next": has_next,
-        "has_prev": has_prev,
-    }
+        subcategory_groups=subcategory_groups,
+        total_events=total_events,
+        page=page,
+        per_page=per_page,
+        total_pages=total_pages,
+        has_next=has_next,
+        has_prev=has_prev,
+    )
 
     # Determine appropriate message based on what was found
     message_parts = []
-    if subcategory_events:
-        message_parts.append(f"{total_subcategory_events} subcategory events")
+    if subcategory_groups:
+        total_subcategory_count = sum(
+            group.total for group in subcategory_groups
+        )
+        message_parts.append(
+            f"{total_subcategory_count} events across {len(subcategory_groups)} subcategories"
+        )
     if category_events:
         message_parts.append(f"{total_category_events} category events")
 
-    message = f"Retrieved {' and '.join(message_parts)} for slug '{slug}'"
+    if not message_parts:
+        message = f"No active events found for slug '{slug}'"
+    else:
+        message = f"Retrieved {' and '.join(message_parts)} for slug '{slug}'"
 
     return api_response(
         status_code=status.HTTP_200_OK,
         message=message,
-        data=response_data,
+        data=response_data.model_dump(),
     )
 
 

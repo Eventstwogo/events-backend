@@ -11,8 +11,6 @@ from event_service.schemas.bookings import (
     AllBookingsEventDetails,
     AllBookingsItemResponse,
     AllBookingsListResponse,
-    AllBookingsOrganizerDetails,
-    AllBookingsUserDetails,
     BookingCreateRequest,
     BookingDetailsResponse,
     BookingEventDetails,
@@ -31,6 +29,7 @@ from event_service.schemas.bookings import (
     UserBookingsListResponse,
 )
 from shared.db.models.events import BookingStatus, Event, EventBooking
+from shared.utils.file_uploads import get_media_url
 
 logger = logging.getLogger(__name__)
 
@@ -614,7 +613,9 @@ def build_booking_with_event_response(
                 "event_address": event_address,
                 "event_start_date": booking.booked_event.start_date,
                 "event_end_date": booking.booked_event.end_date,
-                "event_card_image": booking.booked_event.card_image,
+                "event_card_image": get_media_url(
+                    booking.booked_event.card_image
+                ),
             }
         )
 
@@ -653,7 +654,9 @@ def build_booking_with_user_response(
                 "user_email": booking.user.email,  # This will use the property to decrypt
                 "user_first_name": booking.user.first_name,
                 "user_last_name": booking.user.last_name,
-                "user_profile_picture": booking.user.profile_picture,
+                "user_profile_picture": get_media_url(
+                    booking.user.profile_picture
+                ),
             }
         )
 
@@ -687,7 +690,9 @@ def build_enhanced_booking_response(booking: EventBooking) -> BookingResponse:
                 "user_email": booking.user.email,  # This will use the property to decrypt
                 "user_first_name": booking.user.first_name or "",
                 "user_last_name": booking.user.last_name or "",
-                "user_profile_picture": booking.user.profile_picture,
+                "user_profile_picture": get_media_url(
+                    booking.user.profile_picture
+                ),
             }
         )
 
@@ -704,7 +709,9 @@ def build_enhanced_booking_response(booking: EventBooking) -> BookingResponse:
                 "event_address": event_address,
                 "event_start_date": booking.booked_event.start_date,
                 "event_end_date": booking.booked_event.end_date,
-                "event_card_image": booking.booked_event.card_image,
+                "event_card_image": get_media_url(
+                    booking.booked_event.card_image
+                ),
             }
         )
 
@@ -744,7 +751,7 @@ def build_booking_details_response(
         address=event_address,
         start_date=booking.booked_event.start_date,
         end_date=booking.booked_event.end_date,
-        card_image=booking.booked_event.card_image,
+        card_image=get_media_url(booking.booked_event.card_image),
     )
 
     # Extract slot time information
@@ -792,7 +799,7 @@ def build_user_bookings_list_response(
         booking_item = UserBookingItemResponse(
             booking_id=booking.booking_id,
             event_title=event_title,
-            event_card_image=event_card_image,
+            event_card_image=get_media_url(event_card_image),
             slot_time=slot_time,
             booking_date=booking.booking_date,
             total_price=booking.total_price,
@@ -877,7 +884,7 @@ async def get_organizer_bookings_with_events_and_slots(
             event_id=event.event_id,
             title=event.event_title,
             slug=event.event_slug,
-            card_image=event.card_image,
+            card_image=get_media_url(event.card_image),
             start_date=event.start_date,
             end_date=event.end_date,
             status="active" if event.event_status else "inactive",
@@ -1052,7 +1059,7 @@ async def get_all_bookings_with_details(
             start_date=booking.booked_event.start_date,
             end_date=booking.booked_event.end_date,
             location=booking.booked_event.location,
-            card_image=booking.booked_event.card_image,
+            card_image=get_media_url(booking.booked_event.card_image),
         )
 
         # Build organizer details

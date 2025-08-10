@@ -264,6 +264,50 @@ class EventListWithSubcategoriesResponse(BaseModel):
     has_prev: bool = Field(..., description="Whether there are previous pages")
 
 
+class SubcategoryEventGroup(BaseModel):
+    """Schema for a group of events under a subcategory"""
+
+    subcategory_info: SubCategoryInfo = Field(
+        ..., description="Subcategory information"
+    )
+    events: List[EventMinimalResponse] = Field(
+        ..., description="Events in this subcategory"
+    )
+    total: int = Field(
+        ..., description="Total number of events in this subcategory"
+    )
+
+
+class ComprehensiveCategoryEventResponse(BaseModel):
+    """Schema for comprehensive category/subcategory event response"""
+
+    slug: str = Field(..., description="The searched slug")
+    matched_category_id: Optional[str] = Field(
+        None, description="Category ID if slug matched a category"
+    )
+    matched_subcategory_id: Optional[str] = Field(
+        None, description="Subcategory ID if slug matched a subcategory"
+    )
+
+    # Category events (events with only category_id, no subcategory_id)
+    category_events: Dict[str, Any] = Field(
+        ..., description="Category events data"
+    )
+
+    # Subcategory events grouped by subcategory
+    subcategory_groups: List[SubcategoryEventGroup] = Field(
+        default_factory=list, description="Subcategory event groups"
+    )
+
+    # Pagination and totals
+    total_events: int = Field(..., description="Total events across all groups")
+    page: int = Field(..., description="Current page number")
+    per_page: int = Field(..., description="Items per page")
+    total_pages: int = Field(..., description="Total number of pages")
+    has_next: bool = Field(..., description="Whether there are more pages")
+    has_prev: bool = Field(..., description="Whether there are previous pages")
+
+
 class EventListSimpleResponse(BaseModel):
     """Schema for simple event list response (for subcategory slug)"""
 
