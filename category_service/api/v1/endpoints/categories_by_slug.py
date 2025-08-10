@@ -469,7 +469,7 @@ async def update_category_by_slug(
     )
 
 
-@router.delete("/slug/{category_slug}/soft")
+@router.delete("/slug/soft/{category_slug}")
 @exception_handler
 async def soft_delete_category_by_slug(
     category_slug: str, db: AsyncSession = Depends(get_db)
@@ -495,7 +495,7 @@ async def soft_delete_category_by_slug(
     )
 
 
-@router.put("/slug/{category_slug}/restore")
+@router.put("/slug/restore/{category_slug}")
 @exception_handler
 async def restore_category_by_slug(
     category_slug: str, db: AsyncSession = Depends(get_db)
@@ -521,7 +521,7 @@ async def restore_category_by_slug(
     )
 
 
-@router.delete("/slug/{category_slug}/hard")
+@router.delete("/slug/hard/{category_slug}")
 @exception_handler
 async def hard_delete_category_by_slug(
     category_slug: str, db: AsyncSession = Depends(get_db)

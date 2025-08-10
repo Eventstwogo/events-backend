@@ -64,7 +64,7 @@ def convert_status_filter(
 
 
 @router.post(
-    "/", status_code=status.HTTP_201_CREATED, response_model=BookingResponse
+    "", status_code=status.HTTP_201_CREATED, response_model=BookingResponse
 )
 @exception_handler
 async def create_event_booking(
@@ -135,7 +135,7 @@ async def create_event_booking(
 
 
 @router.patch(
-    "/{booking_id}/status",
+    "/status/{booking_id}",
     status_code=status.HTTP_200_OK,
     response_model=BookingResponse,
 )

@@ -374,7 +374,7 @@ async def get_events_by_category_or_subcategory_slug(
     )
 
 
-@router.patch("/{event_id}/status", status_code=status.HTTP_200_OK)
+@router.patch("/status/{event_id}", status_code=status.HTTP_200_OK)
 @exception_handler
 async def change_event_status(
     event_id: str,

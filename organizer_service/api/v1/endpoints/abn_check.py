@@ -110,7 +110,7 @@ async def get_abn_details(
         )
 
 
-@router.get("/{abn_id}/verify", summary="Verify ABN ID")
+@router.get("/verify/{abn_id}", summary="Verify ABN ID")
 @exception_handler
 async def verify_abn(abn_id: str):
     abn_data = await fetch_abn_details(abn_id)

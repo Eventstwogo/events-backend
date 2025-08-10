@@ -252,7 +252,7 @@ async def get_query(
 
 
 @router.post(
-    "/{query_id}/messages",
+    "/messages/{query_id}",
     response_model=QueryResponse,
     summary="Add message to query",
 )
@@ -323,7 +323,7 @@ async def add_message_to_query(
 
 
 @router.patch(
-    "/{query_id}/status",
+    "/status/{query_id}",
     response_model=QueryResponse,
     summary="Update query status",
 )
