@@ -163,8 +163,8 @@ async def create_event_booking(
                 "landing_page": "LOGIN",
                 "locale": "en-AU",
                 "user_action": "PAY_NOW",
-                "return_url": f"{settings.USERS_APPLICATION_FRONTEND_URL}/bookings/confirm?booking_id={booking.booking_id}",
-                "cancel_url": f"{settings.USERS_APPLICATION_FRONTEND_URL}/bookings/cancel?booking_id={booking.booking_id}",
+                "return_url": f"{settings.USERS_APPLICATION_FRONTEND_URL}/booking-success?booking_id={booking.booking_id}",
+                "cancel_url": f"{settings.USERS_APPLICATION_FRONTEND_URL}/booking-failure?booking_id={booking.booking_id}",
             },
         }
     )
