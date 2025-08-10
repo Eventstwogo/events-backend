@@ -111,6 +111,7 @@ class Settings(BaseSettings):
     ADMIN_FRONTEND_URL: str = "https://admin.events2go.com.au"
     ORGANIZER_FRONTEND_URL: str = "https://organizer.events2go.com.au"
     USERS_APPLICATION_FRONTEND_URL: str = "https://events2go.com.au"
+    API_BACKEND_URL: str = "https://api.events2go.com.au"
     DESCRIPTION: str = (
         "Events2Go application for managing events and users, built with FastAPI."
     )

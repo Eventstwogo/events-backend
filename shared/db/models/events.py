@@ -1,12 +1,12 @@
 from datetime import date, datetime
-from enum import IntEnum
+from enum import Enum, IntEnum
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
     Date,
-    DateTime
+    DateTime,
 )
 from sqlalchemy import Enum as SQLAlchemyEnum
 from sqlalchemy import (
@@ -16,14 +16,14 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
-    UniqueConstraint
+    UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
-from enum import Enum
-from shared.db.models.base import EventsBase
 from sqlalchemy.types import Enum as SQLAlchemyEnum
+
+from shared.db.models.base import EventsBase
 
 if TYPE_CHECKING:
     from shared.db.models.admin_users import AdminUser
@@ -57,16 +57,16 @@ class Event(EventsBase):
         ForeignKey("e2gsubcategories.subcategory_id", ondelete="SET NULL"),
         nullable=True,
     )
-    event_slug: Mapped[str] = mapped_column(String, nullable=False, unique=True)
-    event_title: Mapped[str] = mapped_column(
-        Text,
-        nullable=False,
-    )
     organizer_id: Mapped[str] = mapped_column(
         String(6),
         ForeignKey("e2gadminusers.user_id"),
         nullable=False,
         index=True,
+    )
+    event_slug: Mapped[str] = mapped_column(String, nullable=False, unique=True)
+    event_title: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
     )
     start_date: Mapped[date] = mapped_column(
         Date(), nullable=False, server_default=func.current_date()
@@ -293,11 +293,17 @@ class EventBooking(EventsBase):
         """Update the total_price field based on current num_seats and price_per_seat."""
         self.total_price = self.calculate_total_price()
 
+    # Business logic constraints and composite indexes
+    # Naming convention handled by base class
     __table_args__ = (
+        # Composite indexes for common query patterns
         Index("ix_user_booking_date", "user_id", "booking_date"),
         Index("ix_event_booking_date", "event_id", "booking_date"),
+        # Business logic constraints
         CheckConstraint("num_seats > 0", name="positive_seats"),
         CheckConstraint("price_per_seat >= 0", name="non_negative_price"),
         CheckConstraint("total_price >= 0", name="non_negative_total"),
-        UniqueConstraint("user_id", "event_id", "slot", name="uq_user_event_slot"),
+        UniqueConstraint(
+            "user_id", "event_id", "slot", name="uq_user_event_slot"
+        ),
     )

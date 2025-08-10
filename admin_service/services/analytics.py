@@ -356,16 +356,17 @@ async def _get_revenue_analytics(
     revenue_difference = current_month_revenue - last_month_revenue
 
     return {
-        "current_month": current_month_revenue,
-        "last_month": last_month_revenue,
-        "difference": revenue_difference,
-        "percentage_change": round(percentage_change, 1),
-        "trend": (
-            "up"
-            if percentage_change > 0
-            else "down" if percentage_change < 0 else "stable"
-        ),
-        "note": "Estimated revenue based on events. "
+        "current_month": 0,  # current_month_revenue,
+        "last_month": 0,  # last_month_revenue,
+        "difference": 0,  # revenue_difference,
+        "percentage_change": 0,  # round(percentage_change, 1),
+        "trend": "stable",
+        # "trend": (
+        #     "up"
+        #     if percentage_change > 0
+        #     else "down" if percentage_change < 0 else "stable"
+        # ),
+        "note": "Estimated revenue based on events."
         "Implement actual payment tracking for accurate data.",
     }
 

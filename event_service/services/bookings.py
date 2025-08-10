@@ -1,25 +1,116 @@
-from datetime import date, datetime, timezone
+import logging
+from datetime import datetime, timezone
 from typing import List, Optional, Tuple
 
 from fastapi import HTTPException
-from sqlalchemy import and_, case, desc, func, insert, select, text
+from sqlalchemy import and_, case, desc, func, insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from sqlalchemy.sql import cast
-from sqlalchemy.types import String
 
 from event_service.schemas.bookings import (
+    AllBookingsEventDetails,
+    AllBookingsItemResponse,
+    AllBookingsListResponse,
+    AllBookingsOrganizerDetails,
+    AllBookingsUserDetails,
     BookingCreateRequest,
+    BookingDetailsResponse,
+    BookingEventDetails,
     BookingResponse,
     BookingStatusUpdateRequest,
+    BookingUserDetails,
     BookingWithEventResponse,
     BookingWithUserResponse,
+    OrganizerBookingDetails,
+    OrganizerBookingsResponse,
+    OrganizerEventDetails,
+    OrganizerEventsCount,
+    OrganizerEventWithSlots,
+    OrganizerSlotDetails,
+    UserBookingItemResponse,
+    UserBookingsListResponse,
 )
 from shared.db.models.events import BookingStatus, Event, EventBooking
-from shared.db.models.users import User
-import logging
 
 logger = logging.getLogger(__name__)
+
+
+def _extract_slot_time(event: Event, slot: str) -> Optional[str]:
+    """
+    Extract slot time information from event slot data.
+
+    Args:
+        event: The event object with slot data
+        slot: The slot string to find time information for
+
+    Returns:
+        Formatted time string (e.g., "10:00 AM - 12:00 PM") or None if not found
+    """
+    if not event or not hasattr(event, "slots") or not event.slots:
+        return None
+
+    try:
+        # Look through all event slots to find matching slot data
+        for event_slot in event.slots:
+            if not event_slot.slot_data:
+                continue
+
+            # slot_data is a JSONB field containing date -> slot mappings
+            for date_key, date_slots in event_slot.slot_data.items():
+                if isinstance(date_slots, dict):
+                    for slot_key, slot_details in date_slots.items():
+                        # Check if this slot matches the booking slot
+                        if slot_key == slot or slot == slot_key:
+                            start_time = slot_details.get("start_time")
+                            end_time = slot_details.get("end_time")
+
+                            if start_time and end_time:
+                                return f"{start_time} - {end_time}"
+                            elif start_time:
+                                return start_time
+
+        # If no specific time found, return the slot string as is
+        return slot
+
+    except Exception as e:
+        logger.warning(
+            f"Error extracting slot time for slot '{slot}': {str(e)}"
+        )
+        return slot
+
+
+def _extract_event_address(event: Event) -> Optional[str]:
+    """
+    Extract event address from extra_data field.
+
+    Args:
+        event: The event object with extra_data
+
+    Returns:
+        Address string from extra_data or None if not found
+    """
+    if not event or not event.extra_data:
+        return None
+
+    try:
+        # Look for common address field names in extra_data
+        address_fields = [
+            "address",
+            "event_address",
+            "location_address",
+            "venue_address",
+        ]
+
+        for field in address_fields:
+            if field in event.extra_data and event.extra_data[field]:
+                return str(event.extra_data[field])
+
+        return None
+
+    except Exception as e:
+        logger.warning(f"Error extracting event address: {str(e)}")
+        return None
+
 
 async def check_existing_booking(
     db: AsyncSession, user_id: str, event_id: str, slot: str
@@ -28,31 +119,34 @@ async def check_existing_booking(
     Check if user has existing booking for the same event and slot.
     Returns (can_book, message, existing_booking)
     """
-    logger.info(f"Checking booking: user_id={user_id}, event_id={event_id}, slot={slot}, type={type(slot)}")
-    
-    query = text("""
-        SELECT booking_id, user_id, event_id, num_seats, price_per_seat, slot, 
-               booking_date, total_price, booking_status, paypal_order_id, 
-               payment_status, created_at, updated_at
-        FROM e2geventbookings
-        WHERE user_id = :user_id
-          AND event_id = :event_id
-          AND slot = :slot
-        ORDER BY created_at DESC
-    """)
-    result = await db.execute(query, {
-        "user_id": user_id,
-        "event_id": event_id,
-        "slot": str(slot)
-    })
-    existing_booking = result.mappings().first()
+    logger.info(
+        f"Checking booking: user_id={user_id}, event_id={event_id}, slot={slot}, type={type(slot)}"
+    )
+
+    # Use SQLAlchemy ORM query instead of raw SQL
+    query = (
+        select(EventBooking)
+        .where(
+            and_(
+                EventBooking.user_id == user_id,
+                EventBooking.event_id == event_id,
+                EventBooking.slot == str(slot),
+            )
+        )
+        .order_by(desc(EventBooking.created_at))
+    )
+
+    result = await db.execute(query)
+    existing_booking = result.scalar_one_or_none()
 
     if existing_booking:
-        logger.warning(f"Booking already exists: booking_id={existing_booking['booking_id']}")
+        logger.warning(
+            f"Booking already exists: booking_id={existing_booking.booking_id}"
+        )
         return (
             False,
-            f"You already have a booking for this event and slot with status: {existing_booking['booking_status']}.",
-            EventBooking(**existing_booking)
+            f"You already have a booking for this event and slot with status: {existing_booking.booking_status}.",
+            existing_booking,
         )
 
     return True, "No existing booking found", None
@@ -79,33 +173,51 @@ async def mark_booking_as_paid(db: AsyncSession, booking_id: int) -> None:
     await db.refresh(booking)
 
 
-async def create_booking_record(db: AsyncSession, booking_data: BookingCreateRequest):
-    logger.info(f"Creating booking record: {booking_data.dict()}")
-    
+async def create_booking_record(
+    db: AsyncSession, booking_data: BookingCreateRequest
+):
+    logger.info(f"Creating booking record: {booking_data.model_dump()}")
+
     # Convert booking_date string to date object
     booking_date = None
     if booking_data.booking_date:
         try:
-            booking_date = datetime.strptime(booking_data.booking_date, "%Y-%m-%d").date()
+            booking_date = datetime.strptime(
+                booking_data.booking_date, "%Y-%m-%d"
+            ).date()
         except ValueError as e:
-            logger.error(f"Invalid booking_date format: {booking_data.booking_date}")
+            logger.error(
+                f"Invalid booking_date format: {booking_data.booking_date}"
+            )
             raise ValueError("Booking date must be in YYYY-MM-DD format")
 
-    query = insert(EventBooking).values(
-        user_id=booking_data.user_id,
-        event_id=booking_data.event_id,
-        num_seats=booking_data.num_seats,
-        price_per_seat=booking_data.price_per_seat,
-        total_price=booking_data.total_price,
-        slot=str(booking_data.slot),
-        booking_date=booking_date or func.current_date(),  # Use date object or default
-        booking_status=BookingStatus.PROCESSING
-    ).returning(EventBooking)
-    
+    query = (
+        insert(EventBooking)
+        .values(
+            user_id=booking_data.user_id,
+            event_id=booking_data.event_id,
+            num_seats=booking_data.num_seats,
+            price_per_seat=booking_data.price_per_seat,
+            total_price=booking_data.total_price,
+            slot=str(booking_data.slot),
+            booking_date=booking_date
+            or func.current_date(),  # Use date object or default
+            booking_status=BookingStatus.PROCESSING,
+        )
+        .returning(EventBooking)
+    )
+
     try:
         result = await db.execute(query)
         await db.commit()
         booking = result.scalars().first()
+
+        if booking is None:
+            logger.error(
+                "Failed to create booking: No booking returned from database"
+            )
+            raise ValueError("Failed to create booking record")
+
         logger.info(f"Booking created: booking_id={booking.booking_id}")
         return booking
     except Exception as e:
@@ -113,63 +225,39 @@ async def create_booking_record(db: AsyncSession, booking_data: BookingCreateReq
         await db.rollback()
         raise
 
+
 async def create_booking(db: AsyncSession, booking_data: BookingCreateRequest):
     # Log the slot value for debugging
-    print(f"Received slot: {booking_data.slot}, type: {type(booking_data.slot)}")
-    
+    print(
+        f"Received slot: {booking_data.slot}, type: {type(booking_data.slot)}"
+    )
+
     can_book, message, existing_booking = await check_existing_booking(
-        db, booking_data.user_id, booking_data.event_id, str(booking_data.slot)  # Ensure string
+        db,
+        booking_data.user_id,
+        booking_data.event_id,
+        str(booking_data.slot),  # Ensure string
     )
     if not can_book:
         raise HTTPException(status_code=400, detail=message)
-    
+
     # Verify other constraints
     can_book, message = await verify_booking_constraints(
-        db, booking_data.event_id, booking_data.num_seats, str(booking_data.slot)
+        db,
+        booking_data.event_id,
+        booking_data.num_seats,
+        str(booking_data.slot),
     )
     if not can_book:
         raise HTTPException(status_code=400, detail=message)
 
     # Proceed to create the booking
-    booking = await create_booking_record(db, booking_data)  # Assuming this is the function
+    booking = await create_booking_record(
+        db, booking_data
+    )  # Assuming this is the function
     return booking
 
 
-async def verify_booking_constraints(
-    db: AsyncSession, event_id: str, num_seats: int, slot: str
-) -> Tuple[bool, str]:
-    logger.info(f"Verifying constraints: event_id={event_id}, slot={slot}, type={type(slot)}")
-    
-    # Get event details
-    event_query = select(Event).where(Event.event_id == event_id)
-    event_result = await db.execute(event_query)
-    event = event_result.scalar_one_or_none()
-
-    if not event:
-        return False, "Event not found"
-
-    if event.event_status:
-        return False, "Event is inactive"
-
-    if event.end_date and event.end_date < datetime.now(timezone.utc).date():
-        return False, "Event has already ended"
-
-    # Check total approved bookings for this event and slot
-    approved_bookings_query = text("""
-        SELECT COALESCE(SUM(num_seats), 0)
-        FROM e2geventbookings
-        WHERE event_id = :event_id
-          AND slot = :slot
-          AND booking_status = :status
-    """)
-    result = await db.execute(approved_bookings_query, {
-        "event_id": event_id,
-        "slot": str(slot),
-        "status": BookingStatus.APPROVED.value
-    })
-    total_booked_seats = result.scalar() or 0
-
-    return True, "Booking can be made"
 async def get_booking_by_id(
     db: AsyncSession, booking_id: int, load_relations: bool = False
 ) -> Optional[EventBooking]:
@@ -196,8 +284,8 @@ async def update_booking_status(
     if not booking:
         return None
 
-    # Convert string status to BookingStatus enum
-    booking.booking_status = status_data.get_booking_status_enum()
+    # Update booking status directly (already a BookingStatus enum)
+    booking.booking_status = status_data.booking_status
 
     await db.commit()
     await db.refresh(booking)
@@ -508,19 +596,31 @@ def build_booking_with_event_response(
         "booking_status": booking.booking_status,
         "created_at": booking.created_at,
         "updated_at": booking.updated_at,
+        # Payment details
+        "payment_status": booking.payment_status,
+        "paypal_order_id": booking.paypal_order_id,
     }
 
     # Add event details if available
     if hasattr(booking, "booked_event") and booking.booked_event:
+        # Extract event address from extra_data
+        event_address = _extract_event_address(booking.booked_event)
+
         response_data.update(
             {
                 "event_title": booking.booked_event.event_title,
                 "event_slug": booking.booked_event.event_slug,
                 "event_location": booking.booked_event.location,
+                "event_address": event_address,
                 "event_start_date": booking.booked_event.start_date,
                 "event_end_date": booking.booked_event.end_date,
+                "event_card_image": booking.booked_event.card_image,
             }
         )
+
+        # Extract slot time information from event slot data
+        slot_time = _extract_slot_time(booking.booked_event, booking.slot)
+        response_data["slot_time"] = slot_time
 
     return BookingWithEventResponse(**response_data)
 
@@ -541,6 +641,9 @@ def build_booking_with_user_response(
         "booking_status": booking.booking_status,
         "created_at": booking.created_at,
         "updated_at": booking.updated_at,
+        # Payment details
+        "payment_status": booking.payment_status,
+        "paypal_order_id": booking.paypal_order_id,
     }
 
     # Add user details if available (handle encrypted fields)
@@ -550,6 +653,7 @@ def build_booking_with_user_response(
                 "user_email": booking.user.email,  # This will use the property to decrypt
                 "user_first_name": booking.user.first_name,
                 "user_last_name": booking.user.last_name,
+                "user_profile_picture": booking.user.profile_picture,
             }
         )
 
@@ -571,6 +675,9 @@ def build_enhanced_booking_response(booking: EventBooking) -> BookingResponse:
         "booking_status": booking.booking_status,
         "created_at": booking.created_at,
         "updated_at": booking.updated_at,
+        # Payment details
+        "payment_status": booking.payment_status,
+        "paypal_order_id": booking.paypal_order_id,
     }
 
     # Add user details if available (handle encrypted fields)
@@ -580,19 +687,405 @@ def build_enhanced_booking_response(booking: EventBooking) -> BookingResponse:
                 "user_email": booking.user.email,  # This will use the property to decrypt
                 "user_first_name": booking.user.first_name or "",
                 "user_last_name": booking.user.last_name or "",
+                "user_profile_picture": booking.user.profile_picture,
             }
         )
 
     # Add event details if available
     if hasattr(booking, "booked_event") and booking.booked_event:
+        # Extract event address from extra_data
+        event_address = _extract_event_address(booking.booked_event)
+
         response_data.update(
             {
                 "event_title": booking.booked_event.event_title,
                 "event_slug": booking.booked_event.event_slug,
                 "event_location": booking.booked_event.location,
+                "event_address": event_address,
                 "event_start_date": booking.booked_event.start_date,
                 "event_end_date": booking.booked_event.end_date,
+                "event_card_image": booking.booked_event.card_image,
             }
         )
 
+        # Extract slot time information from event slot data
+        slot_time = _extract_slot_time(booking.booked_event, booking.slot)
+        response_data["slot_time"] = slot_time
+
     return BookingResponse(**response_data)
+
+
+def build_booking_details_response(
+    booking: EventBooking,
+) -> BookingDetailsResponse:
+    """Build detailed booking response with nested user and event details"""
+
+    # Validate that we have the required relationships loaded
+    if not hasattr(booking, "user") or not booking.user:
+        raise ValueError("Booking must have user relationship loaded")
+
+    if not hasattr(booking, "booked_event") or not booking.booked_event:
+        raise ValueError("Booking must have event relationship loaded")
+
+    # Build user details
+    user_details = BookingUserDetails(
+        user_id=booking.user.user_id,
+        email=booking.user.email,
+        username=booking.user.username,
+    )
+
+    # Build event details
+    event_address = _extract_event_address(booking.booked_event)
+    event_details = BookingEventDetails(
+        event_id=booking.booked_event.event_id,
+        title=booking.booked_event.event_title,
+        slug=booking.booked_event.event_slug,
+        location=booking.booked_event.location,
+        address=event_address,
+        start_date=booking.booked_event.start_date,
+        end_date=booking.booked_event.end_date,
+        card_image=booking.booked_event.card_image,
+    )
+
+    # Extract slot time information
+    slot_time = _extract_slot_time(booking.booked_event, booking.slot)
+
+    # Build the main response
+    return BookingDetailsResponse(
+        booking_id=booking.booking_id,
+        num_seats=booking.num_seats,
+        price_per_seat=booking.price_per_seat,
+        total_price=booking.total_price,
+        slot=booking.slot,
+        slot_time=slot_time,
+        booking_date=booking.booking_date,
+        booking_status=str(booking.booking_status),
+        payment_status=booking.payment_status,
+        paypal_order_id=booking.paypal_order_id,
+        created_at=booking.created_at,
+        updated_at=booking.updated_at,
+        user=user_details,
+        event=event_details,
+    )
+
+
+def build_user_bookings_list_response(
+    bookings: List[EventBooking], total: int, page: int, per_page: int
+) -> UserBookingsListResponse:
+    """Build user bookings list response with pagination"""
+
+    # Build individual booking items
+    booking_items = []
+    for booking in bookings:
+        # Extract slot time information
+        slot_time = None
+        if hasattr(booking, "booked_event") and booking.booked_event:
+            slot_time = _extract_slot_time(booking.booked_event, booking.slot)
+
+        # Get event title and card image
+        event_title = ""
+        event_card_image = None
+        if hasattr(booking, "booked_event") and booking.booked_event:
+            event_title = booking.booked_event.event_title or ""
+            event_card_image = booking.booked_event.card_image
+
+        booking_item = UserBookingItemResponse(
+            booking_id=booking.booking_id,
+            event_title=event_title,
+            event_card_image=event_card_image,
+            slot_time=slot_time,
+            booking_date=booking.booking_date,
+            total_price=booking.total_price,
+            booking_status=str(booking.booking_status),
+        )
+        booking_items.append(booking_item)
+
+    # Calculate total pages
+    total_pages = (total + per_page - 1) // per_page
+
+    return UserBookingsListResponse(
+        events=booking_items,
+        page=page,
+        per_page=per_page,
+        total_items=total,
+        total_pages=total_pages,
+    )
+
+
+async def get_organizer_bookings_with_events_and_slots(
+    db: AsyncSession,
+    organizer_id: str,
+    event_id: Optional[str] = None,
+    status_filter: Optional[BookingStatus] = None,
+    page: int = 1,
+    per_page: int = 10,
+) -> OrganizerBookingsResponse:
+    """
+    Get organizer bookings organized by events and slots with detailed structure
+    """
+
+    # Base query for events by organizer
+    events_query = select(Event).where(Event.organizer_id == organizer_id)
+
+    # Add event_id filter if provided
+    if event_id:
+        events_query = events_query.where(Event.event_id == event_id)
+
+    # Load relationships
+    events_query = events_query.options(
+        selectinload(Event.slots),
+        selectinload(Event.bookings).selectinload(EventBooking.user),
+    )
+
+    # Add pagination to events
+    events_query = events_query.offset((page - 1) * per_page).limit(per_page)
+
+    # Execute events query
+    events_result = await db.execute(events_query)
+    events = events_result.scalars().all()
+
+    # Count total events for pagination
+    count_query = select(func.count(Event.event_id)).where(
+        Event.organizer_id == organizer_id
+    )
+    if event_id:
+        count_query = count_query.where(Event.event_id == event_id)
+
+    total_result = await db.execute(count_query)
+    total_events = total_result.scalar() or 0
+
+    # Count active/inactive events
+    active_count_query = select(func.count(Event.event_id)).where(
+        and_(Event.organizer_id == organizer_id, Event.event_status == True)
+    )
+    inactive_count_query = select(func.count(Event.event_id)).where(
+        and_(Event.organizer_id == organizer_id, Event.event_status == False)
+    )
+
+    active_result = await db.execute(active_count_query)
+    inactive_result = await db.execute(inactive_count_query)
+
+    active_count = active_result.scalar() or 0
+    inactive_count = inactive_result.scalar() or 0
+
+    # Build response structure
+    events_with_slots = []
+
+    for event in events:
+        # Build event details
+        event_details = OrganizerEventDetails(
+            event_id=event.event_id,
+            title=event.event_title,
+            slug=event.event_slug,
+            card_image=event.card_image,
+            start_date=event.start_date,
+            end_date=event.end_date,
+            status="active" if event.event_status else "inactive",
+            slots_count=len(event.slots) if event.slots else 0,
+        )
+
+        # Build slots with bookings
+        slots_details = []
+
+        # Get unique slots from bookings and slot data
+        slot_map = {}
+
+        # First, collect all slots from event.slots (slot configuration)
+        if event.slots:
+            for event_slot in event.slots:
+                if event_slot.slot_data:
+                    for date_key, date_slots in event_slot.slot_data.items():
+                        if isinstance(date_slots, dict):
+                            for slot_key, slot_details in date_slots.items():
+                                if slot_key not in slot_map:
+                                    start_time = slot_details.get(
+                                        "start_time", ""
+                                    )
+                                    end_time = slot_details.get("end_time", "")
+                                    slot_time = (
+                                        f"{start_time} - {end_time}"
+                                        if start_time and end_time
+                                        else slot_key
+                                    )
+                                    capacity = slot_details.get("capacity", 0)
+
+                                    slot_map[slot_key] = {
+                                        "slot_id": slot_key,
+                                        "slot_time": slot_time,
+                                        "total_capacity": capacity,
+                                        "bookings": [],
+                                    }
+
+        # Then, add bookings to slots
+        if event.bookings:
+            for booking in event.bookings:
+                # Apply status filter if provided
+                if status_filter and booking.booking_status != status_filter:
+                    continue
+
+                slot_key = booking.slot
+
+                # If slot not in map, create it with basic info
+                if slot_key not in slot_map:
+                    slot_map[slot_key] = {
+                        "slot_id": slot_key,
+                        "slot_time": slot_key,  # Use slot key as fallback
+                        "total_capacity": 0,
+                        "bookings": [],
+                    }
+
+                booking_details = OrganizerBookingDetails(
+                    booking_id=booking.booking_id,
+                    booking_date=booking.booking_date,
+                    num_seats=booking.num_seats,
+                    total_price=booking.total_price,
+                    booking_status=str(booking.booking_status),
+                    payment_status=booking.payment_status,
+                    paypal_order_id=booking.paypal_order_id,
+                    created_at=booking.created_at,
+                    updated_at=booking.updated_at,
+                    username=booking.user.username,
+                )
+
+                slot_map[slot_key]["bookings"].append(booking_details)
+
+        # Convert slot_map to list and calculate statistics
+        for slot_key, slot_info in slot_map.items():
+            # Calculate booked seats (only approved bookings)
+            booked_seats = sum(
+                booking.num_seats
+                for booking in slot_info["bookings"]
+                if booking.booking_status == "approved"
+            )
+
+            total_capacity = slot_info["total_capacity"]
+            remaining_seats = max(0, total_capacity - booked_seats)
+
+            slot_details = OrganizerSlotDetails(
+                slot_id=slot_info["slot_id"],
+                slot_time=slot_info["slot_time"],
+                total_capacity=total_capacity,
+                booked_seats=booked_seats,
+                remaining_seats=remaining_seats,
+                user_bookings_count=len(slot_info["bookings"]),
+                bookings=slot_info["bookings"],
+            )
+
+            slots_details.append(slot_details)
+
+        # Sort slots by slot_id for consistent ordering
+        slots_details.sort(key=lambda x: x.slot_id)
+
+        event_with_slots = OrganizerEventWithSlots(
+            event=event_details, slots=slots_details
+        )
+
+        events_with_slots.append(event_with_slots)
+
+    # Build events count
+    events_count = OrganizerEventsCount(
+        total=active_count + inactive_count,
+        active=active_count,
+        inactive=inactive_count,
+    )
+
+    # Calculate pagination
+    total_pages = (total_events + per_page - 1) // per_page
+
+    return OrganizerBookingsResponse(
+        events_count=events_count,
+        events=events_with_slots,
+        total_items=total_events,
+        page=page,
+        per_page=per_page,
+        total_pages=total_pages,
+    )
+
+
+async def get_all_bookings_with_details(
+    db: AsyncSession,
+    status_filter: Optional[BookingStatus] = None,
+    page: int = 1,
+    per_page: int = 10,
+) -> AllBookingsListResponse:
+    """
+    Get all bookings with complete details including user, event, and organizer information
+    """
+
+    # Base query for all bookings with relationships
+    query = select(EventBooking).options(
+        selectinload(EventBooking.user),
+        selectinload(EventBooking.booked_event).selectinload(Event.organizer),
+    )
+
+    # Add status filter if provided
+    if status_filter:
+        query = query.where(EventBooking.booking_status == status_filter)
+
+    # Count total bookings
+    count_query = select(func.count(EventBooking.booking_id))
+    if status_filter:
+        count_query = count_query.where(
+            EventBooking.booking_status == status_filter
+        )
+
+    total_result = await db.execute(count_query)
+    total_bookings = total_result.scalar() or 0
+
+    # Add pagination and ordering
+    query = query.order_by(desc(EventBooking.created_at))
+    query = query.offset((page - 1) * per_page).limit(per_page)
+
+    # Execute query
+    result = await db.execute(query)
+    bookings = result.scalars().all()
+
+    # Build response items
+    booking_items = []
+
+    for booking in bookings:
+        # Build event details
+        event_details = AllBookingsEventDetails(
+            event_id=booking.booked_event.event_id,
+            event_title=booking.booked_event.event_title,
+            event_slug=booking.booked_event.event_slug,
+            start_date=booking.booked_event.start_date,
+            end_date=booking.booked_event.end_date,
+            location=booking.booked_event.location,
+            card_image=booking.booked_event.card_image,
+        )
+
+        # Build organizer details
+        organizer = booking.booked_event.organizer
+        organizer_name = organizer.username if organizer else ""
+
+        # Build complete booking item
+        booking_item = AllBookingsItemResponse(
+            booking_id=booking.booking_id,
+            num_seats=booking.num_seats,
+            price_per_seat=booking.price_per_seat,
+            total_price=booking.total_price,
+            slot=booking.slot,
+            booking_date=booking.booking_date,
+            booking_status=str(booking.booking_status),
+            payment_status=booking.payment_status,
+            paypal_order_id=booking.paypal_order_id,
+            created_at=booking.created_at,
+            updated_at=booking.updated_at,
+            username=booking.user.username,
+            organizer_name=organizer_name,
+            event=event_details,
+        )
+
+        booking_items.append(booking_item)
+
+    # Calculate pagination
+    total_pages = (total_bookings + per_page - 1) // per_page
+
+    return AllBookingsListResponse(
+        bookings=booking_items,
+        total_items=total_bookings,
+        page=page,
+        per_page=per_page,
+        total_pages=total_pages,
+    )
