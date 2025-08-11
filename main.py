@@ -24,7 +24,7 @@ def create_app() -> FastAPI:
         version="0.1.0",
         description="Events Service API",
         lifespan=lifespan,
-        debug=settings.ENVIRONMENT == "development",
+        debug=settings.ENVIRONMENT == "local",
         redirect_slashes=True,
         swagger_ui_parameters={
             "filter": True,  # Enable filter

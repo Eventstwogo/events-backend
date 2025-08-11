@@ -11,18 +11,19 @@ from pydantic_settings import (
     SettingsConfigDict,
 )
 
+from shared.core import ENVIRONMENT
 from shared.core.secrets import fetch_vault_secrets_sync
 from shared.keys.key_manager import KeyManager
 
-# # Development only
+# Development override (uncomment if needed for local development)
 # os.environ.pop("ENVIRONMENT", None)
 # load_dotenv(dotenv_path=".env.local", override=True)
 
 
 class VaultSettingsSource(PydanticBaseSettingsSource):
     """
-    A custom Pydantic settings source that loads values from Vault.
-    Maps Vault keys to app settings keys.
+    Custom Pydantic settings source that loads values from Vault.
+    Skips DB-related secrets in non-production environments.
     """
 
     def __init__(self, settings_cls: Type[BaseSettings]) -> None:
@@ -30,7 +31,7 @@ class VaultSettingsSource(PydanticBaseSettingsSource):
         self._vault_data = None
 
     def _get_vault_data(self) -> Dict[str, Any]:
-        """Lazy load vault data to avoid multiple calls."""
+        """Lazy load Vault data to avoid multiple calls."""
         if self._vault_data is None:
             self._vault_data = fetch_vault_secrets_sync()
         return self._vault_data
@@ -39,12 +40,11 @@ class VaultSettingsSource(PydanticBaseSettingsSource):
         self, field: Any, field_name: str
     ) -> Tuple[Any, str, bool]:
         """
-        Get field value from Vault data.
-        Returns: (value, key, is_complex)
+        Get a single field value from Vault.
+        Skips DB secrets in non-production.
         """
         vault_data = self._get_vault_data()
 
-        # Map field names to vault keys
         vault_key_mapping = {
             "POSTGRES_USER": "DATABASE",
             "POSTGRES_HOST": "DB_HOST",
@@ -63,18 +63,45 @@ class VaultSettingsSource(PydanticBaseSettingsSource):
             "FERNET_KEY": "FERNET_KEY",
         }
 
+        # Skip DB secrets in non-production
+        db_fields = {
+            "POSTGRES_USER",
+            "POSTGRES_HOST",
+            "POSTGRES_PASSWORD",
+            "POSTGRES_PORT",
+            "POSTGRES_DB",
+        }
+        if ENVIRONMENT != "production" and field_name in db_fields:
+            return None, field_name, False
+
         vault_key = vault_key_mapping.get(field_name)
         if vault_key and vault_key in vault_data:
-            value = vault_data[vault_key]
-            return value, field_name, False
+            return vault_data[vault_key], field_name, False
 
-        # Return None if field not found in vault
         return None, field_name, False
 
     def __call__(self) -> Dict[str, Any]:
-        """Legacy method for backward compatibility."""
+        """
+        Return a dict of settings from Vault.
+        Skips DB-related secrets in non-production.
+        """
         vault_data = self._get_vault_data()
 
+        if ENVIRONMENT != "production":
+            return {
+                "EMAIL_FROM": vault_data.get("SENDER_EMAIL"),
+                "SMTP_PASSWORD": vault_data.get("SENDER_PASSWORD"),
+                "SMTP_USER": vault_data.get("SMTP_LOGIN"),
+                "SMTP_PORT": vault_data.get("SMTP_PORT"),
+                "SMTP_HOST": vault_data.get("SMTP_SERVER"),
+                "SPACES_ACCESS_KEY_ID": vault_data.get("SPACES_ACCESS_KEY"),
+                "SPACES_BUCKET_NAME": vault_data.get("SPACES_BUCKET_NAME"),
+                "SPACES_REGION_NAME": vault_data.get("SPACES_REGION_NAME"),
+                "SPACES_SECRET_ACCESS_KEY": vault_data.get("SPACES_SECRET_KEY"),
+                "FERNET_KEY": vault_data.get("FERNET_KEY"),
+            }
+
+        # Production: return all secrets
         return {
             "POSTGRES_USER": vault_data.get("DATABASE"),
             "POSTGRES_HOST": vault_data.get("DB_HOST"),
@@ -104,14 +131,14 @@ class Settings(BaseSettings):
     APP_NAME: str = "Events2Go App API"
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api/v1"
-    ENVIRONMENT: Literal["development", "testing", "production"] = "development"
+    ENVIRONMENT: Literal["local", "testing", "production", "staging"] = "local"
     APP_HOST: str = "0.0.0.0"  # nosec B104
     APP_PORT: int = 8000
     LOG_LEVEL: str = "info"
-    ADMIN_FRONTEND_URL: str = "https://admin.events2go.com.au"
-    ORGANIZER_FRONTEND_URL: str = "https://organizer.events2go.com.au"
-    USERS_APPLICATION_FRONTEND_URL: str = "https://events2go.com.au"
-    API_BACKEND_URL: str = "https://api.events2go.com.au"
+    ADMIN_FRONTEND_URL: str = "http://localhost:3001"
+    ORGANIZER_FRONTEND_URL: str = "http://localhost:3002"
+    USERS_APPLICATION_FRONTEND_URL: str = "http://localhost:3000"
+    API_BACKEND_URL: str = "http://localhost:8000"
     DESCRIPTION: str = (
         "Events2Go application for managing events and users, built with FastAPI."
     )
@@ -186,7 +213,7 @@ class Settings(BaseSettings):
 
     # === Pydantic config ===
     model_config = SettingsConfigDict(
-        env_file=".env.production",
+        env_file=f".env.{ENVIRONMENT}",
         env_file_encoding="utf-8",
         extra="allow",
     )

@@ -4,8 +4,15 @@ from typing import Dict
 import requests
 from dotenv import load_dotenv
 
-# Load environment variables from .env.production file
-load_dotenv(dotenv_path=".env.production")
+from shared.core import ENVIRONMENT
+
+# Load environment variables from appropriate .env file based on ENVIRONMENT
+env_file = f".env.{ENVIRONMENT}"
+if os.path.exists(env_file):
+    load_dotenv(dotenv_path=env_file)
+    print(f"[Secrets] Loaded {env_file}")
+else:
+    print(f"[Secrets] No env file found for: {ENVIRONMENT}")
 
 
 class VaultError(Exception):
@@ -22,9 +29,13 @@ def fetch_vault_secrets_sync() -> Dict[str, str]:
     Expects VAULT_URL, VAULT_TOKEN, and VAULT_SECRET_PATH as environment variables.
     """
     try:
+        # In local/dev, skip Vault fetch for DB secrets
+        if ENVIRONMENT != "production":
+            print(f"[Vault] Skipping DB secrets fetch in {ENVIRONMENT} mode.")
+
         # Read required environment variables
         vault_url = os.getenv("VAULT_URL", "https://vault.events2go.com.au")
-        vault_token = os.getenv("VAULT_TOKEN", "hvs.")
+        vault_token = os.getenv("VAULT_TOKEN")
         vault_secret_path = os.getenv("VAULT_SECRET_PATH", "kv/data/data")
 
         if not all([vault_url, vault_token, vault_secret_path]):
@@ -56,8 +67,25 @@ def fetch_vault_secrets_sync() -> Dict[str, str]:
         for key, value in secrets.items():
             if value is not None:
                 os.environ[key] = str(value)
-                print(f"Injected {key}: {value}")
+                print(f"[Vault] Injected secret: {key}")
 
+        # Return filtered secrets depending on environment
+        if ENVIRONMENT != "production":
+            return {
+                # Only non-DB secrets in local/dev
+                "SENDER_EMAIL": secrets.get("SENDER_EMAIL"),
+                "SENDER_PASSWORD": secrets.get("SENDER_PASSWORD"),
+                "SMTP_LOGIN": secrets.get("SMTP_LOGIN"),
+                "SMTP_PORT": secrets.get("SMTP_PORT"),
+                "SMTP_SERVER": secrets.get("SMTP_SERVER"),
+                "SPACES_ACCESS_KEY": secrets.get("SPACES_ACCESS_KEY"),
+                "SPACES_BUCKET_NAME": secrets.get("SPACES_BUCKET_NAME"),
+                "SPACES_REGION_NAME": secrets.get("SPACES_REGION_NAME"),
+                "SPACES_SECRET_KEY": secrets.get("SPACES_SECRET_KEY"),
+                "FERNET_KEY": secrets.get("FERNET_KEY"),
+            }
+
+        # Production: return all secrets
         return {
             "DATABASE": secrets.get("DATABASE"),
             "DB_HOST": secrets.get("DB_HOST"),

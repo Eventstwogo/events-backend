@@ -30,7 +30,7 @@ print(f"DB URL: {settings.database_url}")
 # Create async engine with optimized pool settings
 engine: AsyncEngine = create_async_engine(
     url=str(settings.database_url),
-    echo=False,  # settings.environment == "development",  # Enable SQL logging in development
+    echo=False,  # settings.environment == "local",  # Enable SQL logging in local
     pool_size=(
         5 if settings.ENVIRONMENT == "production" else 3
     ),  # Smaller pool for dev

@@ -39,7 +39,7 @@ def get_logger(name: str) -> Logger:
     logger.setLevel(getattr(logging, LOG_LEVEL, logging.DEBUG))
 
     # === Formatter Configuration ===
-    if ENVIRONMENT == "development":
+    if ENVIRONMENT == "local":
         # Local: Human-readable and colored
         console_formatter = ColoredFormatter(
             "%(log_color)s%(asctime)s | %(levelname)-8s | %(name)s | "

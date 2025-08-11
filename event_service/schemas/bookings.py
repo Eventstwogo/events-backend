@@ -302,6 +302,7 @@ class UserBookingItemResponse(BaseModel):
     event_title: str
     event_card_image: Optional[str] = None
     slot_time: Optional[str] = None
+    num_seats: int
     booking_date: date
     total_price: float
     booking_status: str
@@ -472,6 +473,7 @@ class SimpleOrganizerBookingItem(BaseModel):
     booking_id: int
     event_title: str
     event_id: str
+    card_image: Optional[str] = None
     user_name: str
     user_email: str
     slot_time: str
