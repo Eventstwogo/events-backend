@@ -304,6 +304,10 @@ class EventBooking(EventsBase):
         CheckConstraint("price_per_seat >= 0", name="non_negative_price"),
         CheckConstraint("total_price >= 0", name="non_negative_total"),
         UniqueConstraint(
-            "user_id", "event_id", "slot", name="uq_user_event_slot"
+            "user_id",
+            "event_id",
+            "slot",
+            "booking_date",
+            name="uq_user_event_slot_booking_date",
         ),
     )
