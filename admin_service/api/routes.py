@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from admin_service.api.v1.endpoints import (
     about_us,
+    advertisement,
     analytics,
     config,
     contact_us,
@@ -60,4 +61,7 @@ admin_router.include_router(
 )
 admin_router.include_router(
     partners.router, prefix="/partners", tags=["Partners"]
+)
+admin_router.include_router(
+    advertisement.router, prefix="/advertisements", tags=["Advertisements"]
 )

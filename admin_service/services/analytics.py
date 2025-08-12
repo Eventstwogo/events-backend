@@ -18,6 +18,7 @@ from shared.db.models import (
     QueryStatus,
     User,
 )
+from shared.db.models.events import BookingStatus
 
 
 async def get_admin_user_analytics(
@@ -312,38 +313,33 @@ async def _get_revenue_analytics(
     db: AsyncSession, current_month_start: datetime, last_month_start: datetime
 ) -> Dict[str, Any]:
     """
-    Get revenue analytics data.
+    Get revenue analytics data based on approved bookings with completed payments.
 
-    Note: This is a placeholder implementation since no payment/revenue tables exist yet.
-    When payment system is implemented, this should be updated to query actual revenue data.
+    Filters bookings by:
+    - booking_status = APPROVED
+    - payment_status = APPROVED (completed payments)
     """
 
-    # Placeholder implementation - calculate estimated revenue based on events
-    # This assumes each event generates some revenue (replace with actual payment data)
-
-    # Get events created this month (as proxy for revenue)
-    current_month_events = await db.execute(
-        select(func.count(Event.event_id)).where(
-            Event.created_at >= current_month_start,
-            Event.event_status.is_(False),
+    # Get current month revenue from approved bookings with completed payments
+    current_month_result = await db.execute(
+        select(func.coalesce(func.sum(EventBooking.total_price), 0)).where(
+            EventBooking.created_at >= current_month_start,
+            EventBooking.booking_status == BookingStatus.APPROVED,
+            EventBooking.payment_status == "COMPLETED",
         )
     )
-    current_month_count = current_month_events.scalar() or 0
+    current_month_revenue = float(current_month_result.scalar() or 0)
 
-    # Get events created last month
-    last_month_events = await db.execute(
-        select(func.count(Event.event_id)).where(
-            Event.created_at >= last_month_start,
-            Event.created_at < current_month_start,
-            Event.event_status.is_(False),
+    # Get last month revenue from approved bookings with completed payments
+    last_month_result = await db.execute(
+        select(func.coalesce(func.sum(EventBooking.total_price), 0)).where(
+            EventBooking.created_at >= last_month_start,
+            EventBooking.created_at < current_month_start,
+            EventBooking.booking_status == BookingStatus.APPROVED,
+            EventBooking.payment_status == "COMPLETED",
         )
     )
-    last_month_count = last_month_events.scalar() or 0
-
-    # Placeholder revenue calculation (replace with actual revenue queries)
-    estimated_revenue_per_event = 150.0  # Average revenue per event
-    current_month_revenue = current_month_count * estimated_revenue_per_event
-    last_month_revenue = last_month_count * estimated_revenue_per_event
+    last_month_revenue = float(last_month_result.scalar() or 0)
 
     # Calculate percentage change
     if last_month_revenue > 0:
@@ -353,21 +349,24 @@ async def _get_revenue_analytics(
     else:
         percentage_change = 100.0 if current_month_revenue > 0 else 0.0
 
+    # Calculate revenue difference
     revenue_difference = current_month_revenue - last_month_revenue
 
+    # Determine trend
+    if percentage_change > 0:
+        trend = "up"
+    elif percentage_change < 0:
+        trend = "down"
+    else:
+        trend = "stable"
+
     return {
-        "current_month": 0,  # current_month_revenue,
-        "last_month": 0,  # last_month_revenue,
-        "difference": 0,  # revenue_difference,
-        "percentage_change": 0,  # round(percentage_change, 1),
-        "trend": "stable",
-        # "trend": (
-        #     "up"
-        #     if percentage_change > 0
-        #     else "down" if percentage_change < 0 else "stable"
-        # ),
-        "note": "Estimated revenue based on events."
-        "Implement actual payment tracking for accurate data.",
+        "current_month": round(current_month_revenue, 2),
+        "last_month": round(last_month_revenue, 2),
+        "difference": round(revenue_difference, 2),
+        "percentage_change": round(percentage_change, 1),
+        "trend": trend,
+        "note": "Revenue from approved bookings with completed payments.",
     }
 
 

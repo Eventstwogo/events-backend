@@ -119,3 +119,63 @@ class EventStatsResponse(BaseModel):
     previous_month_events: int = Field(
         ..., description="Number of events created in previous month"
     )
+
+
+class BookingAnalytics(BaseModel):
+    """Schema for booking analytics"""
+
+    total_bookings: int = Field(..., description="Total number of seats booked")
+    total_revenue: float = Field(..., description="Sum of all booking prices")
+    approved_bookings: int = Field(
+        ..., description="Count of bookings with status 'approved'"
+    )
+    average_booking_value: float = Field(
+        ..., description="Average price per booking"
+    )
+
+
+class BookingAnalyticsResponse(BaseModel):
+    """Schema for booking analytics response"""
+
+    booking_analytics: BookingAnalytics = Field(
+        ..., description="Booking analytics data"
+    )
+
+
+class EventBookingStats(BaseModel):
+    """Schema for event-specific booking statistics"""
+
+    event_id: str = Field(..., description="Event ID")
+    event_title: str = Field(..., description="Event title")
+    total_seats_booked: int = Field(
+        ..., description="Total seats booked for event"
+    )
+    total_revenue: float = Field(..., description="Total revenue from event")
+
+
+class TimeRangeBookingStats(BaseModel):
+    """Schema for time range booking statistics"""
+
+    daily: List[EventBookingStats] = Field(
+        default_factory=list, description="Daily booking statistics"
+    )
+    weekly: List[EventBookingStats] = Field(
+        default_factory=list, description="Weekly booking statistics"
+    )
+    monthly: List[EventBookingStats] = Field(
+        default_factory=list, description="Monthly booking statistics"
+    )
+    yearly: List[EventBookingStats] = Field(
+        default_factory=list, description="Yearly booking statistics"
+    )
+    all_time: List[EventBookingStats] = Field(
+        default_factory=list, description="All-time booking statistics"
+    )
+
+
+class EventBookingStatsResponse(BaseModel):
+    """Schema for event booking statistics response"""
+
+    event_booking_stats: TimeRangeBookingStats = Field(
+        ..., description="Event booking statistics by time range"
+    )

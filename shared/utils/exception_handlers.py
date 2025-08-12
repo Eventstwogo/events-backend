@@ -108,6 +108,13 @@ def exception_handler(func: Callable[..., Any]) -> Callable[..., Any]:
             return await func(*args, **kwargs)
         except HTTPException as he:
             raise he  # Let FastAPI handle HTTP exceptions
+        except ValueError as ve:
+            # Custom handling for ValueError
+            return api_response(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                message=str(ve),
+                log_error=True,
+            )
         except Exception as e:
             return handle_general_exception(e)
 

@@ -363,3 +363,28 @@ class Partners(EventsBase):
         onupdate=func.now(),
         nullable=False,
     )
+
+
+class Advertisement(EventsBase):
+    __tablename__ = "e2gadvertisement"
+
+    ad_id: Mapped[str] = mapped_column(
+        String(6), primary_key=True, unique=True, nullable=False
+    )
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    banner: Mapped[str] = mapped_column(String(255), nullable=False)
+    target_url: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True
+    )
+    ad_status: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )

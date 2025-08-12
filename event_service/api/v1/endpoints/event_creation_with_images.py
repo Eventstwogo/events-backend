@@ -49,6 +49,7 @@ from event_service.services.response_builder import (
     unauthorized_to_update_event_response,
 )
 from event_service.utils.location_validator import validate_location_input
+from event_service.utils.utils import normalize_tags
 from shared.core.api_response import api_response
 from shared.core.config import settings
 from shared.db.models import Event
@@ -159,7 +160,8 @@ async def create_event_with_images(
     # Parse JSON fields
     try:
         extra_data_dict = safe_json_parse(extra_data, "extra_data", {})
-        hash_tags_list = safe_json_parse(hash_tags, "hash_tags", [])
+        raw_hash_tags_list = safe_json_parse(hash_tags, "hash_tags", [])
+        hash_tags_list = normalize_tags(raw_hash_tags_list)
     except json.JSONDecodeError as e:
         return invalid_json_format_response(e)
 
@@ -422,7 +424,8 @@ async def update_event_with_images(
         if extra_data is not None:
             extra_data_dict = safe_json_parse(extra_data, "extra_data", {})
         if hash_tags is not None:
-            hash_tags_list = safe_json_parse(hash_tags, "hash_tags", [])
+            raw_hash_tags_list = safe_json_parse(hash_tags, "hash_tags", [])
+            hash_tags_list = normalize_tags(raw_hash_tags_list)
     except json.JSONDecodeError as e:
         return invalid_json_format_response(e)
 

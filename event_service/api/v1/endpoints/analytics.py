@@ -3,11 +3,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from event_service.schemas.analytics import (
     AdminAnalyticsResponse,
+    BookingAnalyticsResponse,
+    EventBookingStatsResponse,
     EventStatsResponse,
     OrganizerAnalyticsResponse,
 )
 from event_service.services.analytics import (
     fetch_admin_events_analytics,
+    fetch_booking_analytics,
+    fetch_event_booking_stats_by_time_range,
     fetch_event_statistics,
     fetch_organizer_events_analytics,
 )
@@ -107,5 +111,74 @@ async def get_event_statistics(
     return api_response(
         status_code=status.HTTP_200_OK,
         message="Event statistics retrieved successfully",
+        data=stats_data,
+    )
+
+
+@router.get(
+    "/booking-analytics",
+    status_code=status.HTTP_200_OK,
+    response_model=BookingAnalyticsResponse,
+)
+@exception_handler
+async def get_booking_analytics(
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Get comprehensive booking analytics from EventBookings table.
+
+    This endpoint provides booking analytics for dashboard cards including:
+    - Total bookings (total number of seats booked)
+    - Total revenue (sum of booking prices)
+    - Approved bookings (count of bookings with status "approved")
+    - Average booking value (average price per booking)
+
+    Returns:
+    - Comprehensive booking analytics data
+    """
+
+    # Fetch booking analytics
+    analytics_data = await fetch_booking_analytics(db)
+
+    return api_response(
+        status_code=status.HTTP_200_OK,
+        message="Booking analytics retrieved successfully",
+        data=analytics_data,
+    )
+
+
+@router.get(
+    "/event-booking-stats",
+    status_code=status.HTTP_200_OK,
+    response_model=EventBookingStatsResponse,
+)
+@exception_handler
+async def get_event_booking_statistics(
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Get event booking statistics for different time ranges.
+
+    This endpoint provides event-specific booking statistics for:
+    - Daily (today)
+    - Weekly (last 7 days)
+    - Monthly (current month)
+    - Yearly (current year)
+    - All-time
+
+    For each event, returns:
+    - Total seats booked
+    - Total revenue
+
+    Returns:
+    - Event booking statistics grouped by time ranges
+    """
+
+    # Fetch event booking statistics
+    stats_data = await fetch_event_booking_stats_by_time_range(db)
+
+    return api_response(
+        status_code=status.HTTP_200_OK,
+        message="Event booking statistics retrieved successfully",
         data=stats_data,
     )

@@ -17,7 +17,7 @@ from user_service.services.analytics import (
 router = APIRouter()
 
 
-@router.get("/analytics", summary="Get application user analytics")
+@router.get("/analytics/card", summary="Get application user analytics")
 @exception_handler
 async def user_analytics(
     current_user: Annotated[User, Depends(get_current_active_user)],

@@ -6,7 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from shared.core.logging_config import get_logger
-from shared.db.models import AdminUser, Event, EventSlot, Role
+from shared.db.models import AdminUser, Event, EventBooking, EventSlot, Role
+from shared.db.models.events import BookingStatus
 
 logger = get_logger(__name__)
 
@@ -355,4 +356,137 @@ async def fetch_event_statistics(db: AsyncSession) -> Dict:
         "monthly_growth_percentage": monthly_growth_percentage,
         "current_month_events": current_month_events,
         "previous_month_events": previous_month_events,
+    }
+
+
+async def fetch_booking_analytics(db: AsyncSession) -> Dict:
+    """
+    Fetch comprehensive booking analytics from EventBookings table.
+
+    Returns:
+    - Total bookings (total number of seats booked)
+    - Total revenue (sum of booking prices)
+    - Approved bookings (count of bookings with status "approved")
+    - Average booking value (average price per booking)
+    """
+    logger.info("Fetching booking analytics")
+
+    # Get total bookings (sum of all num_seats)
+    total_bookings_query = select(func.sum(EventBooking.num_seats))
+    total_bookings_result = await db.execute(total_bookings_query)
+    total_bookings = total_bookings_result.scalar() or 0
+
+    # Get total revenue (sum of all total_price)
+    total_revenue_query = select(func.sum(EventBooking.total_price))
+    total_revenue_result = await db.execute(total_revenue_query)
+    total_revenue = float(total_revenue_result.scalar() or 0)
+
+    # Get approved bookings count
+    approved_bookings_query = select(
+        func.count(EventBooking.booking_id)
+    ).filter(EventBooking.booking_status == BookingStatus.APPROVED)
+    approved_bookings_result = await db.execute(approved_bookings_query)
+    approved_bookings = approved_bookings_result.scalar() or 0
+
+    # Get average booking value (average of total_price)
+    avg_booking_value_query = select(func.avg(EventBooking.total_price))
+    avg_booking_value_result = await db.execute(avg_booking_value_query)
+    average_booking_value = float(avg_booking_value_result.scalar() or 0)
+
+    logger.info(
+        f"Booking analytics calculated: total_bookings={total_bookings}, "
+        f"total_revenue={total_revenue}, approved_bookings={approved_bookings}, "
+        f"average_booking_value={average_booking_value}"
+    )
+
+    return {
+        "booking_analytics": {
+            "total_bookings": total_bookings,
+            "total_revenue": total_revenue,
+            "approved_bookings": approved_bookings,
+            "average_booking_value": round(average_booking_value, 2),
+        }
+    }
+
+
+async def fetch_event_booking_stats_by_time_range(db: AsyncSession) -> Dict:
+    """
+    Fetch event booking statistics for different time ranges.
+
+    Returns statistics for each event including:
+    - Total seats booked
+    - Total revenue
+
+    Time ranges: daily, weekly, monthly, yearly, and all-time
+    """
+    logger.info("Fetching event booking statistics by time range")
+
+    # Get current date and calculate date ranges
+    today = date.today()
+
+    # Daily: today
+    daily_start = today
+
+    # Weekly: last 7 days
+    weekly_start = today - timedelta(days=7)
+
+    # Monthly: current month
+    monthly_start = today.replace(day=1)
+
+    # Yearly: current year
+    yearly_start = today.replace(month=1, day=1)
+
+    async def get_event_stats_for_period(start_date: Optional[date] = None):
+        """Helper function to get event booking stats for a specific period"""
+        # Base query to get event booking statistics
+        query = (
+            select(
+                Event.event_id,
+                Event.event_title,
+                func.sum(EventBooking.num_seats).label("total_seats_booked"),
+                func.sum(EventBooking.total_price).label("total_revenue"),
+            )
+            .join(EventBooking, Event.event_id == EventBooking.event_id)
+            .group_by(Event.event_id, Event.event_title)
+            .order_by(desc("total_revenue"))
+        )
+
+        # Add date filter if specified
+        if start_date:
+            query = query.filter(EventBooking.booking_date >= start_date)
+
+        result = await db.execute(query)
+        return [
+            {
+                "event_id": row.event_id,
+                "event_title": row.event_title,
+                "total_seats_booked": row.total_seats_booked or 0,
+                "total_revenue": float(row.total_revenue or 0),
+            }
+            for row in result
+        ]
+
+    # Get statistics for each time range
+    daily_stats = await get_event_stats_for_period(daily_start)
+    weekly_stats = await get_event_stats_for_period(weekly_start)
+    monthly_stats = await get_event_stats_for_period(monthly_start)
+    yearly_stats = await get_event_stats_for_period(yearly_start)
+    all_time_stats = (
+        await get_event_stats_for_period()
+    )  # No date filter for all-time
+
+    logger.info(
+        f"Event booking stats calculated: daily={len(daily_stats)}, "
+        f"weekly={len(weekly_stats)}, monthly={len(monthly_stats)}, "
+        f"yearly={len(yearly_stats)}, all_time={len(all_time_stats)}"
+    )
+
+    return {
+        "event_booking_stats": {
+            "daily": daily_stats,
+            "weekly": weekly_stats,
+            "monthly": monthly_stats,
+            "yearly": yearly_stats,
+            "all_time": all_time_stats,
+        }
     }

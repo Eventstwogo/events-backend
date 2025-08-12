@@ -131,7 +131,7 @@ async def get_admin_user_by_id(
 
     # Create response object with only requested fields
     user_data = {
-        "username": user.username,
+        "username": user.username.title(),
         "email": user.email,
         "role_id": user.role_id,
         "role_name": role_name,

@@ -10,6 +10,7 @@ from admin_service.schemas.partners import (
     validate_website_url_form,
 )
 from shared.core.api_response import api_response
+from shared.core.config import settings
 from shared.db.models.admin_users import Partners
 from shared.db.sessions.database import get_db
 from shared.utils.exception_handlers import exception_handler
@@ -73,7 +74,10 @@ async def create_partner(
 
     # Upload logo file
     try:
-        logo_path = await save_uploaded_file(logo, f"partners/{partner_id}")
+        partner_image_path = settings.PARTNERS_UPLOAD_PATH.format(
+            partner_id=partner_id
+        )
+        logo_path = await save_uploaded_file(logo, partner_image_path)
         if not logo_path:
             return api_response(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -251,7 +255,10 @@ async def update_partner(
     if logo:
         try:
             # Upload new logo
-            logo_path = await save_uploaded_file(logo, f"partners/{partner_id}")
+            partner_image_path = settings.PARTNERS_UPLOAD_PATH.format(
+                partner_id=partner_id
+            )
+            logo_path = await save_uploaded_file(logo, partner_image_path)
             if not logo_path:
                 return api_response(
                     status_code=status.HTTP_400_BAD_REQUEST,

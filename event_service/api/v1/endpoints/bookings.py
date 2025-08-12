@@ -1,4 +1,4 @@
-from typing import Any, Optional, Union
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import RedirectResponse
@@ -10,38 +10,25 @@ from event_service.schemas.bookings import (
     BookingCreateRequest,
     BookingDetailsResponse,
     BookingResponse,
-    BookingStatsResponse,
     BookingStatusUpdateRequest,
-    BookingWithEventListResponse,
-    BookingWithUserListResponse,
     OrganizerBookingsResponse,
     SimpleOrganizerBookingsResponse,
     UserBookingsListResponse,
 )
 from event_service.services.bookings import (
     build_booking_details_response,
-    build_booking_with_event_response,
-    build_booking_with_user_response,
     build_enhanced_booking_response,
     build_user_bookings_list_response,
     check_existing_booking,
     create_booking,
     get_all_bookings_with_details,
     get_booking_by_id,
-    get_booking_stats_for_event,
-    get_booking_stats_for_user,
-    get_event_bookings,
-    get_organizer_bookings,
     get_organizer_bookings_with_events_and_slots,
     get_simple_organizer_bookings,
     get_user_bookings,
     mark_booking_as_paid,
     update_booking_status,
     verify_booking_constraints,
-)
-from event_service.services.slot_availability import (
-    update_slot_availability_on_booking_cancel,
-    update_slot_availability_on_booking_confirm,
 )
 from event_service.utils.paypal_client import paypal_client
 from shared.core.api_response import api_response
@@ -462,57 +449,6 @@ async def get_user_bookings_endpoint(
     )
 
 
-# @router.get(
-#     "/event/{event_id}",
-#     status_code=status.HTTP_200_OK,
-#     response_model=BookingWithUserListResponse,
-# )
-# @exception_handler
-# async def get_event_bookings_endpoint(
-#     event_id: str,
-#     status_filter: Optional[BookingStatus] = Query(
-#         None,
-#         description="Filter by booking status (failed, processing, approved, cancelled)",
-#     ),
-#     page: int = Query(1, ge=1, description="Page number"),
-#     per_page: int = Query(10, ge=1, le=100, description="Items per page"),
-#     db: AsyncSession = Depends(get_db),
-# ):
-#     """
-#     Get all bookings for a specific event (for organizers)
-
-#     - **event_id**: ID of the event
-#     - **status_filter**: Optional filter by booking status (failed, processing, approved, cancelled)
-#     - **page**: Page number for pagination
-#     - **per_page**: Number of items per page (max 100)
-#     """
-
-#     bookings, total = await get_event_bookings(
-#         db, event_id, status_filter, page, per_page
-#     )
-
-#     # Build response with user details
-#     booking_responses = [
-#         build_booking_with_user_response(booking) for booking in bookings
-#     ]
-
-#     total_pages = (total + per_page - 1) // per_page
-
-#     response_data = BookingWithUserListResponse(
-#         bookings=booking_responses,
-#         total=total,
-#         page=page,
-#         per_page=per_page,
-#         total_pages=total_pages,
-#     )
-
-#     return api_response(
-#         message=f"Retrieved {len(bookings)} bookings for event",
-#         data=response_data,
-#         status_code=status.HTTP_200_OK,
-#     )
-
-
 @router.get(
     "/organizer/{organizer_id}",
     status_code=status.HTTP_200_OK,
@@ -599,6 +535,57 @@ async def get_organizer_bookings_detailed_endpoint(
         data=response_data,
         status_code=status.HTTP_200_OK,
     )
+
+
+# @router.get(
+#     "/event/{event_id}",
+#     status_code=status.HTTP_200_OK,
+#     response_model=BookingWithUserListResponse,
+# )
+# @exception_handler
+# async def get_event_bookings_endpoint(
+#     event_id: str,
+#     status_filter: Optional[BookingStatus] = Query(
+#         None,
+#         description="Filter by booking status (failed, processing, approved, cancelled)",
+#     ),
+#     page: int = Query(1, ge=1, description="Page number"),
+#     per_page: int = Query(10, ge=1, le=100, description="Items per page"),
+#     db: AsyncSession = Depends(get_db),
+# ):
+#     """
+#     Get all bookings for a specific event (for organizers)
+
+#     - **event_id**: ID of the event
+#     - **status_filter**: Optional filter by booking status (failed, processing, approved, cancelled)
+#     - **page**: Page number for pagination
+#     - **per_page**: Number of items per page (max 100)
+#     """
+
+#     bookings, total = await get_event_bookings(
+#         db, event_id, status_filter, page, per_page
+#     )
+
+#     # Build response with user details
+#     booking_responses = [
+#         build_booking_with_user_response(booking) for booking in bookings
+#     ]
+
+#     total_pages = (total + per_page - 1) // per_page
+
+#     response_data = BookingWithUserListResponse(
+#         bookings=booking_responses,
+#         total=total,
+#         page=page,
+#         per_page=per_page,
+#         total_pages=total_pages,
+#     )
+
+#     return api_response(
+#         message=f"Retrieved {len(bookings)} bookings for event",
+#         data=response_data,
+#         status_code=status.HTTP_200_OK,
+#     )
 
 
 # @router.get(
