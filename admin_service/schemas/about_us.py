@@ -55,8 +55,8 @@ class AboutUsCreateRequest(BaseModel):
         if isinstance(v, dict):
             for key, value in v.items():
                 if isinstance(value, str):
-                    normalized_value = normalize_whitespace(value)
-                    if contains_xss(normalized_value):
+                    # normalized_value = normalize_whitespace(value)
+                    if contains_xss(value):
                         raise ValueError(
                             f"About us data contains potentially malicious content in field '{key}'."
                         )
@@ -71,7 +71,7 @@ class AboutUsUpdateRequest(BaseModel):
         description="JSON data containing about us information.",
     )
     about_us_status: Optional[bool] = Field(
-        None,
+        default=False,
         title="About Us Status",
         description="Status of the about us record (active/inactive).",
     )
@@ -86,8 +86,8 @@ class AboutUsUpdateRequest(BaseModel):
         if isinstance(v, dict):
             for key, value in v.items():
                 if isinstance(value, str):
-                    normalized_value = normalize_whitespace(value)
-                    if contains_xss(normalized_value):
+                    # normalized_value = normalize_whitespace(value)
+                    if contains_xss(value):
                         raise ValueError(
                             f"About us data contains potentially malicious content in field '{key}'."
                         )
