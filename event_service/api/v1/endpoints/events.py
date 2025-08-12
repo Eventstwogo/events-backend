@@ -563,6 +563,7 @@ async def get_latest_events_from_each_category(
             slot_id=event.slot_id,
             event_slug=event.event_slug,
             event_title=event.event_title,
+            card_image=event.card_image,
             banner_image=event.banner_image,
             description=description,
             start_date=event.start_date,

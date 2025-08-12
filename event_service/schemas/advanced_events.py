@@ -518,6 +518,7 @@ class CategoryEventResponse(BaseModel):
     slot_id: str = Field(..., description="Slot ID associated with the event")
     event_slug: str = Field(..., description="Event slug")
     event_title: str = Field(..., description="Event title")
+    card_image: Optional[str] = Field(..., description="Card image URL")
     banner_image: Optional[str] = Field(None, description="Banner image URL")
     description: Optional[str] = Field(
         None, description="Event description from extra_data"
@@ -534,6 +535,11 @@ class CategoryEventResponse(BaseModel):
 
     @field_serializer("banner_image")
     def serialize_banner_image(self, value: Optional[str]) -> Optional[str]:
+        """Convert relative path to full media URL"""
+        return get_media_url(value)
+
+    @field_serializer("card_image")
+    def serialize_card_image(self, value: Optional[str]) -> Optional[str]:
         """Convert relative path to full media URL"""
         return get_media_url(value)
 
