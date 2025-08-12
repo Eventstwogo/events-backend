@@ -14,9 +14,9 @@ from pydantic import (
 from shared.utils.email_validators import EmailValidator
 from shared.utils.password_validator import PasswordValidator
 from shared.utils.security_validators import contains_xss
+from shared.utils.username_validators import UsernameValidator
 from shared.utils.validators import (
     has_excessive_repetition,
-    is_valid_username_for_user,
     normalize_whitespace,
     validate_length_range,
 )
@@ -101,22 +101,10 @@ class UserRegisterRequest(BaseModel):
         if not v:
             raise ValueError("Username cannot be empty.")
         v = v.split("@", 1)[0].split("+", 1)[0]
-        if not validate_length_range(
-            v, USERNAME_MIN_LENGTH, USERNAME_MAX_LENGTH
-        ):
-            raise ValueError(
-                f"Username must be {USERNAME_MIN_LENGTH}-{USERNAME_MAX_LENGTH} characters long."
-            )
-        if contains_xss(v):
-            raise ValueError("Username contains potentially malicious content.")
-        if has_excessive_repetition(v, max_repeats=3):
-            raise ValueError("Username contains excessive repeated characters.")
-        if not is_valid_username_for_user(v):
-            raise ValueError(
-                "Username must start with a letter and can only contain letters, numbers, dots, underscores, and hyphens. "
-                "No consecutive or trailing special characters are allowed."
-            )
-        return v.lower().strip()
+        v = UsernameValidator(
+            min_length=4, max_length=32, max_spaces=2
+        ).validate(v)
+        return v.lower()
 
     @field_validator("email")
     @classmethod
@@ -407,22 +395,10 @@ class UsernameAvailabilityRequest(BaseModel):
         # Process username by removing email and plus parts
         v = v.split("@", 1)[0].split("+", 1)[0]
 
-        if not validate_length_range(
-            v, USERNAME_MIN_LENGTH, USERNAME_MAX_LENGTH
-        ):
-            raise ValueError(
-                f"Username must be {USERNAME_MIN_LENGTH}-{USERNAME_MAX_LENGTH} characters long."
-            )
-        if contains_xss(v):
-            raise ValueError("Username contains potentially malicious content.")
-        if has_excessive_repetition(v, max_repeats=3):
-            raise ValueError("Username contains excessive repeated characters.")
-        if not is_valid_username_for_user(v):
-            raise ValueError(
-                "Username must start with a letter and can only contain letters, numbers, dots, underscores, and hyphens. "
-                "No consecutive or trailing special characters are allowed."
-            )
-        return v.lower().strip()
+        v = UsernameValidator(
+            min_length=4, max_length=32, max_spaces=2
+        ).validate(v)
+        return v.lower()
 
 
 class UsernameAvailabilityResponse(BaseModel):

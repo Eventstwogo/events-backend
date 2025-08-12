@@ -7,6 +7,7 @@ from organizer_service.api.v1.endpoints import (
     business_profile,
     fetch_organizers,
     onboarding,
+    organizer_card_analytics,
     queries,
     registration,
     store,
@@ -51,4 +52,9 @@ organizer_router.include_router(
     queries.router,
     prefix="/queries",
     tags=["Organizer Queries"],
+)
+organizer_router.include_router(
+    organizer_card_analytics.router,
+    prefix="/card-analytics",
+    tags=["Organizer Card Analytics"],
 )

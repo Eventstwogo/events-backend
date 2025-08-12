@@ -13,10 +13,8 @@ from shared.db.models import AdminUser, Role
 from shared.db.sessions.database import get_db
 from shared.utils.exception_handlers import exception_handler
 from shared.utils.file_uploads import get_media_url
-from shared.utils.security_validators import contains_xss
+from shared.utils.username_validators import UsernameValidator
 from shared.utils.validators import (
-    has_excessive_repetition,
-    is_valid_username,
     normalize_whitespace,
     validate_length_range,
 )
@@ -165,47 +163,9 @@ async def update_username_and_role(
     # Validate and sanitize form inputs
     # Skip validation if username is None or empty string
     if new_username is not None:
-        new_username = normalize_whitespace(new_username)
-        if (
-            not new_username
-        ):  # If empty after normalization, set to None to skip
-            new_username = None
-        else:
-            # Validate only if not empty
-            if not is_valid_username(
-                new_username, allow_spaces=True, allow_hyphens=True
-            ):
-                return api_response(
-                    status.HTTP_400_BAD_REQUEST,
-                    "Username can only contain letters, numbers, spaces, and hyphens.",
-                    log_error=True,
-                )
-            if not validate_length_range(new_username, 4, 32):
-                return api_response(
-                    status.HTTP_400_BAD_REQUEST,
-                    "Username must be 4–32 characters long.",
-                    log_error=True,
-                )
-            if contains_xss(new_username):
-                return api_response(
-                    status.HTTP_400_BAD_REQUEST,
-                    "Username contains potentially malicious content.",
-                    log_error=True,
-                )
-            if has_excessive_repetition(new_username, max_repeats=3):
-                return api_response(
-                    status.HTTP_400_BAD_REQUEST,
-                    "Username contains excessive repeated characters.",
-                    log_error=True,
-                )
-            if len(new_username) < 3 or not all(
-                c.isalpha() for c in new_username[:3]
-            ):
-                return api_response(
-                    status.HTTP_400_BAD_REQUEST,
-                    "First three characters of username must be letters.",
-                    log_error=True,
-                )
+        new_username = UsernameValidator(
+            min_length=4, max_length=32, max_spaces=2
+        ).validate(new_username)
 
     # Skip validation if role_id is None or empty string
     if new_role_id is not None:

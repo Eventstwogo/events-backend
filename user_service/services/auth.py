@@ -6,30 +6,35 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
 
+from shared.constants import (
+    ACCOUNT_LOCKED_STATUS,
+    ACCOUNT_LOCKOUT_DURATION_HOURS,
+    ACTIVE_LOGIN_STATUS,
+    MAX_LOGIN_ATTEMPTS_BEFORE_LOCKOUT,
+    PASSWORD_EXPIRED_DAYS,
+)
 from shared.core.api_response import api_response
 from shared.core.config import PRIVATE_KEY, settings
 from shared.db.models import User, UserDeviceSession
 from user_service.utils.auth import create_jwt_token, verify_password
 
-MAX_LOGIN_ATTEMPTS = 3
-
 
 async def check_account_lock(
     user: User, db: AsyncSession
 ) -> JSONResponse | None:
-    if user.login_status == 1:
+    if user.login_status == ACCOUNT_LOCKED_STATUS:
         if user.account_locked_at and (
             datetime.now(timezone.utc) - user.account_locked_at
-        ) < timedelta(hours=24):
+        ) < timedelta(hours=ACCOUNT_LOCKOUT_DURATION_HOURS):
             return api_response(
                 status_code=status.HTTP_423_LOCKED,
                 message=(
                     "Account is temporarily locked due to multiple failed login attempts. "
-                    "Try again after 24 hours."
+                    f"Try again after {ACCOUNT_LOCKOUT_DURATION_HOURS} hours."
                 ),
                 log_error=True,
             )
-        user.login_status = 0
+        user.login_status = ACTIVE_LOGIN_STATUS
         user.failure_login_attempts = 0
         await db.commit()
     return None
@@ -42,15 +47,20 @@ async def check_password(
         user.failure_login_attempts += 1
         await db.commit()
 
-        remaining_attempts = MAX_LOGIN_ATTEMPTS - user.failure_login_attempts
+        remaining_attempts = (
+            MAX_LOGIN_ATTEMPTS_BEFORE_LOCKOUT - user.failure_login_attempts
+        )
 
-        if user.failure_login_attempts >= MAX_LOGIN_ATTEMPTS:
-            user.login_status = 1
+        if user.failure_login_attempts >= MAX_LOGIN_ATTEMPTS_BEFORE_LOCKOUT:
+            user.login_status = ACCOUNT_LOCKED_STATUS
             user.account_locked_at = datetime.now(timezone.utc)
             await db.commit()
             return api_response(
                 status_code=status.HTTP_423_LOCKED,
-                message="Account locked after 3 failed login attempts. Try again after 24 hours.",
+                message=(
+                    f"Account locked after {MAX_LOGIN_ATTEMPTS_BEFORE_LOCKOUT} failed "
+                    f"login attempts. Try again after {ACCOUNT_LOCKOUT_DURATION_HOURS} hours."
+                ),
                 log_error=True,
             )
 
@@ -76,7 +86,7 @@ def generate_token(user: User) -> str:
 
 async def check_password_expiry(user: User, now: datetime) -> bool:
     if user.days_180_flag and user.days_180_timestamp:
-        if (now - user.days_180_timestamp).days >= 180:
+        if (now - user.days_180_timestamp).days >= PASSWORD_EXPIRED_DAYS:
             return True
     elif user.days_180_flag:
         user.days_180_timestamp = now

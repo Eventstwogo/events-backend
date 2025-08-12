@@ -9,9 +9,10 @@ from fastapi import (
     Response,
 )
 from fastapi.responses import JSONResponse
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from shared.constants import ACTIVE_LOGIN_STATUS, PASSWORD_EXPIRED_STATUS
 from shared.core.api_response import api_response
 from shared.core.config import PRIVATE_KEY, PUBLIC_KEY, settings
 from shared.core.logging_config import get_logger
@@ -46,10 +47,6 @@ from user_service.utils.auth import (
 logger = get_logger(__name__)
 
 router = APIRouter()
-
-
-# OAuth2 scheme for token authentication
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/users/login/login")
 
 
 @router.post("/login")
@@ -118,9 +115,9 @@ async def process_successful_login(
 
     # Set login status based on password expiry
     if password_expired:
-        user.login_status = 2  # Password expired
+        user.login_status = PASSWORD_EXPIRED_STATUS  # Password expired
     else:
-        user.login_status = 0  # Default/normal status
+        user.login_status = ACTIVE_LOGIN_STATUS  # Default/normal status
 
     await db.commit()
     await db.refresh(user)

@@ -38,6 +38,7 @@ from admin_service.services.user_service import (
 )
 from admin_service.utils.auth import revoke_token
 from shared.constants import (
+    INITIAL_LOGIN_STATUS,
     ONBOARDING_APPROVED,
     ONBOARDING_NOT_STARTED,
     ONBOARDING_REJECTED,
@@ -82,6 +83,7 @@ async def get_organizer_profile_info(user: AdminUser, db: AsyncSession) -> dict:
             "ref_number": "",
             "reviewer_comment": "",
             "onboarding_status": "approved",
+            "user_role_name": "admin",
         }
 
     # Default for organizers
@@ -89,6 +91,7 @@ async def get_organizer_profile_info(user: AdminUser, db: AsyncSession) -> dict:
     ref_number = ""
     reviewer_comment = ""
     onboarding_status = "not_started"
+    user_role_name = "organizer"
 
     # Fetch business profile data
     profile_stmt = select(
@@ -123,6 +126,7 @@ async def get_organizer_profile_info(user: AdminUser, db: AsyncSession) -> dict:
         "ref_number": ref_number or "",
         "reviewer_comment": reviewer_comment,
         "onboarding_status": onboarding_status,
+        "user_role_name": user_role_name,
     }
 
 
@@ -180,7 +184,7 @@ async def validate_login_attempt(
         return password_check_response
 
     # Step 4: Handle first-time login (status -1)
-    if user.login_status == -1:
+    if user.login_status == INITIAL_LOGIN_STATUS:
         return initial_login_response(user)
 
     return user

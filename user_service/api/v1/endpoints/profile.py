@@ -17,13 +17,8 @@ from shared.utils.file_uploads import (
     save_uploaded_file,
 )
 from shared.utils.secure_filename import secure_filename
-from shared.utils.security_validators import contains_xss
-from shared.utils.validators import (
-    has_excessive_repetition,
-    is_valid_username_for_user,
-    normalize_whitespace,
-    validate_length_range,
-)
+from shared.utils.username_validators import UsernameValidator
+from shared.utils.validators import normalize_whitespace
 from user_service.schemas.profile import UpdateProfileRequest, UserProfile
 from user_service.services.user_validation import validate_profile_names
 
@@ -115,48 +110,9 @@ async def update_profile(
 
     # Validate username
     new_username = normalize_whitespace(profile_data.username)
+    validator = UsernameValidator(min_length=4, max_length=32, max_spaces=2)
     if new_username.lower() != user.username:
-        # Validate username format
-        if not is_valid_username_for_user(new_username):
-            return api_response(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                message=(
-                    "Username must start with a letter and can only contain letters, "
-                    "numbers, dots, underscores, and hyphens. "
-                    "No consecutive or trailing special characters are allowed."
-                ),
-                log_error=True,
-            )
-
-        if not validate_length_range(new_username, 4, 32):
-            return api_response(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                message="Username must be 4–32 characters long.",
-                log_error=True,
-            )
-
-        if contains_xss(new_username):
-            return api_response(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                message="Username contains potentially malicious content.",
-                log_error=True,
-            )
-
-        if has_excessive_repetition(new_username, max_repeats=3):
-            return api_response(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                message="Username contains excessive repeated characters.",
-                log_error=True,
-            )
-
-        if len(new_username) < 3 or not all(
-            c.isalpha() for c in new_username[:3]
-        ):
-            return api_response(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                message="First three characters of username must be letters.",
-                log_error=True,
-            )
+        new_username = validator.validate(profile_data.username)
 
         # Check if username already exists using hash-based query
         query = User.by_username_query(new_username.lower())

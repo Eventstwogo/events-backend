@@ -71,7 +71,7 @@ def initial_login_response(user: AdminUser) -> JSONResponse:
     return api_response(
         status_code=status.HTTP_201_CREATED,
         message="Initial login detected. Please reset your password.",
-        data={"user_id": user.user_id, "email": user.email},
+        data={"email": user.email},
     )
 
 

@@ -248,7 +248,7 @@ async def update_profile_picture(
 
     # Delete previous profile picture
     if user.profile_picture:
-        remove_file_if_exists(user.profile_picture)
+        await remove_file_if_exists(user.profile_picture)
 
     # Update and save
     user.profile_picture = uploaded_url
