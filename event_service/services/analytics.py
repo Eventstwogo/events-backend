@@ -372,7 +372,8 @@ async def fetch_booking_analytics(db: AsyncSession) -> Dict:
     logger.info("Fetching booking analytics")
 
     # Get total bookings (sum of all num_seats)
-    total_bookings_query = select(func.sum(EventBooking.num_seats))
+    # total_bookings_query = select(func.sum(EventBooking.num_seats))
+    total_bookings_query = select(func.count(EventBooking.booking_id))
     total_bookings_result = await db.execute(total_bookings_query)
     total_bookings = total_bookings_result.scalar() or 0
 

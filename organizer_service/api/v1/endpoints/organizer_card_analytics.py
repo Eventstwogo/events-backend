@@ -46,16 +46,14 @@ async def get_organizer_counts(
         Organizer counts by status
     """
 
-    # Query to get all organizers with their business profiles
-    query = select(AdminUser, BusinessProfile).outerjoin(
-        BusinessProfile, AdminUser.business_id == BusinessProfile.business_id
-    )
+    # Query to get all business profiles (these represent organizers)
+    query = select(BusinessProfile)
 
     result = await db.execute(query)
-    organizer_data = result.all()
+    business_profiles = result.scalars().all()
 
     # Initialize counters
-    total_organizers = len(organizer_data)
+    total_organizers = len(business_profiles)
     approved = 0
     pending = 0
     rejected = 0
@@ -63,21 +61,18 @@ async def get_organizer_counts(
     not_started = 0
 
     # Count by status
-    for admin_user, business_profile in organizer_data:
-        if business_profile is None:
-            not_started += 1
+    for business_profile in business_profiles:
+        status = business_profile.is_approved
+        if status == ONBOARDING_APPROVED:
+            approved += 1
+        elif status == ONBOARDING_SUBMITTED:
+            pending += 1
+        elif status == ONBOARDING_REJECTED:
+            rejected += 1
+        elif status == ONBOARDING_UNDER_REVIEW:
+            under_review += 1
         else:
-            status = business_profile.is_approved
-            if status == ONBOARDING_APPROVED:
-                approved += 1
-            elif status == ONBOARDING_SUBMITTED:
-                pending += 1
-            elif status == ONBOARDING_REJECTED:
-                rejected += 1
-            elif status == ONBOARDING_UNDER_REVIEW:
-                under_review += 1
-            else:
-                not_started += 1
+            not_started += 1
 
     # Create response
     card_stats = OrganizerCardStats(

@@ -20,7 +20,6 @@ router = APIRouter()
 @router.get("/analytics/card", summary="Get application user analytics")
 @exception_handler
 async def user_analytics(
-    current_user: Annotated[User, Depends(get_current_active_user)],
     db: AsyncSession = Depends(get_db),
 ) -> JSONResponse:
     """
