@@ -32,10 +32,22 @@ if TYPE_CHECKING:
 
 
 class BookingStatus(str, Enum):
-    PROCESSING = "PROCESSING"
-    APPROVED = "APPROVED"
-    CANCELLED = "CANCELLED"
-    FAILED = "FAILED"
+    PROCESSING = "PROCESSING"  # Booking request is being handled
+    APPROVED = "APPROVED"  # Booking confirmed and finalized
+    CANCELLED = "CANCELLED"  # Booking canceled
+    FAILED = "FAILED"  # Booking failed (e.g., no seats)
+
+    def __str__(self):
+        return self.name.lower()
+
+
+class PaymentStatus(str, Enum):
+    PENDING = "PENDING"  # Payment not yet made or awaiting confirmation
+    APPROVED = "APPROVED"  # Payment successfully processed
+    FAILED = "FAILED"  # Payment attempt failed
+    REFUNDED = "REFUNDED"  # Payment returned to user
+    PARTIALLY_REFUNDED = "PARTIALLY_REFUNDED"  # Partial refund issued
+    CANCELLED = "CANCELLED"  # Payment cancelled before completion
 
     def __str__(self):
         return self.name.lower()
@@ -202,8 +214,8 @@ class EventSlot(EventsBase):
 class EventBooking(EventsBase):
     __tablename__ = "e2geventbookings"
 
-    booking_id: Mapped[int] = mapped_column(
-        Integer, primary_key=True, autoincrement=True, index=True
+    booking_id: Mapped[str] = mapped_column(
+        String(6), primary_key=True, index=True
     )
 
     user_id: Mapped[str] = mapped_column(

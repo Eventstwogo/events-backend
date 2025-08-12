@@ -411,7 +411,7 @@ def send_organizer_review_notification(
 def send_booking_success_email(
     email: EmailStr,
     user_name: str,
-    booking_id: int,
+    booking_id: str,
     event_title: str,
     event_date: str,
     event_location: str,

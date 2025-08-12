@@ -29,8 +29,8 @@ class BookingCreateRequest(BaseModel):
     slot: str = Field(
         ..., min_length=1, max_length=100, description="Time slot"
     )
-    booking_date: Optional[str] = Field(
-        None,
+    booking_date: date = Field(
+        default_factory=date.today,
         description="Booking date in YYYY-MM-DD format (defaults to today)",
     )
 
@@ -57,16 +57,13 @@ class BookingCreateRequest(BaseModel):
             raise ValueError("Total price cannot be negative")
         return round(v, 2)
 
-    @field_validator("booking_date")
+    @field_validator("booking_date", mode="before")
     @classmethod
     def validate_booking_date(cls, v):
-        if v is None:
-            return None
-        try:
-            # Parse the date string and return it as string for now
-            # Will be converted to date object in the service layer
-            parsed_date = datetime.strptime(v, "%Y-%m-%d").date()
+        if isinstance(v, date):
             return v
+        try:
+            return datetime.strptime(v, "%Y-%m-%d").date()
         except ValueError:
             raise ValueError("Booking date must be in YYYY-MM-DD format")
 
@@ -93,7 +90,7 @@ class BookingStatusUpdateRequest(BaseModel):
 class BookingResponse(BaseModel):
     """Response schema for booking details"""
 
-    booking_id: int
+    booking_id: str
     user_id: str
     event_id: str
     num_seats: int
@@ -139,7 +136,7 @@ class BookingResponse(BaseModel):
 class BookingWithEventResponse(BaseModel):
     """Response schema for booking with event details"""
 
-    booking_id: int
+    booking_id: str
     user_id: str
     event_id: str
     num_seats: int
@@ -179,7 +176,7 @@ class BookingWithEventResponse(BaseModel):
 class BookingWithUserResponse(BaseModel):
     """Response schema for booking with user details (for organizers)"""
 
-    booking_id: int
+    booking_id: str
     user_id: str
     event_id: str
     num_seats: int
@@ -265,6 +262,7 @@ class BookingEventDetails(BaseModel):
 
     event_id: str
     title: str
+    organizer_name: Optional[str] = None
     slug: str
     location: Optional[str] = None
     address: Optional[str] = None
@@ -276,7 +274,7 @@ class BookingEventDetails(BaseModel):
 class BookingDetailsResponse(BaseModel):
     """Detailed booking response with nested user and event details"""
 
-    booking_id: int
+    booking_id: str
     num_seats: int
     price_per_seat: float
     total_price: float
@@ -298,7 +296,7 @@ class BookingDetailsResponse(BaseModel):
 class UserBookingItemResponse(BaseModel):
     """Individual booking item for user bookings list"""
 
-    booking_id: int
+    booking_id: str
     event_title: str
     event_card_image: Optional[str] = None
     slot_time: Optional[str] = None
@@ -337,7 +335,7 @@ class UserBookingsListResponse(BaseModel):
 class OrganizerBookingDetails(BaseModel):
     """Individual booking details for organizer response"""
 
-    booking_id: int
+    booking_id: str
     booking_date: date
     num_seats: int
     total_price: float
@@ -432,7 +430,7 @@ class AllBookingsOrganizerDetails(BaseModel):
 class AllBookingsItemResponse(BaseModel):
     """Individual booking item with complete details"""
 
-    booking_id: int
+    booking_id: str
     num_seats: int
     price_per_seat: float
     total_price: float
@@ -470,7 +468,7 @@ class AllBookingsListResponse(BaseModel):
 class SimpleOrganizerBookingItem(BaseModel):
     """Simple booking item for organizer tabular view"""
 
-    booking_id: int
+    booking_id: str
     event_title: str
     event_id: str
     card_image: Optional[str] = None

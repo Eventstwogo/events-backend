@@ -320,3 +320,46 @@ class AdminUserProfile(EventsBase):
     admin_user: Mapped["AdminUser"] = relationship(
         "AdminUser", back_populates="user_profile", uselist=False, lazy="joined"
     )
+
+
+class AboutUs(EventsBase):
+    __tablename__ = "e2gaboutus"
+
+    about_us_id: Mapped[str] = mapped_column(
+        String(6), primary_key=True, unique=True, nullable=False
+    )
+    about_us_data: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    about_us_status: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+
+class Partners(EventsBase):
+    __tablename__ = "e2gpartners"
+
+    partner_id: Mapped[str] = mapped_column(
+        String(6), primary_key=True, unique=True, nullable=False
+    )
+    logo: Mapped[str] = mapped_column(String(255), nullable=False)
+    website_url: Mapped[str] = mapped_column(String(255), nullable=False)
+    partner_status: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )

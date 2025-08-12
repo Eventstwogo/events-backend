@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import List, Optional, Tuple
 
 from fastapi import HTTPException
@@ -37,6 +37,7 @@ from shared.db.models.events import (
     EventSlot,
 )
 from shared.utils.file_uploads import get_media_url
+from shared.utils.id_generators import generate_digits_letters
 
 logger = logging.getLogger(__name__)
 
@@ -119,7 +120,7 @@ def _extract_event_address(event: Event) -> Optional[str]:
 
 
 async def check_existing_booking(
-    db: AsyncSession, user_id: str, event_id: str, slot: str
+    db: AsyncSession, user_id: str, event_id: str, slot: str, booking_date: date
 ) -> Tuple[bool, str, Optional[EventBooking]]:
     """
     Check if user has existing booking for the same event and slot.
@@ -137,6 +138,7 @@ async def check_existing_booking(
                 EventBooking.user_id == user_id,
                 EventBooking.event_id == event_id,
                 EventBooking.slot == str(slot),
+                EventBooking.booking_date == booking_date,
             )
         )
         .order_by(desc(EventBooking.created_at))
@@ -158,7 +160,7 @@ async def check_existing_booking(
     return True, "No existing booking found", None
 
 
-async def mark_booking_as_paid(db: AsyncSession, booking_id: int) -> None:
+async def mark_booking_as_paid(db: AsyncSession, booking_id: str) -> None:
     # Fetch the booking
     result = await db.execute(
         select(EventBooking).where(EventBooking.booking_id == booking_id)
@@ -184,29 +186,17 @@ async def create_booking_record(
 ):
     logger.info(f"Creating booking record: {booking_data.model_dump()}")
 
-    # Convert booking_date string to date object
-    booking_date = None
-    if booking_data.booking_date:
-        try:
-            booking_date = datetime.strptime(
-                booking_data.booking_date, "%Y-%m-%d"
-            ).date()
-        except ValueError as e:
-            logger.error(
-                f"Invalid booking_date format: {booking_data.booking_date}"
-            )
-            raise ValueError("Booking date must be in YYYY-MM-DD format")
-
     query = (
         insert(EventBooking)
         .values(
+            booking_id=generate_digits_letters(6),
             user_id=booking_data.user_id,
             event_id=booking_data.event_id,
             num_seats=booking_data.num_seats,
             price_per_seat=booking_data.price_per_seat,
             total_price=booking_data.total_price,
             slot=str(booking_data.slot),
-            booking_date=booking_date
+            booking_date=booking_data.booking_date
             or func.current_date(),  # Use date object or default
             booking_status=BookingStatus.PROCESSING,
         )
@@ -243,6 +233,7 @@ async def create_booking(db: AsyncSession, booking_data: BookingCreateRequest):
         booking_data.user_id,
         booking_data.event_id,
         str(booking_data.slot),  # Ensure string
+        booking_data.booking_date,
     )
     if not can_book:
         raise HTTPException(status_code=400, detail=message)
@@ -265,7 +256,7 @@ async def create_booking(db: AsyncSession, booking_data: BookingCreateRequest):
 
 
 async def get_booking_by_id(
-    db: AsyncSession, booking_id: int, load_relations: bool = False
+    db: AsyncSession, booking_id: str, load_relations: bool = False
 ) -> Optional[EventBooking]:
     """Get booking by ID with optional relations"""
 
@@ -282,7 +273,7 @@ async def get_booking_by_id(
 
 
 async def update_booking_status(
-    db: AsyncSession, booking_id: int, status_data: BookingStatusUpdateRequest
+    db: AsyncSession, booking_id: str, status_data: BookingStatusUpdateRequest
 ) -> Optional[EventBooking]:
     """Update booking status"""
 
@@ -798,6 +789,7 @@ def build_booking_details_response(
     event_address = _extract_event_address(booking.booked_event)
     event_details = BookingEventDetails(
         event_id=booking.booked_event.event_id,
+        organizer_name=booking.booked_event.organizer.username,
         title=booking.booked_event.event_title,
         slug=booking.booked_event.event_slug,
         location=booking.booked_event.location,

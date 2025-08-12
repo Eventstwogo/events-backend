@@ -1,11 +1,13 @@
 from fastapi import APIRouter
 
 from admin_service.api.v1.endpoints import (
+    about_us,
     analytics,
     config,
     contact_us,
     login,
     my_session,
+    partners,
     password,
     profile,
     register,
@@ -52,4 +54,10 @@ admin_router.include_router(
 )
 admin_router.include_router(
     my_session.router, prefix="/admin/me/sessions", tags=["My Admin Session"]
+)
+admin_router.include_router(
+    about_us.router, prefix="/about-us", tags=["About Us"]
+)
+admin_router.include_router(
+    partners.router, prefix="/partners", tags=["Partners"]
 )

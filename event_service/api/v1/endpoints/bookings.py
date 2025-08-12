@@ -50,6 +50,7 @@ from shared.db.models.events import BookingStatus
 from shared.db.sessions.database import get_db
 
 # from shared.utils.email_utils.admin_emails import send_booking_success_email
+from shared.utils.email_utils.admin_emails import send_booking_success_email
 from shared.utils.exception_handlers import exception_handler
 
 router = APIRouter()
@@ -119,6 +120,7 @@ async def create_event_booking(
         booking_data.user_id,
         booking_data.event_id,
         str(booking_data.slot),
+        booking_data.booking_date,
     )
 
     if not can_book_duplicate:
@@ -159,12 +161,14 @@ async def create_event_booking(
             ],
             "application_context": {
                 "payment_method_preference": "IMMEDIATE_PAYMENT_REQUIRED",
-                "brand_name": "YourEventPlatform",
+                "brand_name": "Events2Go",
                 "landing_page": "LOGIN",
                 "locale": "en-AU",
                 "user_action": "PAY_NOW",
-                "return_url": f"{settings.USERS_APPLICATION_FRONTEND_URL}/booking-success?booking_id={booking.booking_id}",
-                "cancel_url": f"{settings.USERS_APPLICATION_FRONTEND_URL}/booking-failure?booking_id={booking.booking_id}",
+                # "return_url": f"{settings.USERS_APPLICATION_FRONTEND_URL}/booking-success?booking_id={booking.booking_id}",
+                # "cancel_url": f"{settings.USERS_APPLICATION_FRONTEND_URL}/booking-failure?booking_id={booking.booking_id}",
+                "return_url": f"{settings.API_BACKEND_URL}/api/v1/bookings/confirm?booking_id={booking.booking_id}",
+                "cancel_url": f"{settings.API_BACKEND_URL}/api/v1/bookings/cancel?booking_id={booking.booking_id}",
             },
         }
     )
@@ -196,7 +200,7 @@ async def create_event_booking(
 @router.get("/confirm")
 @exception_handler
 async def confirm_booking(
-    token: str, booking_id: int, db: AsyncSession = Depends(get_db)
+    token: str, booking_id: str, db: AsyncSession = Depends(get_db)
 ):
     # Capture the payment
     request = OrdersCaptureRequest(token)
@@ -209,43 +213,58 @@ async def confirm_booking(
         if payment_status == "COMPLETED":
             await mark_booking_as_paid(db, booking_id)
 
-            # # Get booking details with relations for email
-            # booking = await get_booking_by_id(db, booking_id, load_relations=True)
+            # Get booking details with relations for email
+            booking = await get_booking_by_id(
+                db, booking_id, load_relations=True
+            )
 
-            # if booking and booking.user and booking.booked_event:
-            #     # Send booking success email
-            #     try:
-            #         # Format the event date
-            #         event_date = booking.booked_event.start_date.strftime("%B %d, %Y")
-            #         if booking.booked_event.end_date != booking.booked_event.start_date:
-            #             event_date += f" - {booking.booked_event.end_date.strftime('%B %d, %Y')}"
+            if booking and booking.user and booking.booked_event:
+                # Send booking success email
+                try:
+                    # Format the event date
+                    event_date = booking.booked_event.start_date.strftime(
+                        "%B %d, %Y"
+                    )
+                    if (
+                        booking.booked_event.end_date
+                        != booking.booked_event.start_date
+                    ):
+                        event_date += f" - {booking.booked_event.end_date.strftime('%B %d, %Y')}"
 
-            #         # Get user name using the property (automatically decrypts)
-            #         user_name = booking.user.first_name or booking.user.username or 'Valued Customer'
-            #         if booking.user.last_name:
-            #             user_name += f" {booking.user.last_name}"
+                    # Get user name using the property (automatically decrypts)
+                    user_name = (
+                        booking.user.first_name
+                        or booking.user.username
+                        or "Valued Customer"
+                    )
+                    if booking.user.last_name:
+                        user_name += f" {booking.user.last_name}"
 
-            #         # Get event category name (you might need to adjust this based on your category model)
-            #         event_category = booking.booked_event.category_id or 'General'
+                    # Get event category name (you might need to adjust this based on your category model)
+                    event_category = (
+                        booking.booked_event.category.category_name or "General"
+                    )
 
-            #         # Send the email
-            #         send_booking_success_email(
-            #             email=booking.user.email,  # Using the property that automatically decrypts
-            #             user_name=user_name,
-            #             booking_id=booking.booking_id,
-            #             event_title=booking.booked_event.event_title,
-            #             event_date=event_date,
-            #             event_location=booking.booked_event.location or "TBA",
-            #             event_category=event_category,
-            #             time_slot=booking.slot,
-            #             num_seats=booking.num_seats,
-            #             price_per_seat=float(booking.price_per_seat),
-            #             total_price=float(booking.total_price),
-            #             booking_date=booking.booking_date.strftime("%B %d, %Y"),
-            #         )
-            #     except Exception as email_error:
-            #         # Log the error but don't fail the booking confirmation
-            #         print(f"Failed to send booking confirmation email: {email_error}")
+                    # Send the email
+                    send_booking_success_email(
+                        email=booking.user.email,  # Using the property that automatically decrypts
+                        user_name=user_name,
+                        booking_id=booking.booking_id,
+                        event_title=booking.booked_event.event_title,
+                        event_date=event_date,
+                        event_location=booking.booked_event.location or "TBA",
+                        event_category=event_category,
+                        time_slot=booking.slot,
+                        num_seats=booking.num_seats,
+                        price_per_seat=float(booking.price_per_seat),
+                        total_price=float(booking.total_price),
+                        booking_date=booking.booking_date.strftime("%B %d, %Y"),
+                    )
+                except Exception as email_error:
+                    # Log the error but don't fail the booking confirmation
+                    print(
+                        f"Failed to send booking confirmation email: {email_error}"
+                    )
 
             # Redirect to frontend success page
             return RedirectResponse(
@@ -269,16 +288,22 @@ async def confirm_booking(
 
 @router.get("/cancel")
 @exception_handler
-async def cancel_booking(booking_id: int, db: AsyncSession = Depends(get_db)):
+async def cancel_booking(booking_id: str, db: AsyncSession = Depends(get_db)):
     update_data = BookingStatusUpdateRequest(
         booking_status=BookingStatus.CANCELLED
     )
     booking = await update_booking_status(db, booking_id, update_data)
 
-    return api_response(
-        status_code=status.HTTP_200_OK,
-        message="Booking cancelled by user",
-        data={"booking_id": booking_id},
+    # return api_response(
+    #     status_code=status.HTTP_200_OK,
+    #     message="Booking cancelled by user",
+    #     data={"booking_id": booking_id},
+    # )
+
+    # Redirect to frontend booking failure page
+    return RedirectResponse(
+        url=f"{settings.USERS_APPLICATION_FRONTEND_URL}/booking-failure?booking_id={booking_id}",
+        status_code=302,
     )
 
 
@@ -289,7 +314,7 @@ async def cancel_booking(booking_id: int, db: AsyncSession = Depends(get_db)):
 )
 @exception_handler
 async def update_booking_status_endpoint(
-    booking_id: int,
+    booking_id: str,
     status_data: BookingStatusUpdateRequest,
     db: AsyncSession = Depends(get_db),
 ):
@@ -373,7 +398,7 @@ async def get_all_bookings_endpoint(
 )
 @exception_handler
 async def get_booking_details(
-    booking_id: int,
+    booking_id: str,
     db: AsyncSession = Depends(get_db),
 ):
     """
