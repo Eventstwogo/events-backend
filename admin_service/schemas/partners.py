@@ -1,8 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from fastapi import Form, HTTPException, UploadFile, status
-from pydantic import BaseModel, Field, computed_field, field_validator
+from pydantic import BaseModel, Field, field_serializer, field_validator
 
 from shared.utils.file_uploads import get_media_url
 from shared.utils.security_validators import contains_xss
@@ -20,7 +19,7 @@ class PartnersResponse(BaseModel):
     logo: str = Field(
         ...,
         title="Logo",
-        description="Relative path to the partner's logo.",
+        description="Full URL path to the partner's logo.",
     )
     website_url: str = Field(
         ...,
@@ -43,11 +42,10 @@ class PartnersResponse(BaseModel):
         description="Timestamp when the partner was last updated.",
     )
 
-    @computed_field
-    @property
-    def logo_url(self) -> str:
-        """Get the full URL for the partner's logo."""
-        return get_media_url(self.logo) or ""
+    @field_serializer("logo")
+    def serialize_logo(self, value: str, _info) -> str:
+        """Convert relative logo path to full media URL."""
+        return get_media_url(value) or ""
 
     class Config:
         from_attributes = True
