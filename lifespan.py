@@ -1,8 +1,10 @@
+import asyncio
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator
 
 from fastapi import FastAPI
 
+from event_service.tasks.seat_cleanup import schedule_seat_cleanup
 from rbac_service.services.init_roles_permissions import init_roles_permissions
 from shared.core.logging_config import get_logger
 from shared.db.sessions.database import AsyncSessionLocal, init_db, shutdown_db
@@ -15,6 +17,8 @@ logger = get_logger(__name__)
 async def lifespan(_app: FastAPI) -> AsyncGenerator[Any, None]:
     """Handle startup and shutdown events for the FastAPI application."""
     logger.info(msg="Starting up FastAPI application...")
+    cleanup_task = None
+
     try:
         await init_db()
         logger.info(msg="Database initialized successfully")
@@ -24,6 +28,13 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[Any, None]:
             await init_roles_permissions(session)
             logger.info("Default roles and permissions initialized")
 
+        # Start the seat cleanup scheduler
+        cleanup_task = schedule_seat_cleanup()
+        if cleanup_task:
+            logger.info("Seat cleanup scheduler started")
+        else:
+            logger.warning("Failed to start seat cleanup scheduler")
+
     except Exception as e:
         logger.error(msg=f"Startup failed: {str(e)}")
         raise
@@ -32,6 +43,14 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[Any, None]:
 
     logger.info(msg="Shutting down FastAPI application...")
     try:
+        # Cancel the cleanup task if it exists
+        if cleanup_task and not cleanup_task.done():
+            cleanup_task.cancel()
+            try:
+                await cleanup_task
+            except asyncio.CancelledError:
+                logger.info("Seat cleanup scheduler cancelled")
+
         await shutdown_db()
         logger.info(msg="Database shutdown successfully")
     except Exception as e:

@@ -32,6 +32,7 @@ from event_service.services.bookings import (
     update_booking_status,
     verify_booking_constraints,
 )
+from event_service.services.seat_holding import release_held_seats
 from event_service.utils.paypal_client import paypal_client
 from shared.core.api_response import api_response
 from shared.core.config import settings
@@ -213,6 +214,20 @@ async def confirm_booking(
                 db, booking_id, load_relations=True
             )
 
+            # Release held seats since payment is confirmed
+            if booking:
+                release_success, release_message = await release_held_seats(
+                    db, booking.event_id, booking_id
+                )
+                if release_success:
+                    print(
+                        f"Released held seats for booking {booking_id}: {release_message}"
+                    )
+                else:
+                    print(
+                        f"Failed to release held seats for booking {booking_id}: {release_message}"
+                    )
+
             if booking and booking.user and booking.booked_event:
                 # Send booking success email
                 try:
@@ -293,16 +308,27 @@ async def confirm_booking(
 )
 @exception_handler
 async def cancel_booking(booking_id: str, db: AsyncSession = Depends(get_db)):
+    # Get booking details before cancelling
+    booking = await get_booking_by_id(db, booking_id)
+
     update_data = BookingStatusUpdateRequest(
         booking_status=BookingStatus.CANCELLED
     )
-    booking = await update_booking_status(db, booking_id, update_data)
+    updated_booking = await update_booking_status(db, booking_id, update_data)
 
-    # return api_response(
-    #     status_code=status.HTTP_200_OK,
-    #     message="Booking cancelled by user",
-    #     data={"booking_id": booking_id},
-    # )
+    # Release held seats since booking is cancelled
+    if booking:
+        release_success, release_message = await release_held_seats(
+            db, booking.event_id, booking_id
+        )
+        if release_success:
+            print(
+                f"Released held seats for cancelled booking {booking_id}: {release_message}"
+            )
+        else:
+            print(
+                f"Failed to release held seats for cancelled booking {booking_id}: {release_message}"
+            )
 
     # Redirect to frontend booking failure page
     return RedirectResponse(

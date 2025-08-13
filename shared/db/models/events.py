@@ -203,6 +203,11 @@ class EventSlot(EventsBase):
     slot_status: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False
     )
+    held_seats: Mapped[Optional[Dict[str, Any]]] = mapped_column(
+        JSONB,  # Contains held seat data: {"date": {"slot_key": {"booking_id": {"seats": 2, "held_at": "timestamp"}}}}
+        nullable=True,
+        default={},
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

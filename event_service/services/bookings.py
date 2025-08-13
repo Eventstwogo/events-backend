@@ -30,6 +30,11 @@ from event_service.schemas.bookings import (
     UserBookingItemResponse,
     UserBookingsListResponse,
 )
+from event_service.services.seat_holding import (
+    cleanup_expired_holds,
+    get_held_seats_count,
+    hold_seats,
+)
 from shared.db.models import (
     AdminUser,
     BookingStatus,
@@ -42,6 +47,66 @@ from shared.utils.file_uploads import get_media_url
 from shared.utils.id_generators import generate_digits_letters
 
 logger = logging.getLogger(__name__)
+
+
+async def _determine_slot_key_from_time(
+    db: AsyncSession, event_id: str, slot_time: str, booking_date: str
+) -> Optional[str]:
+    """
+    Determine the slot_key (e.g., 'slot_1') from the slot time string.
+
+    Args:
+        db: Database session
+        event_id: Event ID
+        slot_time: Time string (e.g., "10:00 AM - 12:00 PM")
+        booking_date: Date string (e.g., "2024-01-15")
+
+    Returns:
+        Slot key (e.g., "slot_1") or None if not found
+    """
+    try:
+        # Get event and its slot data
+        event_query = select(Event).where(Event.event_id == event_id)
+        event_result = await db.execute(event_query)
+        event = event_result.scalar_one_or_none()
+
+        if not event:
+            return None
+
+        # Get event slot
+        slot_query = select(EventSlot).where(EventSlot.slot_id == event.slot_id)
+        slot_result = await db.execute(slot_query)
+        event_slot = slot_result.scalar_one_or_none()
+
+        if not event_slot or not event_slot.slot_data:
+            return None
+
+        # Search through slot data to find matching time
+        for date_key, date_slots in event_slot.slot_data.items():
+            if date_key == booking_date and isinstance(date_slots, dict):
+                for slot_key, slot_info in date_slots.items():
+                    start_time = slot_info.get("start_time", "")
+                    end_time = slot_info.get("end_time", "")
+
+                    # Create possible time format combinations for matching
+                    possible_formats = [
+                        f"{start_time} - {end_time}",
+                        f"{start_time}:00 - {end_time}:00",
+                        f"{start_time} AM - {end_time} PM",
+                        f"{start_time} PM - {end_time} PM",
+                        f"{start_time} AM - {end_time} AM",
+                    ]
+
+                    if slot_time in possible_formats or (
+                        start_time in slot_time and end_time in slot_time
+                    ):
+                        return slot_key
+
+        return None
+
+    except Exception as e:
+        logger.error(f"Error determining slot key from time: {str(e)}")
+        return None
 
 
 def _extract_slot_time(event: Event, slot: str) -> Optional[str]:
@@ -246,14 +311,45 @@ async def create_booking(db: AsyncSession, booking_data: BookingCreateRequest):
         booking_data.event_id,
         booking_data.num_seats,
         str(booking_data.slot),
+        str(booking_data.booking_date),
     )
     if not can_book:
         raise HTTPException(status_code=400, detail=message)
 
-    # Proceed to create the booking
-    booking = await create_booking_record(
-        db, booking_data
-    )  # Assuming this is the function
+    # Create the booking record first
+    booking = await create_booking_record(db, booking_data)
+
+    # Hold seats immediately after creating the booking
+    # We need to determine the slot_key from the slot time string
+    slot_key = await _determine_slot_key_from_time(
+        db,
+        booking_data.event_id,
+        str(booking_data.slot),
+        str(booking_data.booking_date),
+    )
+
+    if slot_key:
+        hold_success, hold_message = await hold_seats(
+            db,
+            booking_data.event_id,
+            booking.booking_id,
+            slot_key,
+            str(booking_data.booking_date),
+            booking_data.num_seats,
+        )
+
+        if not hold_success:
+            logger.warning(
+                f"Failed to hold seats for booking {booking.booking_id}: {hold_message}"
+            )
+            # Note: We don't fail the booking creation if seat holding fails
+            # as this is a temporary hold mechanism
+    else:
+        logger.warning(
+            f"Could not determine slot_key for booking {booking.booking_id}, "
+            f"slot: {booking_data.slot}, date: {booking_data.booking_date}"
+        )
+
     return booking
 
 
@@ -537,7 +633,11 @@ async def get_booking_stats_for_event(db: AsyncSession, event_id: str) -> dict:
 
 
 async def verify_booking_constraints(
-    db: AsyncSession, event_id: str, num_seats: int, slot: str
+    db: AsyncSession,
+    event_id: str,
+    num_seats: int,
+    slot: str,
+    booking_date: Optional[str] = None,
 ) -> Tuple[bool, str]:
     """Verify if booking can be made (check event capacity, availability, etc.)"""
 
@@ -570,6 +670,9 @@ async def verify_booking_constraints(
     if event_slot.slot_status:
         return False, "Event slot is inactive"
 
+    # Clean up expired holds first
+    await cleanup_expired_holds(db, event_slot.id)
+
     # Get total approved bookings for this event and slot
     approved_bookings_query = select(
         func.coalesce(func.sum(EventBooking.num_seats), 0)
@@ -587,6 +690,8 @@ async def verify_booking_constraints(
     # Check slot capacity from JSONB data
     slot_data = event_slot.slot_data or {}
     slot_capacity = None
+    matched_slot_key = None
+    matched_date_key = None
 
     # Find the matching slot in JSONB data
     for date_key, date_slots in slot_data.items():
@@ -607,18 +712,29 @@ async def verify_booking_constraints(
                 start_time in slot and end_time in slot
             ):
                 slot_capacity = slot_info.get("capacity", 0)
+                matched_slot_key = slot_key
+                matched_date_key = date_key
                 break
 
         if slot_capacity is not None:
             break
 
-    # If we found slot capacity, check availability
-    if slot_capacity is not None:
-        available_seats = slot_capacity - total_booked_seats
+    # If we found slot capacity, check availability including held seats
+    if slot_capacity is not None and matched_slot_key and matched_date_key:
+        # Get currently held seats for this slot and date
+        held_seats_count = await get_held_seats_count(
+            event_slot, matched_slot_key, matched_date_key
+        )
+
+        # Calculate total unavailable seats (booked + held)
+        total_unavailable_seats = total_booked_seats + held_seats_count
+        available_seats = slot_capacity - total_unavailable_seats
+
         if available_seats < num_seats:
             return (
                 False,
-                f"Not enough seats available. Only {available_seats} seats left for this slot",
+                f"Not enough seats available. Only {available_seats} seats left for this slot "
+                f"(Capacity: {slot_capacity}, Booked: {total_booked_seats}, Held: {held_seats_count})",
             )
     else:
         # Fallback: If no specific slot capacity found, allow booking but warn
