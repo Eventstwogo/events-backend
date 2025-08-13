@@ -26,9 +26,15 @@ from organizer_service.services.analytics import (
 from shared.constants import ONBOARDING_UNDER_REVIEW
 from shared.core.api_response import api_response
 from shared.core.security import decrypt_data
-from shared.db.models import AdminUser, BusinessProfile, Event
-from shared.db.models.events import BookingStatus, EventBooking
-from shared.db.models.organizer import OrganizerQuery
+from shared.db.models import (
+    AdminUser,
+    BookingStatus,
+    BusinessProfile,
+    Event,
+    EventBooking,
+    EventStatus,
+    OrganizerQuery,
+)
 from shared.db.sessions.database import get_db
 from shared.dependencies.admin import get_current_active_user
 from shared.utils.data_utils import process_business_profile_data
@@ -173,7 +179,7 @@ async def get_organizer_full_details(
     active_events = 0
 
     for event in events:
-        if not event.event_status:
+        if event.event_status == EventStatus.ACTIVE:
             active_events += 1
 
         # Process event slots
@@ -221,6 +227,7 @@ async def get_organizer_full_details(
             "extra_data": event.extra_data,
             "hash_tags": event.hash_tags,
             "event_status": event.event_status,
+            "featured_event": event.featured_event,
             "slot_id": event.slot_id,
             "created_at": event.created_at,
             "updated_at": event.updated_at,
@@ -339,7 +346,9 @@ async def get_organizer_summary(
     events = events_result.scalars().all()
 
     total_events = len(events)
-    active_events = sum(1 for event in events if not event.event_status)
+    active_events = sum(
+        1 for event in events if event.event_status == EventStatus.ACTIVE
+    )
 
     # Prepare summary response
     summary_data = {
@@ -599,6 +608,7 @@ async def get_event_analytics(
                 "total_bookings": booking_count or 0,
                 "total_revenue": round(event_revenue, 2),
                 "event_status": event.event_status,
+                "featured_event": event.featured_event,
                 "is_online": event.is_online,
                 "card_image": get_media_url(event.card_image),
             }

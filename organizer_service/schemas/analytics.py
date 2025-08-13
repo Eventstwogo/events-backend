@@ -3,6 +3,8 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
+from shared.db.models.events import EventStatus
+
 
 class RoleInfo(BaseModel):
     role_id: str
@@ -78,7 +80,8 @@ class EventDetails(BaseModel):
     event_extra_images: Optional[List[str]] = None
     extra_data: Optional[Dict[str, Any]] = None
     hash_tags: Optional[List[str]] = None
-    event_status: bool
+    event_status: EventStatus = EventStatus.INACTIVE
+    featured_event: bool
     slot_id: str
     created_at: datetime
     updated_at: datetime
@@ -190,7 +193,8 @@ class RecentEvent(BaseModel):
     event_title: str
     category_name: Optional[str] = None
     start_date: date
-    event_status: bool
+    event_status: EventStatus = EventStatus.INACTIVE
+    featured_event: bool
     created_at: datetime
     card_image: Optional[str] = None
 
@@ -218,7 +222,8 @@ class EventPerformance(BaseModel):
     end_date: date
     total_bookings: int
     total_revenue: float
-    event_status: bool
+    event_status: EventStatus = EventStatus.INACTIVE
+    featured_event: bool
     is_online: bool
     card_image: Optional[str] = None
 

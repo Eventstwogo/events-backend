@@ -145,17 +145,25 @@
         .detail-item {
             display: flex;
             justify-content: space-between;
+            align-items: flex-start;
             margin-bottom: 8px;
             font-size: 12px;
+            gap: 16px;
         }
 
         .detail-label {
             color: #656d76;
+            flex-shrink: 0;
+            min-width: 120px;
+            font-weight: 600;
         }
 
         .detail-value {
             color: #24292f;
             font-weight: 500;
+            text-align: right;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
 
         /* Timeline */
@@ -303,6 +311,11 @@
             .detail-item {
                 flex-direction: column;
                 gap: 4px;
+                align-items: flex-start;
+            }
+
+            .detail-value {
+                text-align: left !important;
             }
         }
     </style>
@@ -336,19 +349,19 @@
             <div class="account-details">
                 <div class="details-title">Application Details</div>
                 <div class="detail-item">
-                    <span class="detail-label"><strong>Applicant Name:</strong></span>
+                    <span class="detail-label">Applicant Name:</span>
                     <span class="detail-value">{{ organizer_name }}</span>
                 </div>
                 <div class="detail-item">
-                    <span class="detail-label"><strong>Email:</strong></span>
+                    <span class="detail-label">Email:</span>
                     <span class="detail-value">{{ organizer_email }}</span>
                 </div>
                 <div class="detail-item">
-                    <span class="detail-label"><strong>Application Date:</strong></span>
+                    <span class="detail-label">Application Date:</span>
                     <span class="detail-value">{{ application_date }}</span>
                 </div>
                 <!-- <div class="detail-item">
-                    <span class="detail-label"><strong>Application ID:</strong></span>
+                    <span class="detail-label">Application ID:</span>
                     <span class="detail-value">{{ application_id }}</span>
                 </div> -->
                 <div class="detail-item">

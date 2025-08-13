@@ -97,25 +97,36 @@
 
         /* Ticket Container */
         .ticket-container {
-            background: linear-gradient(135deg, #8250df 0%, #7c3aed 100%);
-            border-radius: 12px;
-            padding: 24px;
+            background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+            border-radius: 16px;
+            padding: 28px;
             margin: 24px 0;
             color: white;
             position: relative;
             overflow: hidden;
+            box-shadow: 0 8px 25px rgba(79, 70, 229, 0.15);
         }
 
         .ticket-container::before {
             content: '';
             position: absolute;
-            top: 0;
-            right: 0;
-            width: 100px;
-            height: 100px;
-            background: rgba(255, 255, 255, 0.1);
+            top: -20px;
+            right: -20px;
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.08);
             border-radius: 50%;
-            transform: translate(30px, -30px);
+        }
+
+        .ticket-container::after {
+            content: '';
+            position: absolute;
+            bottom: -30px;
+            left: -30px;
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 50%;
         }
 
         .ticket-header {
@@ -147,31 +158,123 @@
             margin-bottom: 16px;
             position: relative;
             z-index: 1;
+            text-transform: capitalize;
+            line-height: 1.3;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            hyphens: auto;
         }
 
         .ticket-details {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 16px;
+            gap: 14px;
             position: relative;
             z-index: 1;
+            margin-top: 20px;
         }
 
         .ticket-detail {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 12px;
-            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.12);
+            padding: 18px 14px;
+            border-radius: 12px;
+            text-align: center;
+            min-height: 70px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.2s ease;
+        }
+
+        .ticket-detail:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-1px);
         }
 
         .ticket-detail-label {
+            font-size: 11px;
+            opacity: 0.85;
+            margin-bottom: 8px;
+            line-height: 1.2;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            white-space: nowrap;
+        }
+
+        .ticket-detail-label .emoji {
             font-size: 12px;
-            opacity: 0.8;
-            margin-bottom: 4px;
+            display: inline-block;
+            width: 14px;
+            text-align: center;
         }
 
         .ticket-detail-value {
             font-size: 14px;
             font-weight: 600;
+            line-height: 1.4;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            hyphens: auto;
+            white-space: normal;
+            text-align: center;
+            min-height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Specific formatting for different data types */
+        .ticket-detail.date .ticket-detail-value {
+            font-size: 13px;
+            line-height: 1.3;
+        }
+
+        .ticket-detail.time .ticket-detail-value {
+            text-transform: capitalize;
+        }
+
+        .ticket-detail.location .ticket-detail-value {
+            font-size: 13px;
+            line-height: 1.3;
+        }
+
+        .ticket-detail.seats .ticket-detail-value {
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Enhanced responsive grid for better text handling */
+        @media (max-width: 480px) {
+            .ticket-details {
+                grid-template-columns: 1fr !important;
+            }
+        }
+
+        /* Text overflow handling for very long content */
+        .ticket-detail-value.long-text {
+            font-size: 12px !important;
+            line-height: 1.2 !important;
+        }
+
+        /* Date range formatting */
+        .ticket-detail.date .ticket-detail-value {
+            white-space: pre-line;
+            text-align: center;
+        }
+
+        /* Location text handling */
+        .ticket-detail.location .ticket-detail-value {
+            white-space: normal;
+            max-width: 100%;
+        }
+
+        /* Ensure consistent icon alignment */
+        .ticket-detail-label .emoji {
+            flex-shrink: 0;
         }
 
         /* Booking Details */
@@ -186,10 +289,12 @@
         .detail-item {
             display: flex;
             justify-content: space-between;
+            align-items: flex-start;
             margin-bottom: 12px;
             font-size: 14px;
             padding: 8px 0;
             border-bottom: 1px solid #e1e4e8;
+            gap: 16px;
         }
 
         .detail-item:last-child {
@@ -198,12 +303,17 @@
 
         .detail-label {
             color: #656d76;
-            font-weight: 500;
+            font-weight: 600;
+            flex-shrink: 0;
+            min-width: 140px;
         }
 
         .detail-value {
             color: #24292f;
             font-weight: 600;
+            text-align: right;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
 
         /* Price Summary */
@@ -241,18 +351,21 @@
 
         .cta-button {
             display: inline-block;
-            background-color: #8250df;
+            background-color: #4f46e5;
             color: #ffffff !important;
             text-decoration: none;
             padding: 12px 24px;
-            border-radius: 6px;
+            border-radius: 8px;
             font-weight: 500;
             font-size: 14px;
             margin: 0 8px 8px 0;
+            transition: all 0.2s ease;
         }
 
         .cta-button:hover {
-            background-color: #7c3aed;
+            background-color: #4338ca;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
         }
 
         .cta-button.secondary {
@@ -332,10 +445,43 @@
             .detail-item {
                 flex-direction: column;
                 gap: 4px;
+                align-items: flex-start;
+            }
+
+            .detail-value {
+                text-align: left !important;
             }
 
             .ticket-details {
                 grid-template-columns: 1fr !important;
+                gap: 10px !important;
+            }
+
+            .ticket-detail {
+                min-height: 60px !important;
+                padding: 16px 12px !important;
+            }
+
+            .ticket-detail-label {
+                font-size: 10px !important;
+                margin-bottom: 6px !important;
+                gap: 3px !important;
+            }
+
+            .ticket-detail-label .emoji {
+                font-size: 11px !important;
+                width: 12px !important;
+            }
+
+            .ticket-detail-value {
+                font-size: 13px !important;
+                line-height: 1.3 !important;
+            }
+
+            .ticket-detail.date .ticket-detail-value,
+            .ticket-detail.location .ticket-detail-value {
+                font-size: 12px !important;
+                line-height: 1.2 !important;
             }
 
             .ticket-header {
@@ -378,20 +524,32 @@
                 <div class="event-name">{{ event_title }}</div>
 
                 <div class="ticket-details">
-                    <div class="ticket-detail">
-                        <div class="ticket-detail-label">📅 Date</div>
+                    <div class="ticket-detail date">
+                        <div class="ticket-detail-label">
+                            <span class="emoji">📅</span>
+                            <span>Date</span>
+                        </div>
                         <div class="ticket-detail-value">{{ event_date }}</div>
                     </div>
-                    <div class="ticket-detail">
-                        <div class="ticket-detail-label">⏰ Time Slot</div>
+                    <div class="ticket-detail time">
+                        <div class="ticket-detail-label">
+                            <span class="emoji">⏰</span>
+                            <span>Time Slot</span>
+                        </div>
                         <div class="ticket-detail-value">{{ time_slot }}</div>
                     </div>
-                    <div class="ticket-detail">
-                        <div class="ticket-detail-label">📍 Location</div>
+                    <div class="ticket-detail location">
+                        <div class="ticket-detail-label">
+                            <span class="emoji">📍</span>
+                            <span>Location</span>
+                        </div>
                         <div class="ticket-detail-value">{{ event_location }}</div>
                     </div>
-                    <div class="ticket-detail">
-                        <div class="ticket-detail-label">👥 Seats</div>
+                    <div class="ticket-detail seats">
+                        <div class="ticket-detail-label">
+                            <span class="emoji">👥</span>
+                            <span>Seats</span>
+                        </div>
                         <div class="ticket-detail-value">{{ num_seats }} seat(s)</div>
                     </div>
                 </div>

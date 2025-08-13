@@ -138,17 +138,25 @@
         .detail-item {
             display: flex;
             justify-content: space-between;
+            align-items: flex-start;
             margin-bottom: 8px;
             font-size: 12px;
+            gap: 16px;
         }
 
         .detail-label {
             color: #656d76;
+            flex-shrink: 0;
+            min-width: 120px;
+            font-weight: 600;
         }
 
         .detail-value {
             color: #24292f;
             font-weight: 500;
+            text-align: right;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
 
         /* Next Steps */
@@ -278,6 +286,11 @@
             .detail-item {
                 flex-direction: column;
                 gap: 4px;
+                align-items: flex-start;
+            }
+
+            .detail-value {
+                text-align: left !important;
             }
         }
 
@@ -307,15 +320,15 @@
             <div class="account-details">
                 <div class="details-title">Account Information</div>
                 <div class="detail-item">
-                    <span class="detail-label"><strong>Name:</strong></span>
+                    <span class="detail-label">Name:</span>
                     <span class="detail-value">{{ organizer_name }}</span>
                 </div>
                 <div class="detail-item">
-                    <span class="detail-label"><strong>Email:</strong></span>
+                    <span class="detail-label">Email:</span>
                     <span class="detail-value">{{ organizer_email }}</span>
                 </div>
                 <div class="detail-item">
-                    <span class="detail-label"><strong>Account Type:</strong></span>
+                    <span class="detail-label">Account Type:</span>
                     <span class="detail-value">Event Organizer</span>
                 </div>
             </div>

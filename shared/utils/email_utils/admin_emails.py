@@ -413,6 +413,7 @@ def send_booking_success_email(
     user_name: str,
     booking_id: str,
     event_title: str,
+    event_slug: str,
     event_date: str,
     event_location: str,
     event_category: str,
@@ -466,9 +467,9 @@ def send_booking_success_email(
         "total_price": f"{total_price:.2f}",
         "booking_date": booking_date,
         "event_url": event_url
-        or f"{settings.USERS_APPLICATION_FRONTEND_URL}/events/view/{event_title.lower().replace(' ', '-')}",
+        or f"{settings.USERS_APPLICATION_FRONTEND_URL}/event/{event_slug}",
         "my_bookings_url": my_bookings_url
-        or f"{settings.USERS_APPLICATION_FRONTEND_URL}/my-bookings",
+        or f"{settings.USERS_APPLICATION_FRONTEND_URL}/Profile",
         "support_url": support_url
         or f"{settings.USERS_APPLICATION_FRONTEND_URL}/support",
         "help_center_url": help_center_url

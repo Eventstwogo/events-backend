@@ -337,12 +337,12 @@ async def update_event_slot_endpoint(
             log_error=True,
         )
 
-    # # Validate slot dates against event date range
-    # is_valid, error_message = validate_slot_dates_against_event(
-    #     slot_request.slot_data, event.start_date, event.end_date
-    # )
-    # if not is_valid:
-    #     return invalid_slot_data_response(error_message)
+    # Validate slot dates against event date range
+    is_valid, error_message = validate_slot_dates_against_event(
+        slot_request.slot_data, event.start_date, event.end_date
+    )
+    if not is_valid:
+        return invalid_slot_data_response(error_message)
 
     # Get existing slot to preview the merge result
     existing_slot = await get_event_slot(db, slot_id)
@@ -375,12 +375,12 @@ async def update_event_slot_endpoint(
             log_error=True,
         )
 
-    # # Validate all dates in merged data are within event date range
-    # is_merged_valid, merged_error = validate_slot_dates_against_event(
-    #     merged_data, event.start_date, event.end_date
-    # )
-    # if not is_merged_valid:
-    #     return invalid_slot_data_response(f"After merging: {merged_error}")
+    # Validate all dates in merged data are within event date range
+    is_merged_valid, merged_error = validate_slot_dates_against_event(
+        merged_data, event.start_date, event.end_date
+    )
+    if not is_merged_valid:
+        return invalid_slot_data_response(f"After merging: {merged_error}")
 
     # Update the event slot with proper JSONB merge logic
     updated_slot = await update_event_slot(

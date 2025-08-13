@@ -1248,6 +1248,7 @@ async def get_simple_organizer_bookings(
             booking_date=booking.booking_date,
             num_seats=booking.num_seats,
             total_price=booking.total_price,
+            price_per_seat=booking.price_per_seat,
             booking_status=str(booking.booking_status),
             payment_status=booking.payment_status,
             created_at=booking.created_at,

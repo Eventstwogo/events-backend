@@ -478,6 +478,7 @@ class SimpleOrganizerBookingItem(BaseModel):
     booking_date: date
     num_seats: int
     total_price: float
+    price_per_seat: float
     booking_status: str
     payment_status: Optional[str] = None
     created_at: datetime

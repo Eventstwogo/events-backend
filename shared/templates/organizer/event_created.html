@@ -103,10 +103,12 @@
         .detail-item {
             display: flex;
             justify-content: space-between;
+            align-items: flex-start;
             margin-bottom: 12px;
             font-size: 14px;
             padding: 8px 0;
             border-bottom: 1px solid #e1e4e8;
+            gap: 16px;
         }
 
         .detail-item:last-child {
@@ -115,12 +117,17 @@
 
         .detail-label {
             color: #656d76;
-            font-weight: 500;
+            font-weight: 600;
+            flex-shrink: 0;
+            min-width: 140px;
         }
 
         .detail-value {
             color: #24292f;
             font-weight: 600;
+            text-align: right;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
 
         /* CTA Button */
@@ -213,6 +220,11 @@
             .detail-item {
                 flex-direction: column;
                 gap: 4px;
+                align-items: flex-start;
+            }
+
+            .detail-value {
+                text-align: left !important;
             }
         }
     </style>
@@ -243,22 +255,22 @@
                 <div class="event-title"><strong>{{ event_title }}</strong></div>
 
                 <div class="detail-item">
-                    <span class="detail-label"><strong>Event Start Date:</strong></span>
+                    <span class="detail-label">Event Start Date:</span>
                     <span class="detail-value">{{ event_date }}</span>
                 </div>
 
                 <div class="detail-item">
-                    <span class="detail-label"><strong>Event End Date:</strong></span>
+                    <span class="detail-label">Event End Date:</span>
                     <span class="detail-value">{{ event_date }}</span>
                 </div>
 
                 <div class="detail-item">
-                    <span class="detail-label"><strong>Location:</strong></span>
+                    <span class="detail-label">Location:</span>
                     <span class="detail-value">{{ event_location }}</span>
                 </div>
 
                 <div class="detail-item">
-                    <span class="detail-label"><strong>Event Category:</strong></span>
+                    <span class="detail-label">Event Category:</span>
                     <span class="detail-value">{{ event_category }}</span>
                 </div>
             </div>

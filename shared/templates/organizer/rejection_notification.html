@@ -176,17 +176,25 @@
         .detail-item {
             display: flex;
             justify-content: space-between;
+            align-items: flex-start;
             margin-bottom: 8px;
             font-size: 12px;
+            gap: 16px;
         }
 
         .detail-label {
             color: #656d76;
+            flex-shrink: 0;
+            min-width: 120px;
+            font-weight: 600;
         }
 
         .detail-value {
             color: #24292f;
             font-weight: 500;
+            text-align: right;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
 
         /* Admin Message */
