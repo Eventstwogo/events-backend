@@ -29,6 +29,7 @@ from event_service.services.response_builder import (
     organizer_not_found_response,
 )
 from shared.core.api_response import api_response
+from shared.db.models.events import EventStatus
 from shared.db.sessions.database import get_db
 from shared.utils.exception_handlers import exception_handler
 
@@ -45,7 +46,7 @@ async def list_events(
     per_page: int = Query(
         default=10, ge=1, le=100, description="Items per page"
     ),
-    status_filter: Optional[bool] = Query(
+    status_filter: Optional[EventStatus] = Query(
         None, alias="status", description="Filter by event status"
     ),
     category_id: Optional[str] = Query(
@@ -119,7 +120,7 @@ async def search_events_advanced(
     per_page: int = Query(
         default=10, ge=1, le=100, description="Items per page"
     ),
-    status_filter: Optional[bool] = Query(
+    status_filter: Optional[EventStatus] = Query(
         None, alias="status", description="Filter by event status"
     ),
     category_id: Optional[str] = Query(
@@ -191,7 +192,7 @@ async def filter_events_endpoint(
     per_page: int = Query(
         default=10, ge=1, le=100, description="Items per page"
     ),
-    status_filter: Optional[bool] = Query(
+    status_filter: Optional[EventStatus] = Query(
         None, alias="status", description="Filter by event status"
     ),
     category_id: Optional[str] = Query(
@@ -209,7 +210,7 @@ async def filter_events_endpoint(
     created_before: Optional[str] = Query(
         None, description="Filter events created before this date (ISO format)"
     ),
-    has_slots: Optional[bool] = Query(
+    has_slots: Optional[EventStatus] = Query(
         None, description="Filter events that have/don't have slots"
     ),
     min_slots: Optional[int] = Query(
@@ -305,7 +306,7 @@ async def get_events_by_organizer_endpoint(
     per_page: int = Query(
         default=10, ge=1, le=100, description="Items per page"
     ),
-    status_filter: Optional[bool] = Query(
+    status_filter: Optional[EventStatus] = Query(
         None, alias="status", description="Filter by event status"
     ),
     sort_by: str = Query(default="created_at", description="Sort field"),
@@ -449,7 +450,7 @@ async def get_events_by_hashtag_endpoint(
     per_page: int = Query(
         default=10, ge=1, le=100, description="Items per page"
     ),
-    status_filter: Optional[bool] = Query(
+    status_filter: Optional[EventStatus] = Query(
         None, alias="status", description="Filter by event status"
     ),
     db: AsyncSession = Depends(get_db),
