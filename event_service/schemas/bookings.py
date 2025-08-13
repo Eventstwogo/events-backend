@@ -497,3 +497,23 @@ class SimpleOrganizerBookingsResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class EventStats(BaseModel):
+    event_id: str
+    event_title: str
+    card_image: str | None = None
+    total_tickets: int
+    total_revenue: float
+
+    class Config:
+        from_attributes = True
+
+
+class OrganizerEventsStatsResponse(BaseModel):
+    organizer_id: str
+    organizer_name: str
+    events: List[EventStats]
+
+    class Config:
+        from_attributes = True

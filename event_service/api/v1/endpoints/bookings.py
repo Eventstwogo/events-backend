@@ -12,6 +12,7 @@ from event_service.schemas.bookings import (
     BookingResponse,
     BookingStatusUpdateRequest,
     OrganizerBookingsResponse,
+    OrganizerEventsStatsResponse,
     SimpleOrganizerBookingsResponse,
     UserBookingsListResponse,
 )
@@ -24,6 +25,7 @@ from event_service.services.bookings import (
     get_all_bookings_with_details,
     get_booking_by_id,
     get_organizer_bookings_with_events_and_slots,
+    get_organizer_events_with_stats,
     get_simple_organizer_bookings,
     get_user_bookings,
     mark_booking_as_paid,
@@ -533,6 +535,36 @@ async def get_organizer_bookings_detailed_endpoint(
     return api_response(
         message="Retrieved detailed bookings for organizer",
         data=response_data,
+        status_code=status.HTTP_200_OK,
+    )
+
+
+@router.get(
+    "/organizer/revenue/{organizer_id}",
+    status_code=status.HTTP_200_OK,
+    response_model=OrganizerEventsStatsResponse,
+)
+@exception_handler
+async def get_organizer_revenue_endpoint(
+    organizer_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Get total revenue for an organizer based on approved bookings with completed payments
+
+    - **organizer_id**: ID of the organizer
+
+    Returns:
+    - Total revenue from approved bookings with completed payments
+    - Total number of qualifying bookings
+    - Currency (AUD)
+    """
+
+    revenue_data = await get_organizer_events_with_stats(db, organizer_id)
+
+    return api_response(
+        message="Organizer revenue retrieved successfully",
+        data=revenue_data,
         status_code=status.HTTP_200_OK,
     )
 

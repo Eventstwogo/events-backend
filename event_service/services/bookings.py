@@ -30,7 +30,8 @@ from event_service.schemas.bookings import (
     UserBookingItemResponse,
     UserBookingsListResponse,
 )
-from shared.db.models.events import (
+from shared.db.models import (
+    AdminUser,
     BookingStatus,
     Event,
     EventBooking,
@@ -1250,3 +1251,58 @@ async def get_simple_organizer_bookings(
         per_page=per_page,
         total_pages=total_pages,
     )
+
+
+async def get_organizer_events_with_stats(
+    db: AsyncSession, organizer_id: str
+) -> dict:
+    # # Fetch organizer basic info
+    # organizer_query = select(AdminUser).where(AdminUser.user_id == organizer_id)
+    # organizer_result = await db.execute(organizer_query)
+    # organizer = organizer_result.first()
+    # if not organizer:
+    #     return {"error": "Organizer not found"}
+
+    # Query all events with aggregated booking stats in ONE go
+    events_query = (
+        select(
+            Event.event_id,
+            Event.event_title,
+            Event.card_image,
+            func.coalesce(func.sum(EventBooking.num_seats), 0).label(
+                "total_tickets"
+            ),
+            func.coalesce(func.sum(EventBooking.total_price), 0.0).label(
+                "total_revenue"
+            ),
+        )
+        .join(
+            EventBooking,
+            and_(
+                EventBooking.event_id == Event.event_id,
+                EventBooking.booking_status == BookingStatus.APPROVED,
+                EventBooking.payment_status == "COMPLETED",
+            ),
+            isouter=True,
+        )
+        .where(Event.organizer_id == organizer_id)
+        .group_by(Event.event_id, Event.event_title, Event.card_image)
+    )
+    events_result = await db.execute(events_query)
+
+    events = [
+        {
+            "event_id": row.event_id,
+            "event_title": row.event_title,
+            "card_image": row.card_image,
+            "total_tickets": int(row.total_tickets or 0),
+            "total_revenue": round(float(row.total_revenue or 0.0), 2),
+        }
+        for row in events_result.fetchall()
+    ]
+
+    return {
+        "organizer_id": organizer_id,
+        "organizer_name": "",
+        "events": events,
+    }
