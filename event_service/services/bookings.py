@@ -36,6 +36,7 @@ from shared.db.models import (
     Event,
     EventBooking,
     EventSlot,
+    EventStatus,
 )
 from shared.utils.file_uploads import get_media_url
 from shared.utils.id_generators import generate_digits_letters
@@ -239,7 +240,7 @@ async def create_booking(db: AsyncSession, booking_data: BookingCreateRequest):
     if not can_book:
         raise HTTPException(status_code=400, detail=message)
 
-    # Verify other constraints
+    # Verify other constraints including held seats
     can_book, message = await verify_booking_constraints(
         db,
         booking_data.event_id,
@@ -548,8 +549,11 @@ async def verify_booking_constraints(
     if not event:
         return False, "Event not found"
 
-    if event.event_status:
+    if event.event_status == EventStatus.INACTIVE:
         return False, "Event is inactive"
+
+    if event.event_status == EventStatus.PENDING:
+        return False, "Event is pending for slots"
 
     # Check if event has ended
     if event.end_date and event.end_date < datetime.now(timezone.utc).date():
@@ -910,10 +914,16 @@ async def get_organizer_bookings_with_events_and_slots(
 
     # Count active/inactive events
     active_count_query = select(func.count(Event.event_id)).where(
-        and_(Event.organizer_id == organizer_id, Event.event_status == True)
+        and_(
+            Event.organizer_id == organizer_id,
+            Event.event_status == EventStatus.ACTIVE,
+        )
     )
     inactive_count_query = select(func.count(Event.event_id)).where(
-        and_(Event.organizer_id == organizer_id, Event.event_status == False)
+        and_(
+            Event.organizer_id == organizer_id,
+            Event.event_status == EventStatus.INACTIVE,
+        )
     )
 
     active_result = await db.execute(active_count_query)
@@ -934,7 +944,11 @@ async def get_organizer_bookings_with_events_and_slots(
             card_image=get_media_url(event.card_image),
             start_date=event.start_date,
             end_date=event.end_date,
-            status="active" if event.event_status else "inactive",
+            status=(
+                "active"
+                if event.event_status == EventStatus.ACTIVE
+                else "inactive"
+            ),
             slots_count=len(event.slots) if event.slots else 0,
         )
 

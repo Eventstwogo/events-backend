@@ -228,8 +228,8 @@ async def confirm_booking(
 
                     # Get user name using the property (automatically decrypts)
                     user_name = (
-                        booking.user.first_name
-                        or booking.user.username
+                        booking.user.username
+                        or booking.user.first_name
                         or "Valued Customer"
                     )
                     if booking.user.last_name:
@@ -239,6 +239,13 @@ async def confirm_booking(
                     event_category = (
                         booking.booked_event.category.category_name or "General"
                     )
+                    event_location = (
+                        booking.booked_event.location
+                        or (booking.booked_event.extra_data or {}).get(
+                            "address", ""
+                        )
+                        or ""
+                    )
 
                     # Send the email
                     send_booking_success_email(
@@ -247,9 +254,9 @@ async def confirm_booking(
                         booking_id=booking.booking_id,
                         event_title=booking.booked_event.event_title,
                         event_date=event_date,
-                        event_location=booking.booked_event.location or "TBA",
+                        event_location=event_location,
                         event_category=event_category,
-                        time_slot=booking.slot,
+                        time_slot=booking.slot.replace("_", " ").title(),
                         num_seats=booking.num_seats,
                         price_per_seat=float(booking.price_per_seat),
                         total_price=float(booking.total_price),
