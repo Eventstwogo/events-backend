@@ -1222,19 +1222,12 @@ async def get_simple_organizer_bookings(
                                 slot_time = f"{start_time} - {end_time}"
                             break
 
-        # Build user name
-        user_name = (
-            f"{booking.user.first_name} {booking.user.last_name}".strip()
-        )
-        if not user_name:
-            user_name = booking.user.username
-
         booking_item = SimpleOrganizerBookingItem(
             booking_id=booking.booking_id,
             event_title=booking.booked_event.event_title,
             event_id=booking.booked_event.event_id,
             card_image=get_media_url(booking.booked_event.card_image),
-            user_name=user_name,
+            user_name=booking.user.username,
             user_email=booking.user.email,
             slot_time=slot_time,
             booking_date=booking.booking_date,

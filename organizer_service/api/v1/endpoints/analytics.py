@@ -1,8 +1,8 @@
 from datetime import date, datetime, timedelta
-from typing import Annotated, Any, Dict, List, Optional
+from typing import Annotated, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
-from sqlalchemy import and_, asc, desc, func, or_, select
+from fastapi import APIRouter, Depends, Path, Query
+from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -15,13 +15,20 @@ from organizer_service.schemas.analytics import (
     PerformanceMetricsApiResponse,
     QueryAnalyticsApiResponse,
 )
+from organizer_service.services.analytics import (
+    calculate_date_range,
+    get_booking_statistics_and_revenue,
+    get_event_statistics,
+    get_query_statistics,
+    get_recent_events,
+    validate_user_access,
+)
 from shared.constants import ONBOARDING_UNDER_REVIEW
 from shared.core.api_response import api_response
 from shared.core.security import decrypt_data
-from shared.db.models import AdminUser, BusinessProfile, Event, EventSlot
-from shared.db.models.contact_us import ContactUs, ContactUsStatus
+from shared.db.models import AdminUser, BusinessProfile, Event
 from shared.db.models.events import BookingStatus, EventBooking
-from shared.db.models.organizer import OrganizerQuery, QueryStatus
+from shared.db.models.organizer import OrganizerQuery
 from shared.db.sessions.database import get_db
 from shared.dependencies.admin import get_current_active_user
 from shared.utils.data_utils import process_business_profile_data
@@ -436,189 +443,33 @@ async def get_dashboard_overview(
     ),
     db: AsyncSession = Depends(get_db),
 ):
-    """
-    Get comprehensive dashboard overview analytics for authenticated organizer.
+    # Validate user access
+    access_error = await validate_user_access(current_user, db)
+    if access_error:
+        return access_error
 
-    Includes:
-    - Event statistics (total, active, upcoming, past)
-    - Booking statistics (total bookings, revenue, pending approvals)
-    - Query statistics (total queries, pending, resolved)
-    - Recent activity trends
-    - Performance metrics
-    """
+    # Date range
+    start_date, end_date = calculate_date_range(period)
 
-    user_id = current_user.user_id
-
-    # Calculate date range based on period
-    end_date = date.today()
-    if period == "7d":
-        start_date = end_date - timedelta(days=7)
-    elif period == "30d":
-        start_date = end_date - timedelta(days=30)
-    elif period == "90d":
-        start_date = end_date - timedelta(days=90)
-    elif period == "1y":
-        start_date = end_date - timedelta(days=365)
-    else:
-        start_date = end_date - timedelta(days=30)
-
-    # Get event statistics
-    events_stmt = select(Event).where(Event.organizer_id == user_id)
-    events_result = await db.execute(events_stmt)
-    all_events = events_result.scalars().all()
-
-    total_events = len(all_events)
-    active_events = sum(
-        1 for event in all_events if not event.event_status
-    )  # Fixed: active events have event_status = False
-    upcoming_events = sum(
-        1 for event in all_events if event.start_date > end_date
+    # Fetch statistics
+    event_stats = await get_event_statistics(db, current_user.user_id, end_date)
+    booking_stats, revenue_stats = await get_booking_statistics_and_revenue(
+        db, current_user.user_id, start_date, end_date
     )
-    past_events = sum(1 for event in all_events if event.end_date < end_date)
+    query_stats = await get_query_statistics(
+        db, current_user.user_id, start_date, end_date
+    )
+    recent_events = await get_recent_events(db, current_user.user_id)
 
-    # Get booking statistics
-    bookings_stmt = (
-        select(EventBooking)
-        .join(Event, EventBooking.event_id == Event.event_id)
-        .where(
-            and_(
-                Event.organizer_id == user_id,
-                EventBooking.booking_date >= start_date,
-                EventBooking.booking_date <= end_date,
-            )
-        )
-    )
-    bookings_result = await db.execute(bookings_stmt)
-    bookings = bookings_result.scalars().all()
-
-    total_bookings = len(bookings)
-    approved_bookings = sum(
-        1
-        for booking in bookings
-        if booking.booking_status == BookingStatus.APPROVED
-    )
-    pending_bookings = sum(
-        1
-        for booking in bookings
-        if booking.booking_status == BookingStatus.PROCESSING
-    )
-    cancelled_bookings = sum(
-        1
-        for booking in bookings
-        if booking.booking_status == BookingStatus.CANCELLED
-    )
-
-    # Calculate revenue
-    total_revenue = sum(
-        float(booking.total_price)
-        for booking in bookings
-        if booking.booking_status == BookingStatus.APPROVED
-    )
-    pending_revenue = sum(
-        float(booking.total_price)
-        for booking in bookings
-        if booking.booking_status == BookingStatus.PROCESSING
-    )
-
-    # Get query statistics - Fixed: queries should be TO the organizer, not FROM them
-    queries_stmt = select(OrganizerQuery).where(
-        and_(
-            OrganizerQuery.receiver_user_id
-            == user_id,  # Fixed: queries TO the organizer
-            OrganizerQuery.created_at
-            >= datetime.combine(start_date, datetime.min.time()),
-            OrganizerQuery.created_at
-            <= datetime.combine(end_date, datetime.max.time()),
-        )
-    )
-    queries_result = await db.execute(queries_stmt)
-    queries = queries_result.scalars().all()
-
-    total_queries = len(queries)
-    pending_queries = sum(
-        1 for query in queries if query.query_status.value == "open"
-    )
-    resolved_queries = sum(
-        1 for query in queries if query.query_status.value == "resolved"
-    )
-
-    # Get recent events (last 5)
-    recent_events_stmt = (
-        select(Event)
-        .options(selectinload(Event.category))
-        .where(Event.organizer_id == user_id)
-        .order_by(desc(Event.created_at))
-        .limit(5)
-    )
-    recent_events_result = await db.execute(recent_events_stmt)
-    recent_events = recent_events_result.scalars().all()
-
-    recent_events_data = []
-    for event in recent_events:
-        recent_events_data.append(
-            {
-                "event_id": event.event_id,
-                "event_title": event.event_title,
-                "category_name": (
-                    event.category.category_name if event.category else None
-                ),
-                "start_date": event.start_date,
-                "event_status": event.event_status,
-                "created_at": event.created_at,
-                "card_image": get_media_url(event.card_image),
-            }
-        )
-
-    # Prepare dashboard data
+    # Response payload
     dashboard_data = {
         "period": period,
         "date_range": {"start_date": start_date, "end_date": end_date},
-        "event_statistics": {
-            "total_events": total_events,
-            "active_events": active_events,
-            "upcoming_events": upcoming_events,
-            "past_events": past_events,
-        },
-        "booking_statistics": {
-            "total_bookings": total_bookings,
-            "approved_bookings": approved_bookings,
-            "pending_bookings": pending_bookings,
-            "cancelled_bookings": cancelled_bookings,
-            "approval_rate": round(
-                (
-                    (approved_bookings / total_bookings * 100)
-                    if total_bookings > 0
-                    else 0
-                ),
-                2,
-            ),
-        },
-        "revenue_statistics": {
-            "total_revenue": round(total_revenue, 2),
-            "pending_revenue": round(pending_revenue, 2),
-            "average_booking_value": round(
-                (
-                    (total_revenue / approved_bookings)
-                    if approved_bookings > 0
-                    else 0
-                ),
-                2,
-            ),
-        },
-        "query_statistics": {
-            "total_queries": total_queries,
-            "pending_queries": pending_queries,
-            "resolved_queries": resolved_queries,
-            "resolution_rate": round(
-                (
-                    (resolved_queries / total_queries * 100)
-                    if total_queries > 0
-                    else 0
-                ),
-                2,
-            ),
-        },
-        "recent_events": recent_events_data,
+        "event_statistics": event_stats,
+        "booking_statistics": booking_stats,
+        "revenue_statistics": revenue_stats,
+        "query_statistics": query_stats,
+        "recent_events": recent_events,
     }
 
     return api_response(
@@ -648,6 +499,11 @@ async def get_event_analytics(
     """
     Get detailed event analytics for authenticated organizer dashboard.
 
+    Requirements:
+    - User must have organizer role
+    - User must have a business profile
+    - Revenue calculations only include approved bookings with completed payments
+
     Includes:
     - Event performance metrics
     - Booking trends by event
@@ -657,6 +513,39 @@ async def get_event_analytics(
     """
 
     user_id = current_user.user_id
+
+    # Constraint 1: Check if user has organizer role
+    if (
+        not current_user.role
+        or current_user.role.role_name.lower() != "organizer"
+    ):
+        return api_response(
+            status_code=403,
+            message="Access denied. This endpoint is restricted to organizers only.",
+            data=None,
+        )
+
+    # Constraint 2: Check if user has business profile
+    if not current_user.business_id:
+        return api_response(
+            status_code=400,
+            message="Business profile required. Please complete your business profile to access event analytics.",
+            data=None,
+        )
+
+    # Verify business profile exists
+    business_stmt = select(BusinessProfile).where(
+        BusinessProfile.business_id == current_user.business_id
+    )
+    business_result = await db.execute(business_stmt)
+    business_profile = business_result.scalars().first()
+
+    if not business_profile:
+        return api_response(
+            status_code=400,
+            message="Business profile not found. Please complete your business profile to access event analytics.",
+            data=None,
+        )
 
     # Calculate date range
     end_date = date.today()

@@ -378,7 +378,11 @@ async def fetch_booking_analytics(db: AsyncSession) -> Dict:
     total_bookings = total_bookings_result.scalar() or 0
 
     # Get total revenue (sum of all total_price)
-    total_revenue_query = select(func.sum(EventBooking.total_price))
+    total_revenue_query = (
+        select(func.sum(EventBooking.total_price))
+        .filter(EventBooking.booking_status == BookingStatus.APPROVED)
+        .filter(EventBooking.payment_status == "COMPLETED")
+    )
     total_revenue_result = await db.execute(total_revenue_query)
     total_revenue = float(total_revenue_result.scalar() or 0)
 
