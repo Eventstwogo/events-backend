@@ -7,6 +7,7 @@ from event_service.api.v1.endpoints import (
     event_creation_with_images,
     event_images,
     events,
+    featured_events,
     slots,
 )
 
@@ -35,6 +36,9 @@ event_router.include_router(
 )
 event_router.include_router(
     bookings.router, prefix="/bookings", tags=["Event Bookings"]
+)
+event_router.include_router(
+    featured_events.router, prefix="/featured-events", tags=["Featured Events"]
 )
 # event_router.include_router(
 #     advanced_slots.router, prefix="/advanced-slots", tags=["Advanced Slots"]

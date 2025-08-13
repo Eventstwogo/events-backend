@@ -6,8 +6,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from shared.core.logging_config import get_logger
-from shared.db.models import AdminUser, Event, EventBooking, EventSlot, Role
-from shared.db.models.events import BookingStatus
+from shared.db.models import (
+    AdminUser,
+    BookingStatus,
+    Event,
+    EventBooking,
+    EventStatus,
+    Role,
+)
 
 logger = get_logger(__name__)
 
@@ -206,8 +212,16 @@ def calculate_events_analytics(events: List[Event]) -> Dict:
     Helper function to calculate analytics for a list of events.
     """
     total_events = len(events)
-    active_events = len([e for e in events if not e.event_status])
-    draft_events = len([e for e in events if e.event_status])
+    active_events = len(
+        [e for e in events if e.event_status == EventStatus.ACTIVE]
+    )
+    draft_events = len(
+        [e for e in events if e.event_status == EventStatus.INACTIVE]
+    )
+    pending_events = len(
+        [e for e in events if e.event_status == EventStatus.PENDING]
+    )
+    featured_events = len([e for e in events if e.featured_event == True])
 
     # Calculate upcoming and past events
     today = date.today()
@@ -215,13 +229,17 @@ def calculate_events_analytics(events: List[Event]) -> Dict:
         [
             e
             for e in events
-            if not e.event_status
+            if e.event_status == EventStatus.ACTIVE
             and (e.start_date >= today or e.end_date >= today)
         ]
     )
 
     past_events = len(
-        [e for e in events if not e.event_status and e.end_date < today]
+        [
+            e
+            for e in events
+            if e.event_status == EventStatus.ACTIVE and e.end_date < today
+        ]
     )
 
     # Calculate slots analytics
@@ -247,12 +265,15 @@ def calculate_events_analytics(events: List[Event]) -> Dict:
                     "total": 0,
                     "active": 0,
                     "draft": 0,
+                    "pending": 0,
                 }
             events_by_category[category_name]["total"] += 1
-            if event.event_status:
+            if event.event_status == EventStatus.INACTIVE:
                 events_by_category[category_name]["draft"] += 1
-            else:
+            elif event.event_status == EventStatus.ACTIVE:
                 events_by_category[category_name]["active"] += 1
+            else:
+                events_by_category[category_name]["pending"] += 1
 
     # Get events by month (last 12 months)
     events_by_month = {}
@@ -267,6 +288,8 @@ def calculate_events_analytics(events: List[Event]) -> Dict:
             "total_events": total_events,
             "active_events": active_events,
             "draft_events": draft_events,
+            "featured_events": featured_events,
+            "pending_events": pending_events,
             "upcoming_events": upcoming_events,
             "past_events": past_events,
             "events_by_category": events_by_category,
@@ -301,16 +324,18 @@ async def fetch_event_statistics(db: AsyncSession) -> Dict:
             month=current_month_start.month - 1
         )
 
-    # Get active events count (event_status = False means active)
+    # Get active events count
     active_events_query = select(func.count(Event.event_id)).filter(
-        Event.event_status == False
+        Event.event_status == EventStatus.ACTIVE
     )
     active_events_result = await db.execute(active_events_query)
     active_events_count = active_events_result.scalar() or 0
 
     # Get upcoming events count (active events with start_date >= today)
     upcoming_events_query = select(func.count(Event.event_id)).filter(
-        and_(Event.event_status == False, Event.start_date >= today)
+        and_(
+            Event.event_status == EventStatus.ACTIVE, Event.start_date >= today
+        )
     )
     upcoming_events_result = await db.execute(upcoming_events_query)
     upcoming_events_count = upcoming_events_result.scalar() or 0

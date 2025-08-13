@@ -6,7 +6,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from shared.core.logging_config import get_logger
-from shared.db.models import AdminUser, Category, Event, EventSlot, SubCategory
+from shared.db.models import (
+    AdminUser,
+    Category,
+    Event,
+    EventSlot,
+    EventStatus,
+    SubCategory,
+)
 
 logger = get_logger(__name__)
 
@@ -177,7 +184,10 @@ async def fetch_event_by_slug_with_relations(
             selectinload(Event.organizer),
             selectinload(Event.slots),
         )
-        .filter(Event.event_slug == event_slug)
+        .filter(
+            Event.event_slug == event_slug,
+            Event.event_status == EventStatus.ACTIVE,
+        )
     )
     result = await db.execute(query)
     return result.scalars().first()
@@ -240,7 +250,11 @@ async def fetch_limited_events_without_filters(
     )
 
     # Get total count
-    count_query = select(func.count(Event.event_id))
+    count_query = (
+        select(func.count())
+        .select_from(Event)
+        .where(Event.event_status == EventStatus.ACTIVE)
+    )
 
     total_result = await db.execute(count_query)
     total = total_result.scalar()
@@ -276,7 +290,7 @@ async def fetch_upcoming_events(
         .filter(
             and_(
                 # Only active events (event_status = false means published/active)
-                Event.event_status == False,
+                Event.event_status == EventStatus.ACTIVE,
                 # Events that are upcoming or ongoing
                 or_(
                     Event.start_date >= today,  # Events starting today or later
@@ -336,7 +350,7 @@ async def fetch_limited_events_with_filter(
         # Filter for upcoming events only
         filters = and_(
             # Only active events (event_status = false means published/active)
-            Event.event_status == False,
+            Event.event_status == EventStatus.ACTIVE,
             # Events that are upcoming or ongoing
             or_(
                 Event.start_date >= today,  # Events starting today or later
@@ -380,7 +394,7 @@ async def update_event(
 
 
 async def update_event_status(
-    db: AsyncSession, event_id: str, status: bool
+    db: AsyncSession, event_id: str, status: EventStatus
 ) -> Event | None:
     """Update event status"""
     event = await fetch_event_by_id(db, event_id)
@@ -582,7 +596,9 @@ async def fetch_events_by_slug_comprehensive(
             .filter(
                 Event.subcategory_id.is_(None)
             )  # Only events without subcategory
-            .filter(Event.event_status.is_(False))  # Only active events
+            .filter(
+                Event.event_status == EventStatus.ACTIVE
+            )  # Only active events
             .order_by(desc(Event.created_at))
             .offset(offset)
             .limit(per_page)
@@ -598,7 +614,7 @@ async def fetch_events_by_slug_comprehensive(
             .filter(
                 Event.subcategory_id.is_(None)
             )  # Only events without subcategory
-            .filter(Event.event_status.is_(False))
+            .filter(Event.event_status == EventStatus.ACTIVE)
         )
         category_count_result = await db.execute(category_count_query)
         total_category_events = category_count_result.scalar() or 0
@@ -616,7 +632,9 @@ async def fetch_events_by_slug_comprehensive(
             .filter(
                 Event.subcategory_id.is_not(None)
             )  # Only events WITH subcategory
-            .filter(Event.event_status.is_(False))  # Only active events
+            .filter(
+                Event.event_status == EventStatus.ACTIVE
+            )  # Only active events
             .order_by(desc(Event.created_at))
         )
 
@@ -650,7 +668,7 @@ async def fetch_events_by_slug_comprehensive(
             subcategory_count_query = (
                 select(func.count(Event.event_id))
                 .filter(Event.subcategory_id == subcategory_id)
-                .filter(Event.event_status.is_(False))
+                .filter(Event.event_status == EventStatus.ACTIVE)
             )
             subcategory_count_result = await db.execute(subcategory_count_query)
             count = subcategory_count_result.scalar() or 0
@@ -677,7 +695,9 @@ async def fetch_events_by_slug_comprehensive(
                 selectinload(Event.slots),
             )
             .filter(Event.subcategory_id == subcategory.subcategory_id)
-            .filter(Event.event_status.is_(False))  # Only active events
+            .filter(
+                Event.event_status == EventStatus.ACTIVE
+            )  # Only active events
             .order_by(desc(Event.created_at))
             .offset(offset)
             .limit(per_page)
@@ -690,7 +710,7 @@ async def fetch_events_by_slug_comprehensive(
         subcategory_count_query = (
             select(func.count(Event.event_id))
             .filter(Event.subcategory_id == subcategory.subcategory_id)
-            .filter(Event.event_status.is_(False))
+            .filter(Event.event_status == EventStatus.ACTIVE)
         )
         subcategory_count_result = await db.execute(subcategory_count_query)
         total_subcategory_events = subcategory_count_result.scalar() or 0
@@ -746,7 +766,7 @@ async def fetch_events_by_category_or_subcategory_slug(
 
     # Build base event filter conditions
     base_conditions: List[Any] = [
-        Event.event_status.is_(False)
+        Event.event_status == EventStatus.ACTIVE
     ]  # Only published events
 
     # Add date-based filtering conditions
@@ -1186,7 +1206,7 @@ async def fetch_latest_event_from_each_category(
 
     # Build base event filter conditions
     base_conditions: List[Any] = [
-        Event.event_status.is_(False)
+        Event.event_status == EventStatus.ACTIVE
     ]  # Only published events
 
     # Add date-based filtering conditions

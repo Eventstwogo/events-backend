@@ -34,6 +34,9 @@ class Category(EventsBase):
     featured_category: Mapped[bool | None] = mapped_column(
         Boolean, nullable=True
     )
+    promotion_category: Mapped[bool | None] = mapped_column(
+        Boolean, nullable=True
+    )
     show_in_menu: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     category_status: Mapped[bool] = mapped_column(Boolean, default=False)
     category_tstamp: Mapped[DateTime | None] = mapped_column(
@@ -76,6 +79,9 @@ class SubCategory(EventsBase):
         String, nullable=True
     )
     featured_subcategory: Mapped[bool | None] = mapped_column(
+        Boolean, nullable=True
+    )
+    promotion_subcategory: Mapped[bool | None] = mapped_column(
         Boolean, nullable=True
     )
     show_in_menu: Mapped[bool | None] = mapped_column(Boolean, nullable=True)

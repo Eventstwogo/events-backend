@@ -97,7 +97,11 @@ def check_paypal_payment_status(response: Any) -> Optional[str]:
         return None
 
 
-@router.post("", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    status_code=status.HTTP_201_CREATED,
+    summary="Integrated in Application frontend",
+)
 @exception_handler
 async def create_event_booking(
     booking_data: BookingCreateRequest,
@@ -186,7 +190,9 @@ async def create_event_booking(
         )
 
 
-@router.get("/confirm")
+@router.get(
+    "/confirm", summary="Indirectly integrated with Application frontend"
+)
 @exception_handler
 async def confirm_booking(
     token: str, booking_id: str, db: AsyncSession = Depends(get_db)
@@ -275,7 +281,9 @@ async def confirm_booking(
         )
 
 
-@router.get("/cancel")
+@router.get(
+    "/cancel", summary="Indirectly integrated with Application frontend"
+)
 @exception_handler
 async def cancel_booking(booking_id: str, db: AsyncSession = Depends(get_db)):
     update_data = BookingStatusUpdateRequest(
@@ -300,6 +308,7 @@ async def cancel_booking(booking_id: str, db: AsyncSession = Depends(get_db)):
     "/status/{booking_id}",
     status_code=status.HTTP_200_OK,
     response_model=BookingResponse,
+    summary="Integrated in Application frontend",
 )
 @exception_handler
 async def update_booking_status_endpoint(
@@ -344,6 +353,7 @@ async def update_booking_status_endpoint(
     "/all",
     status_code=status.HTTP_200_OK,
     response_model=AllBookingsListResponse,
+    summary="Integrated in Admin frontend",
 )
 @exception_handler
 async def get_all_bookings_endpoint(
@@ -384,6 +394,7 @@ async def get_all_bookings_endpoint(
     "/{booking_id}",
     status_code=status.HTTP_200_OK,
     response_model=BookingDetailsResponse,
+    summary="Integrated in Organizer and Application frontend",
 )
 @exception_handler
 async def get_booking_details(
@@ -414,6 +425,7 @@ async def get_booking_details(
     "/user/{user_id}",
     status_code=status.HTTP_200_OK,
     response_model=UserBookingsListResponse,
+    summary="Integrated in Application frontend",
 )
 @exception_handler
 async def get_user_bookings_endpoint(
@@ -455,6 +467,7 @@ async def get_user_bookings_endpoint(
     "/organizer/{organizer_id}",
     status_code=status.HTTP_200_OK,
     response_model=SimpleOrganizerBookingsResponse,
+    summary="Integrated in Organizer frontend",
 )
 @exception_handler
 async def get_organizer_bookings_endpoint(
@@ -500,6 +513,7 @@ async def get_organizer_bookings_endpoint(
     "/organizer/{organizer_id}/detailed",
     status_code=status.HTTP_200_OK,
     response_model=OrganizerBookingsResponse,
+    summary="Not integrated in any frontend",
 )
 @exception_handler
 async def get_organizer_bookings_detailed_endpoint(
@@ -543,6 +557,7 @@ async def get_organizer_bookings_detailed_endpoint(
     "/organizer/revenue/{organizer_id}",
     status_code=status.HTTP_200_OK,
     response_model=OrganizerEventsStatsResponse,
+    summary="Not integrated in any frontend",
 )
 @exception_handler
 async def get_organizer_revenue_endpoint(

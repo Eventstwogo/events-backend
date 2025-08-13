@@ -3,6 +3,8 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
+from shared.db.models import EventStatus
+
 
 class HealthCheckResponse(BaseModel):
     """Schema for health check response"""
@@ -23,8 +25,9 @@ class EventExistsResponse(BaseModel):
 
     event_id: str = Field(..., description="Event ID")
     exists: bool = Field(..., description="Whether event exists")
-    event_status: Optional[bool] = Field(
-        None, description="Event status if exists"
+    event_status: EventStatus = Field(
+        default=EventStatus.INACTIVE,  # Use a valid enum member as default
+        description="The status of the event.",
     )
     event_title: Optional[str] = Field(
         None, description="Event title if exists"

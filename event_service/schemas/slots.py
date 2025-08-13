@@ -3,6 +3,7 @@ from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
+from shared.db.models import EventStatus
 from shared.utils.security_validators import contains_xss
 from shared.utils.validators import validate_length_range
 
@@ -605,7 +606,10 @@ class SlotDateDetailsResponse(BaseModel):
     slots_data: Dict[str, Any] = Field(
         ..., description="Detailed slot data for the date"
     )
-    event_status: bool = Field(..., description="Event status")
+    event_status: EventStatus = Field(
+        default=EventStatus.INACTIVE,  # Use a valid enum member as default
+        description="The status of the event.",
+    )
     slot_status: bool = Field(..., description="Slot status")
     total_capacity: int = Field(
         ..., description="Total capacity for all slots on this date"

@@ -10,7 +10,7 @@ from typing import Any, Dict, Optional
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from shared.db.models import Event, EventSlot
+from shared.db.models import Event, EventSlot, EventStatus
 
 
 def deep_merge_slot_data(
@@ -129,6 +129,26 @@ async def check_event_exists_by_slot_id(
     return result.scalar_one_or_none()
 
 
+async def check_event_created_status_by_id(
+    db: AsyncSession, slot_id: str
+) -> Optional[Event]:
+    query = select(Event).filter(
+        Event.slot_id == slot_id, Event.event_status == EventStatus.PENDING
+    )
+    result = await db.execute(query)
+    return result.scalar_one_or_none()
+
+
+async def check_event_slot_created_status_by_id(
+    db: AsyncSession, slot_id: str
+) -> Optional[Event]:
+    query = select(Event).filter(
+        Event.slot_id == slot_id, Event.event_status == EventStatus.ACTIVE
+    )
+    result = await db.execute(query)
+    return result.scalar_one_or_none()
+
+
 async def check_slot_exists_for_event(
     db: AsyncSession, slot_id: str
 ) -> Optional[EventSlot]:
@@ -182,7 +202,11 @@ async def count_event_slots(db: AsyncSession, slot_id: str) -> int:
 
 
 async def create_event_slot(
-    db: AsyncSession, slot_id: str, slot_data: dict, slot_status: bool = False
+    db: AsyncSession,
+    event: Event,
+    slot_id: str,
+    slot_data: dict,
+    slot_status: bool = False,
 ) -> EventSlot:
     """
     Create a new event slot.
@@ -199,8 +223,10 @@ async def create_event_slot(
     new_slot = EventSlot(
         slot_id=slot_id, slot_data=slot_data, slot_status=slot_status
     )
+    event.event_status = EventStatus.ACTIVE
 
     db.add(new_slot)
+    db.add(event)
     await db.commit()
     await db.refresh(new_slot)
 

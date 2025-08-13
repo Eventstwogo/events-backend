@@ -14,13 +14,17 @@ from event_service.schemas.slots import (
     SlotStatusToggleResponse,
 )
 from event_service.services.response_builder import (
+    event_not_created_response,
     event_not_found_response,
+    event_slots_not_created_response,
     invalid_slot_data_response,
     slot_already_exists_response,
     slot_not_found_response,
 )
 from event_service.services.slots import (
+    check_event_created_status_by_id,
     check_event_exists_by_slot_id,
+    check_event_slot_created_status_by_id,
     check_slot_exists_for_event,
     create_event_slot,
     deep_merge_slot_data,
@@ -145,7 +149,11 @@ def populate_missing_dates_and_filter(
     return processed_slot_data
 
 
-@router.post("/create", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/create",
+    status_code=status.HTTP_201_CREATED,
+    summary="Integrated in Admin and Organizer frontend",
+)
 @exception_handler
 async def create_event_slot_endpoint(
     slot_request: EventSlotCreateRequest,
@@ -183,6 +191,12 @@ async def create_event_slot_endpoint(
     event = await check_event_exists_by_slot_id(db, slot_request.slot_id)
     if not event:
         return event_not_found_response()
+
+    slot_created_event = await check_event_created_status_by_id(
+        db, event.slot_id
+    )
+    if not slot_created_event:
+        return event_not_created_response()
 
     # Check if slot already exists for this event
     existing_slot = await check_slot_exists_for_event(db, slot_request.slot_id)
@@ -228,6 +242,7 @@ async def create_event_slot_endpoint(
     # Create the event slot
     new_slot = await create_event_slot(
         db=db,
+        event=event,
         slot_id=slot_request.slot_id,
         slot_data=slot_request.slot_data,
     )
@@ -253,7 +268,11 @@ async def create_event_slot_endpoint(
     )
 
 
-@router.put("/update/{slot_id}", status_code=status.HTTP_200_OK)
+@router.put(
+    "/update/{slot_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Integrated in Admin and Organizer frontend",
+)
 @exception_handler
 async def update_event_slot_endpoint(
     slot_id: str,
@@ -291,6 +310,12 @@ async def update_event_slot_endpoint(
     if not event:
         return event_not_found_response()
 
+    slot_created_event = await check_event_slot_created_status_by_id(
+        db, slot_id
+    )
+    if not slot_created_event:
+        return event_slots_not_created_response()
+
     # Validate slot data structure (basic validation)
     if not slot_request.slot_data:
         return invalid_slot_data_response("Slot data cannot be empty")
@@ -312,12 +337,12 @@ async def update_event_slot_endpoint(
             log_error=True,
         )
 
-    # Validate slot dates against event date range
-    is_valid, error_message = validate_slot_dates_against_event(
-        slot_request.slot_data, event.start_date, event.end_date
-    )
-    if not is_valid:
-        return invalid_slot_data_response(error_message)
+    # # Validate slot dates against event date range
+    # is_valid, error_message = validate_slot_dates_against_event(
+    #     slot_request.slot_data, event.start_date, event.end_date
+    # )
+    # if not is_valid:
+    #     return invalid_slot_data_response(error_message)
 
     # Get existing slot to preview the merge result
     existing_slot = await get_event_slot(db, slot_id)
@@ -350,12 +375,12 @@ async def update_event_slot_endpoint(
             log_error=True,
         )
 
-    # Validate all dates in merged data are within event date range
-    is_merged_valid, merged_error = validate_slot_dates_against_event(
-        merged_data, event.start_date, event.end_date
-    )
-    if not is_merged_valid:
-        return invalid_slot_data_response(f"After merging: {merged_error}")
+    # # Validate all dates in merged data are within event date range
+    # is_merged_valid, merged_error = validate_slot_dates_against_event(
+    #     merged_data, event.start_date, event.end_date
+    # )
+    # if not is_merged_valid:
+    #     return invalid_slot_data_response(f"After merging: {merged_error}")
 
     # Update the event slot with proper JSONB merge logic
     updated_slot = await update_event_slot(
@@ -392,7 +417,11 @@ async def update_event_slot_endpoint(
     )
 
 
-@router.get("/get/{slot_id}", status_code=status.HTTP_200_OK)
+@router.get(
+    "/get/{slot_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Integrated in Admin and Organizer frontend",
+)
 @exception_handler
 async def get_event_slot_endpoint(
     slot_id: str,
@@ -420,6 +449,12 @@ async def get_event_slot_endpoint(
     event = await check_event_exists_by_slot_id(db, slot_id)
     if not event:
         return event_not_found_response()
+
+    slot_created_event = await check_event_slot_created_status_by_id(
+        db, slot_id
+    )
+    if not slot_created_event:
+        return event_slots_not_created_response()
 
     # Get the event slot
     slot = await get_event_slot(db, slot_id)
@@ -452,7 +487,11 @@ async def get_event_slot_endpoint(
     )
 
 
-@router.delete("/delete/{slot_id}", status_code=status.HTTP_200_OK)
+@router.delete(
+    "/delete/{slot_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Not integrated in any frontend",
+)
 @exception_handler
 async def delete_event_slot_endpoint(
     slot_id: str,
@@ -481,6 +520,12 @@ async def delete_event_slot_endpoint(
     if not event:
         return event_not_found_response()
 
+    slot_created_event = await check_event_slot_created_status_by_id(
+        db, slot_id
+    )
+    if not slot_created_event:
+        return event_slots_not_created_response()
+
     # Check if slot exists
     existing_slot = await check_slot_exists_for_event(db, slot_id)
     if not existing_slot:
@@ -501,7 +546,11 @@ async def delete_event_slot_endpoint(
     )
 
 
-@router.patch("/toggle-status/{slot_id}", status_code=status.HTTP_200_OK)
+@router.patch(
+    "/toggle-status/{slot_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Not integrated in any frontend",
+)
 @exception_handler
 async def toggle_slot_status_endpoint(
     slot_id: str,
@@ -581,7 +630,11 @@ async def toggle_slot_status_endpoint(
     )
 
 
-@router.get("/date-details/{slot_id}/{date}", status_code=status.HTTP_200_OK)
+@router.get(
+    "/date-details/{slot_id}/{date}",
+    status_code=status.HTTP_200_OK,
+    summary="Not integrated in any frontend",
+)
 @exception_handler
 async def get_slot_date_details_endpoint(
     slot_id: str,
@@ -615,6 +668,12 @@ async def get_slot_date_details_endpoint(
     event = await check_event_exists_by_slot_id(db, slot_id)
     if not event:
         return event_not_found_response()
+
+    slot_created_event = await check_event_slot_created_status_by_id(
+        db, slot_id
+    )
+    if not slot_created_event:
+        return event_slots_not_created_response()
 
     # Get the event slot
     slot = await get_event_slot(db, slot_id)

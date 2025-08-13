@@ -52,7 +52,7 @@ from event_service.utils.location_validator import validate_location_input
 from event_service.utils.utils import normalize_tags
 from shared.core.api_response import api_response
 from shared.core.config import settings
-from shared.db.models import Event
+from shared.db.models import Event, EventStatus
 from shared.db.sessions.database import get_db
 from shared.utils.email_utils.admin_emails import send_event_creation_email
 from shared.utils.exception_handlers import exception_handler
@@ -311,6 +311,7 @@ async def create_event_with_images(
         extra_data=extra_data_dict,
         hash_tags=hash_tags_list if hash_tags_list else None,
         slot_id=generate_digits_upper_lower_case(length=8),
+        event_status=EventStatus.PENDING,
     )
 
     # Add to database
@@ -684,9 +685,6 @@ async def update_event_details(
     end_date: Optional[date] = Form(
         None, description="Event end date in ISO format (YYYY-MM-DD)"
     ),
-    location: Optional[str] = Form(
-        None, description="Event location (optional)"
-    ),
     is_online: Optional[bool] = Form(
         default=False, description="Is the event online?"
     ),
@@ -765,11 +763,6 @@ async def update_event_details(
                 message="End date must be after the existing start date.",
                 log_error=True,
             )
-
-    # Validate location
-    if location is not None:
-        cleaned_location = process_location_input(location, allow_empty=True)
-        update_data["location"] = cleaned_location
 
     # Validate is_online
     if is_online is not None:

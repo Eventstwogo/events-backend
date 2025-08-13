@@ -62,6 +62,22 @@ def event_not_found_response() -> JSONResponse:
     )
 
 
+def event_slots_not_created_response() -> JSONResponse:
+    return api_response(
+        status_code=status.HTTP_404_NOT_FOUND,
+        message="Event SLots not created at all",
+        log_error=True,
+    )
+
+
+def event_not_created_response() -> JSONResponse:
+    return api_response(
+        status_code=status.HTTP_404_NOT_FOUND,
+        message="Event not created at all",
+        log_error=True,
+    )
+
+
 def unauthorized_to_update_event_response() -> JSONResponse:
     return api_response(
         status_code=status.HTTP_403_FORBIDDEN,

@@ -53,6 +53,15 @@ class PaymentStatus(str, Enum):
         return self.name.lower()
 
 
+class EventStatus(str, Enum):
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
+    PENDING = "PENDING"
+
+    def __str__(self):
+        return self.name.lower()
+
+
 class Event(EventsBase):
     __tablename__ = "e2gevents"
 
@@ -112,14 +121,22 @@ class Event(EventsBase):
         JSONB,
         nullable=True,
     )
-    event_status: Mapped[bool] = mapped_column(
-        Boolean, default=False, nullable=False
+    event_status: Mapped[EventStatus] = mapped_column(
+        SQLAlchemyEnum(
+            EventStatus, name="event_status_enum", native_enum=False
+        ),
+        nullable=False,
+        default=EventStatus.INACTIVE,
+        index=True,
     )
     slot_id: Mapped[str] = mapped_column(
         String(8),
         nullable=False,
         index=True,
         unique=True,
+    )
+    featured_event: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

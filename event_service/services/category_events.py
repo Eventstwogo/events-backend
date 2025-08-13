@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from shared.core.logging_config import get_logger
-from shared.db.models import Category, Event, SubCategory
+from shared.db.models import Category, Event, EventStatus, SubCategory
 
 logger = get_logger(__name__)
 
@@ -337,7 +337,7 @@ async def fetch_categories_with_all_events(
 
     # Build base event filter conditions
     base_conditions: List[Any] = [
-        Event.event_status.is_(False)
+        Event.event_status == EventStatus.ACTIVE
     ]  # Only published events
 
     # Add date-based filtering conditions
@@ -398,6 +398,7 @@ async def fetch_categories_with_all_events(
                     "is_online": event.is_online,
                     "card_image": event.card_image,
                     "event_status": event.event_status,
+                    "featured_event": event.featured_event,
                 }
             )
 
@@ -455,7 +456,7 @@ async def fetch_events_by_category_slug_unified(
 
     # Build base event filter conditions
     base_conditions: List[Any] = [
-        Event.event_status.is_(False)
+        Event.event_status == EventStatus.ACTIVE
     ]  # Only published events
 
     # Add date-based filtering conditions
@@ -570,6 +571,7 @@ async def fetch_events_by_category_slug_unified(
                 "location": event.location,
                 "is_online": event.is_online,
                 "event_status": event.event_status,
+                "featured_event": event.featured_event,
                 "created_at": event.created_at,
                 "updated_at": event.updated_at,
             }

@@ -26,6 +26,7 @@ router = APIRouter()
     "/organizer-events",
     status_code=status.HTTP_200_OK,
     response_model=OrganizerAnalyticsResponse,
+    summary="Not integrated in any frontend",
 )
 @exception_handler
 async def get_organizer_events_analytics(
@@ -57,6 +58,7 @@ async def get_organizer_events_analytics(
     "/admin-events",
     status_code=status.HTTP_200_OK,
     response_model=AdminAnalyticsResponse,
+    summary="Not integrated in any frontend",
 )
 @exception_handler
 async def get_admin_events_analytics(
@@ -89,6 +91,7 @@ async def get_admin_events_analytics(
     "/event-stats",
     status_code=status.HTTP_200_OK,
     response_model=EventStatsResponse,
+    summary="Not integrated in any frontend",
 )
 @exception_handler
 async def get_event_statistics(
@@ -119,6 +122,7 @@ async def get_event_statistics(
     "/booking-analytics",
     status_code=status.HTTP_200_OK,
     response_model=BookingAnalyticsResponse,
+    summary="Integrated in Admin frontend",
 )
 @exception_handler
 async def get_booking_analytics(
@@ -151,6 +155,7 @@ async def get_booking_analytics(
     "/event-booking-stats",
     status_code=status.HTTP_200_OK,
     response_model=EventBookingStatsResponse,
+    summary="Not integrated in any frontend",
 )
 @exception_handler
 async def get_event_booking_statistics(

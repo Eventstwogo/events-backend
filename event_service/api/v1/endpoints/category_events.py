@@ -26,6 +26,7 @@ router = APIRouter()
     "/categories-with-events",
     status_code=status.HTTP_200_OK,
     response_model=SimplifiedCategoryEventsResponse,
+    summary="Integrated in application frontend",
 )
 @exception_handler
 async def get_categories_with_latest_events(
@@ -71,6 +72,7 @@ async def get_categories_with_latest_events(
     "/events-by-slug/{slug}",
     status_code=status.HTTP_200_OK,
     response_model=SimplifiedSlugEventsResponse,
+    summary="Integrated in APplication frontend",
 )
 @exception_handler
 async def get_events_by_category_or_subcategory_slug(

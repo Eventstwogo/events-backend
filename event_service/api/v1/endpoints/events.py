@@ -32,6 +32,7 @@ from event_service.services.response_builder import (
     invalid_event_data_response,
 )
 from shared.core.api_response import api_response
+from shared.db.models import EventStatus
 from shared.db.sessions.database import get_db
 from shared.utils.exception_handlers import exception_handler
 
@@ -39,7 +40,10 @@ router = APIRouter()
 
 
 @router.get(
-    "", status_code=status.HTTP_200_OK, response_model=EventListResponse
+    "",
+    status_code=status.HTTP_200_OK,
+    response_model=EventListResponse,
+    summary="Integrated in Admin panel",
 )
 @exception_handler
 async def list_events(
@@ -67,6 +71,7 @@ async def list_events(
     "/upcoming",
     status_code=status.HTTP_200_OK,
     response_model=EventListResponse,
+    summary="Not Integrated in any frontend",
 )
 @exception_handler
 async def list_upcoming_events(
@@ -94,6 +99,7 @@ async def list_upcoming_events(
     "/limited-list",
     status_code=status.HTTP_200_OK,
     response_model=LimitedEventListResponse,
+    summary="Not Integrated in any frontend",
 )
 @exception_handler
 async def limited_list_events(
@@ -126,6 +132,7 @@ async def limited_list_events(
     "/limited-list/filter",
     status_code=status.HTTP_200_OK,
     response_model=LimitedEventListResponse,
+    summary="Not Integrated in any frontend",
 )
 @exception_handler
 async def limited_list_events_with_filter(
@@ -171,7 +178,10 @@ async def limited_list_events_with_filter(
 
 
 @router.get(
-    "/{event_id}", status_code=status.HTTP_200_OK, response_model=EventResponse
+    "/{event_id}",
+    status_code=status.HTTP_200_OK,
+    response_model=EventResponse,
+    summary="Integrated in Admin and Organizer frontend",
 )
 @exception_handler
 async def get_event_by_id(
@@ -199,6 +209,7 @@ async def get_event_by_id(
     "/slug/{event_slug}",
     status_code=status.HTTP_200_OK,
     response_model=EventResponse,
+    summary="Integrated in application frontend",
 )
 @exception_handler
 async def get_event_by_slug(
@@ -226,6 +237,7 @@ async def get_event_by_slug(
     "/category-or-subcategory/{slug}",
     status_code=status.HTTP_200_OK,
     response_model=ComprehensiveCategoryEventResponse,
+    summary="Integrated in Application frontend",
 )
 @exception_handler
 async def get_events_by_category_or_subcategory_slug(
@@ -356,14 +368,18 @@ async def get_events_by_category_or_subcategory_slug(
     )
 
 
-@router.patch("/status/{event_id}", status_code=status.HTTP_200_OK)
+@router.patch(
+    "/status/{event_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Not integrated in any frontend",
+)
 @exception_handler
 async def change_event_status(
     event_id: str,
-    event_status: bool = Form(
+    event_status: EventStatus = Form(
         ...,
-        example=False,
-        description="Event status (false for published, true for draft)",
+        example=EventStatus.ACTIVE,
+        description="Event status (ACTIVE for published, INACTIVE for draft)",
     ),
     db: AsyncSession = Depends(get_db),
 ):
@@ -379,7 +395,7 @@ async def change_event_status(
     if not updated_event:
         return invalid_event_data_response("Failed to update event status")
 
-    status_text = "draft" if event_status else "published"
+    status_text = "published" if event_status == EventStatus.ACTIVE else "draft"
 
     return api_response(
         status_code=status.HTTP_200_OK,
@@ -392,7 +408,11 @@ async def change_event_status(
     )
 
 
-@router.delete("/{event_id}", status_code=status.HTTP_200_OK)
+@router.delete(
+    "/{event_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Integrated in admin and organizer frontend",
+)
 @exception_handler
 async def delete_event_by_id(
     event_id: str,
@@ -420,6 +440,7 @@ async def delete_event_by_id(
 @router.get(
     "/latest/category-or-subcategory/{slug}",
     status_code=status.HTTP_200_OK,
+    summary="Integrated in application frontend",
 )
 @exception_handler
 async def get_latest_5_events_by_category_or_subcategory_slug(
@@ -523,6 +544,7 @@ async def get_latest_5_events_by_category_or_subcategory_slug(
     "/by-category/latest",
     status_code=status.HTTP_200_OK,
     response_model=CategoryEventListResponse,
+    summary="Integrated in application frontend",
 )
 @exception_handler
 async def get_latest_events_from_each_category(
@@ -570,6 +592,7 @@ async def get_latest_events_from_each_category(
             end_date=event.end_date,
             location=event.location,
             is_online=event.is_online,
+            featured_event=event.featured_event,
         )
         event_responses.append(event_response)
 

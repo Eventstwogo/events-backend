@@ -9,6 +9,7 @@ from event_service.schemas.events import (
     SubCategoryInfo,
 )
 from event_service.utils.utils import filter_slot_data
+from shared.db.models import EventStatus
 from shared.utils.file_uploads import get_media_url
 from shared.utils.security_validators import contains_xss
 from shared.utils.validators import (
@@ -65,6 +66,11 @@ class EventResponse(BaseModel):
         ..., description="Whether the event is online or in-person"
     )
     slot_id: str = Field(..., description="Unique slot ID for the event")
+    event_status: EventStatus = Field(
+        default=EventStatus.INACTIVE,  # Use a valid enum member as default
+        description="The status of the event.",
+    )
+    featured_event: bool = Field(..., description="Event is featured or not")
 
     # Related entity information
     category: Optional[CategoryInfo] = Field(
@@ -135,6 +141,7 @@ class LimitedEventResponse(BaseModel):
     is_online: bool = Field(
         ..., description="Whether the event is online or in-person"
     )
+    featured_event: bool = Field(..., description="Event is featured or not")
 
     # Event content
     card_image: Optional[str] = Field(None, description="Card image URL")
@@ -221,6 +228,7 @@ class EventMinimalResponse(BaseModel):
         ..., description="Whether the event is online or in-person"
     )
     card_image: Optional[str] = Field(None, description="Card image URL")
+    featured_event: bool = Field(..., description="Event is featured or not")
 
     @field_serializer("card_image")
     def serialize_card_image(self, value: Optional[str]) -> Optional[str]:
@@ -532,6 +540,7 @@ class CategoryEventResponse(BaseModel):
     is_online: bool = Field(
         ..., description="Whether the event is online or in-person"
     )
+    featured_event: bool = Field(..., description="Event is featured or not")
 
     @field_serializer("banner_image")
     def serialize_banner_image(self, value: Optional[str]) -> Optional[str]:
