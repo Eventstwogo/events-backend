@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -431,7 +432,9 @@
                 border-right: none !important;
             }
 
-            .header, .content, .footer {
+            .header,
+            .content,
+            .footer {
                 padding-left: 16px !important;
                 padding-right: 16px !important;
             }
@@ -492,6 +495,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="email-container">
         <!-- Header -->
@@ -499,7 +503,8 @@
             {% if logo_url %}
             <img src="{{ logo_url }}" alt="Events2Go" class="logo">
             {% else %}
-            <img src="https://drive.google.com/uc?export=view&id=11A_iCjfgjonUXMhjptwsNk6FvzIqZRvi" alt="Events2Go" class="logo">
+            <img src="https://drive.google.com/uc?export=view&id=11A_iCjfgjonUXMhjptwsNk6FvzIqZRvi" alt="Events2Go"
+                class="logo">
             {% endif %}
             <h1 class="header-title">🎉 Booking Confirmed!</h1>
         </div>
@@ -511,49 +516,53 @@
             <p class="greeting">Hi <strong>{{ user_name }}</strong>,</p>
 
             <p class="message">
-                Great news! Your booking has been confirmed and payment processed successfully. Your digital ticket is ready!
+                Great news! Your booking has been confirmed and payment processed successfully. Your digital ticket is
+                ready!
             </p>
 
             <!-- Digital Ticket -->
-            <div class="ticket-container">
-                <div class="ticket-header">
+            <article class="ticket-container" aria-label="Digital Ticket">
+                <header class="ticket-header">
                     <h3 class="ticket-title">🎫 Digital Ticket</h3>
-                    <div class="booking-id">ID: #{{ booking_id }}</div>
-                </div>
+                    <div class="booking-id" aria-label="Booking ID">ID: #{{ booking_id }}</div>
+                </header>
 
-                <div class="event-name">{{ event_title }}</div>
+                <h2 class="event-name">{{ event_title }}</h2>
 
-                <div class="ticket-details">
+                <section class="ticket-details">
                     <div class="ticket-detail date">
                         <div class="ticket-detail-label">
-                            <span class="emoji">📅</span>
-                            <span>Date</span>
+                            <span class="emoji" aria-hidden="true">📅</span>
+                            <span class="label-text">Date</span>
                         </div>
-                        <div class="ticket-detail-value">{{ event_date }}</div>
+                        <time class="ticket-detail-value">{{ event_date }}</time>
                     </div>
+
                     <div class="ticket-detail time">
                         <div class="ticket-detail-label">
-                            <span class="emoji">⏰</span>
-                            <span>Time Slot</span>
+                            <span class="emoji" aria-hidden="true">⏰</span>
+                            <span class="label-text">Time Slot</span>
                         </div>
                         <div class="ticket-detail-value">{{ time_slot }}</div>
                     </div>
+
                     <div class="ticket-detail location">
                         <div class="ticket-detail-label">
-                            <span class="emoji">📍</span>
-                            <span>Location</span>
+                            <span class="emoji" aria-hidden="true">📍</span>
+                            <span class="label-text">Location</span>
                         </div>
-                        <div class="ticket-detail-value">{{ event_location }}</div>
+                        <address class="ticket-detail-value">{{ event_location }}</address>
                     </div>
+
                     <div class="ticket-detail seats">
                         <div class="ticket-detail-label">
-                            <span class="emoji">👥</span>
-                            <span>Seats</span>
+                            <span class="emoji" aria-hidden="true">👥</span>
+                            <span class="label-text">Seats</span>
                         </div>
                         <div class="ticket-detail-value">{{ num_seats }} seat(s)</div>
                     </div>
-                </div>
-            </div>
+                </section>
+            </article>
 
             <!-- Booking Details -->
             <div class="booking-details">
@@ -628,7 +637,8 @@
         <!-- Footer -->
         <div class="footer">
             <div class="footer-text">
-                Need help? Contact our <a href="{{ support_url }}" class="footer-link">support team</a> or visit our <a href="{{ help_center_url }}" class="footer-link">help center</a>.
+                Need help? Contact our <a href="{{ support_url }}" class="footer-link">support team</a> or visit our <a
+                    href="{{ help_center_url }}" class="footer-link">help center</a>.
             </div>
             <div class="footer-text">
                 © {{ year }} Events2Go. All rights reserved.
@@ -636,4 +646,5 @@
         </div>
     </div>
 </body>
+
 </html>

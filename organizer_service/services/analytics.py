@@ -14,7 +14,7 @@ from shared.db.models import (
     OrganizerQuery,
     Role,
 )
-from shared.db.models.events import BookingStatus
+from shared.db.models.events import BookingStatus, EventStatus
 from shared.utils.file_uploads import get_media_url
 
 
@@ -76,7 +76,9 @@ async def get_event_statistics(
 
     return {
         "total_events": len(events),
-        "active_events": sum(1 for e in events if not e.event_status),
+        "active_events": sum(
+            1 for e in events if not e.event_status == EventStatus.ACTIVE
+        ),
         "upcoming_events": sum(1 for e in events if e.start_date > today),
         "past_events": sum(1 for e in events if e.end_date < today),
     }

@@ -304,7 +304,7 @@ async def fetch_upcoming_events(
     # Get total count with same filters
     count_query = select(func.count(Event.event_id)).filter(
         and_(
-            Event.event_status == False,
+            Event.event_status == EventStatus.ACTIVE,
             or_(Event.start_date >= today, Event.end_date >= today),
         )
     )
@@ -450,7 +450,7 @@ async def search_events(
     search_fields: List[str] = ["title", "slug", "hashtags"],
     page: int = 1,
     per_page: int = 10,
-    status: Optional[bool] = None,
+    status: Optional[EventStatus] = None,
     category_id: Optional[str] = None,
     subcategory_id: Optional[str] = None,
 ) -> Tuple[List[Event], int]:
@@ -866,7 +866,7 @@ async def filter_events_advanced(
     db: AsyncSession,
     page: int = 1,
     per_page: int = 10,
-    status: Optional[bool] = None,
+    status: Optional[EventStatus] = None,
     category_id: Optional[str] = None,
     subcategory_id: Optional[str] = None,
     organizer_id: Optional[str] = None,
@@ -964,7 +964,7 @@ async def get_events_by_organizer(
     organizer_id: str,
     page: int = 1,
     per_page: int = 10,
-    status: Optional[bool] = None,
+    status: Optional[EventStatus] = None,
     sort_by: str = "created_at",
     sort_order: str = "desc",
 ) -> Tuple[List[Event], int, dict]:
@@ -995,7 +995,10 @@ async def get_events_by_organizer(
         Event.organizer_id == organizer_id
     )
     active_query = select(func.count(Event.event_id)).filter(
-        and_(Event.organizer_id == organizer_id, Event.event_status.is_(True))
+        and_(
+            Event.organizer_id == organizer_id,
+            Event.event_status == EventStatus.INACTIVE,
+        )
     )
 
     total_result = await db.execute(total_query)
@@ -1094,7 +1097,7 @@ async def get_upcoming_events(
             selectinload(Event.subcategory),
             selectinload(Event.organizer),
         )
-        .filter(Event.event_status.is_(True))
+        .filter(Event.event_status == EventStatus.INACTIVE)
     )
 
     # Apply additional filters
@@ -1111,7 +1114,7 @@ async def get_upcoming_events(
 
     # Get total count
     count_query = select(func.count(Event.event_id)).filter(
-        Event.event_status.is_(True)
+        Event.event_status == EventStatus.INACTIVE
     )
     if filters:
         count_query = count_query.filter(and_(*filters))
@@ -1138,7 +1141,7 @@ async def get_events_by_hashtag(
     hashtag: str,
     page: int = 1,
     per_page: int = 10,
-    status: Optional[bool] = None,
+    status: Optional[EventStatus] = None,
 ) -> Tuple[List[Event], int]:
     """Find events by hashtag"""
 

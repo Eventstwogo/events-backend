@@ -4,6 +4,8 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
+from shared.db.models.events import EventStatus
+
 
 class UserTypeEnum(str, Enum):
     """Enum for user types based on role_name"""
@@ -18,7 +20,7 @@ class EventInfo(BaseModel):
 
     event_id: str
     event_title: str
-    event_status: bool
+    event_status: EventStatus
     created_at: datetime
 
 

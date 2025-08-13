@@ -12,8 +12,7 @@ from event_service.schemas.bookings import (
     BookingWithEventResponse,
     BookingWithUserResponse,
 )
-from shared.db.models.events import BookingStatus, Event, EventBooking
-from shared.db.models.users import User
+from shared.db.models import BookingStatus, Event, EventBooking, EventStatus
 
 
 async def check_existing_booking(
@@ -412,7 +411,7 @@ async def verify_booking_constraints(
     if not event:
         return False, "Event not found"
 
-    if event.event_status:
+    if event.event_status == EventStatus.ACTIVE:
         return False, "Event is inactive"
 
     # Check if event has ended

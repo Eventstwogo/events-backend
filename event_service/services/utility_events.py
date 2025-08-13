@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from shared.core.logging_config import get_logger
 from shared.db.models import AdminUser, Category, Event, SubCategory
+from shared.db.models.events import EventStatus
 
 logger = get_logger(__name__)
 
@@ -26,10 +27,10 @@ async def get_event_metrics(db: AsyncSession) -> dict:
     # Basic event counts
     total_events_query = select(func.count(Event.event_id))
     published_events_query = select(func.count(Event.event_id)).filter(
-        Event.event_status.is_(False)
+        Event.event_status == EventStatus.ACTIVE
     )
     draft_events_query = select(func.count(Event.event_id)).filter(
-        Event.event_status.is_(True)
+        Event.event_status == EventStatus.INACTIVE
     )
 
     total_events_result = await db.execute(total_events_query)

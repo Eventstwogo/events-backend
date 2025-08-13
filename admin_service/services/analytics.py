@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from shared.db.models import (
     AdminUser,
+    BookingStatus,
     BusinessProfile,
     Category,
     Config,
@@ -14,11 +15,11 @@ from shared.db.models import (
     ContactUsStatus,
     Event,
     EventBooking,
+    EventStatus,
     OrganizerQuery,
     QueryStatus,
     User,
 )
-from shared.db.models.events import BookingStatus
 
 
 async def get_admin_user_analytics(
@@ -423,7 +424,9 @@ async def _get_events_analytics(
 
     # Get total active events count
     total_result = await db.execute(
-        select(func.count(Event.event_id)).where(Event.event_status.is_(False))
+        select(func.count(Event.event_id)).where(
+            Event.event_status == EventStatus.ACTIVE
+        )
     )
     total_events = total_result.scalar() or 0
 
@@ -431,7 +434,7 @@ async def _get_events_analytics(
     current_month_result = await db.execute(
         select(func.count(Event.event_id)).where(
             Event.created_at >= current_month_start,
-            Event.event_status.is_(False),
+            Event.event_status == EventStatus.ACTIVE,
         )
     )
     current_month_count = current_month_result.scalar() or 0
@@ -441,7 +444,7 @@ async def _get_events_analytics(
         select(func.count(Event.event_id)).where(
             Event.created_at >= last_month_start,
             Event.created_at < current_month_start,
-            Event.event_status.is_(False),
+            Event.event_status == EventStatus.ACTIVE,
         )
     )
     last_month_count = last_month_result.scalar() or 0

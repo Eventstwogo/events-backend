@@ -27,9 +27,7 @@ async def fetch_categories_with_latest_events(
         .join(Event, Category.category_id == Event.category_id)
         .where(
             and_(
-                Event.event_status.is_(
-                    False
-                ),  # Only published events (False = published)
+                Event.event_status == EventStatus.ACTIVE,
                 Event.subcategory_id.is_(
                     None
                 ),  # Only events without subcategory
@@ -51,9 +49,7 @@ async def fetch_categories_with_latest_events(
             .where(
                 and_(
                     Event.category_id == category.category_id,
-                    Event.event_status.is_(
-                        False
-                    ),  # Only published events (False = published)
+                    Event.event_status == EventStatus.ACTIVE,
                     Event.subcategory_id.is_(
                         None
                     ),  # Only events without subcategory
@@ -108,9 +104,7 @@ async def fetch_subcategories_with_latest_events(
         select(SubCategory)
         .join(Event, SubCategory.subcategory_id == Event.subcategory_id)
         .join(Category, SubCategory.category_id == Category.category_id)
-        .where(
-            Event.event_status.is_(False)
-        )  # Only published events (False = published)
+        .where(Event.event_status == EventStatus.ACTIVE)
         .distinct()
         .order_by(SubCategory.subcategory_name)
         .options(selectinload(SubCategory.category))
@@ -128,9 +122,7 @@ async def fetch_subcategories_with_latest_events(
             .where(
                 and_(
                     Event.subcategory_id == subcategory.subcategory_id,
-                    Event.event_status.is_(
-                        False
-                    ),  # Only published events (False = published)
+                    Event.event_status == EventStatus.ACTIVE,
                 )
             )
             .order_by(desc(Event.created_at))
@@ -221,9 +213,7 @@ async def fetch_events_by_category_or_subcategory_slug(
             .where(
                 and_(
                     Event.category_id == category.category_id,
-                    Event.event_status.is_(
-                        False
-                    ),  # Only published events (False = published)
+                    Event.event_status == EventStatus.ACTIVE,
                     Event.subcategory_id.is_(
                         None
                     ),  # Only events without subcategory
@@ -238,7 +228,7 @@ async def fetch_events_by_category_or_subcategory_slug(
         count_query = select(func.count(Event.event_id)).where(
             and_(
                 Event.category_id == category.category_id,
-                Event.event_status.is_(False),
+                Event.event_status == EventStatus.ACTIVE,
                 Event.subcategory_id.is_(None),
             )
         )
@@ -263,9 +253,7 @@ async def fetch_events_by_category_or_subcategory_slug(
             .where(
                 and_(
                     Event.subcategory_id == subcategory.subcategory_id,
-                    Event.event_status.is_(
-                        False
-                    ),  # Only published events (False = published)
+                    Event.event_status == EventStatus.ACTIVE,
                 )
             )
             .order_by(desc(Event.created_at))
@@ -277,7 +265,7 @@ async def fetch_events_by_category_or_subcategory_slug(
         count_query = select(func.count(Event.event_id)).where(
             and_(
                 Event.subcategory_id == subcategory.subcategory_id,
-                Event.event_status.is_(False),
+                Event.event_status == EventStatus.ACTIVE,
             )
         )
 
