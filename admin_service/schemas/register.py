@@ -84,3 +84,35 @@ class AdminRegisterResponse(BaseModel):
     user_id: str
     email: EmailStr
     username: str
+
+
+# Username availability check schemas
+class AdminUsernameAvailabilityRequest(BaseModel):
+    username: str = Field(
+        ...,
+        min_length=3,
+        max_length=32,
+        title="Username",
+        description="Username to check for availability",
+    )
+
+    @field_validator("username")
+    @classmethod
+    def validate_username(cls, v):
+        v = normalize_whitespace(v)
+        if not v:
+            raise ValueError("Username cannot be empty.")
+
+        # Process username by removing email and plus parts
+        v = v.split("@", 1)[0].split("+", 1)[0]
+
+        v = UsernameValidator(
+            min_length=4, max_length=32, max_spaces=2
+        ).validate(v)
+        return v.lower()
+
+
+class AdminUsernameAvailabilityResponse(BaseModel):
+    username: str
+    available: bool
+    message: str

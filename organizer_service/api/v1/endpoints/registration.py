@@ -15,6 +15,8 @@ from admin_service.utils.auth import hash_password
 from organizer_service.schemas.register import (
     OrganizerRegisterRequest,
     OrganizerRegisterResponse,
+    OrganizerUsernameAvailabilityRequest,
+    OrganizerUsernameAvailabilityResponse,
 )
 from shared.core.api_response import api_response
 from shared.db.models import AdminUser, AdminUserVerification
@@ -118,3 +120,56 @@ async def register_user(
         ),
         data=OrganizerRegisterResponse(email=user_data.email),
     )
+
+
+@router.post(
+    "/check-username",
+    response_model=OrganizerUsernameAvailabilityResponse,
+    status_code=status.HTTP_200_OK,
+)
+@exception_handler
+async def check_username_availability(
+    username_data: OrganizerUsernameAvailabilityRequest,
+    db: AsyncSession = Depends(get_db),
+) -> JSONResponse:
+    """
+    Check if a username is available for registration.
+
+    This endpoint checks if the provided username is already taken by another user.
+    The username will be processed to remove email and plus parts before checking.
+
+    Args:
+        username_data: Username availability request containing the username to check
+        db: Database session
+
+    Returns:
+        JSONResponse: Response indicating whether the username is available
+    """
+    # The username has already been processed and validated by the schema
+    processed_username = username_data.username
+
+    # Check if username already exists
+    query = AdminUser.by_username_query(processed_username)
+    existing_user = await db.execute(query)
+    user_exists = existing_user.scalar_one_or_none() is not None
+
+    if user_exists:
+        return api_response(
+            status_code=status.HTTP_200_OK,
+            message=f"Username '{processed_username}' is already taken.",
+            data=OrganizerUsernameAvailabilityResponse(
+                username=processed_username,
+                available=False,
+                message=f"Username '{processed_username}' is already taken.",
+            ),
+        )
+    else:
+        return api_response(
+            status_code=status.HTTP_200_OK,
+            message=f"Username '{processed_username}' is available.",
+            data=OrganizerUsernameAvailabilityResponse(
+                username=processed_username,
+                available=True,
+                message=f"Username '{processed_username}' is available.",
+            ),
+        )

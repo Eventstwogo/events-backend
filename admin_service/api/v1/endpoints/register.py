@@ -5,6 +5,8 @@ from starlette.responses import JSONResponse
 from admin_service.schemas.register import (
     AdminRegisterRequest,
     AdminRegisterResponse,
+    AdminUsernameAvailabilityRequest,
+    AdminUsernameAvailabilityResponse,
 )
 from admin_service.services.response_builders import (
     config_not_found_response,
@@ -137,3 +139,56 @@ async def register_user(
             username=user_data.username,
         ),
     )
+
+
+@router.post(
+    "/check-username",
+    response_model=AdminUsernameAvailabilityResponse,
+    status_code=status.HTTP_200_OK,
+)
+@exception_handler
+async def check_username_availability(
+    username_data: AdminUsernameAvailabilityRequest,
+    db: AsyncSession = Depends(get_db),
+) -> JSONResponse:
+    """
+    Check if a username is available for registration.
+
+    This endpoint checks if the provided username is already taken by another user.
+    The username will be processed to remove email and plus parts before checking.
+
+    Args:
+        username_data: Username availability request containing the username to check
+        db: Database session
+
+    Returns:
+        JSONResponse: Response indicating whether the username is available
+    """
+    # The username has already been processed and validated by the schema
+    processed_username = username_data.username
+
+    # Check if username already exists
+    query = AdminUser.by_username_query(processed_username)
+    existing_user = await db.execute(query)
+    user_exists = existing_user.scalar_one_or_none() is not None
+
+    if user_exists:
+        return api_response(
+            status_code=status.HTTP_200_OK,
+            message=f"Username '{processed_username}' is already taken.",
+            data=AdminUsernameAvailabilityResponse(
+                username=processed_username,
+                available=False,
+                message=f"Username '{processed_username}' is already taken.",
+            ),
+        )
+    else:
+        return api_response(
+            status_code=status.HTTP_200_OK,
+            message=f"Username '{processed_username}' is available.",
+            data=AdminUsernameAvailabilityResponse(
+                username=processed_username,
+                available=True,
+                message=f"Username '{processed_username}' is available.",
+            ),
+        )

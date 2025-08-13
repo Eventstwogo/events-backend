@@ -16,6 +16,7 @@ EMAIL_ERRORS: dict[str, str] = {
     "invalid_format": "Invalid email address format.",
     "invalid_local": "Invalid characters in the local part of the email.",
     "invalid_domain": "Invalid domain part of the email.",
+    "aliasing_not_allowed": "Email aliasing using '+' is not allowed.",
 }
 
 # =============================================================================
@@ -51,6 +52,12 @@ class EmailValidator:
 
         local_part, domain = EmailValidator._split_email(email)
 
+        if "+" in local_part:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=EMAIL_ERRORS["aliasing_not_allowed"],
+            )
+
         if not EmailValidator._is_valid_local_part(local_part):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -79,6 +86,9 @@ class EmailValidator:
         """
         Validates the local part of an email address.
         """
+        if "+" in local_part:
+            return False
+
         if not 1 <= len(local_part) <= 64:
             return False
         if (
