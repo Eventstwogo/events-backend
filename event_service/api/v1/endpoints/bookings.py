@@ -1,8 +1,10 @@
-from typing import Any, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import RedirectResponse
-from paypalcheckoutsdk.orders import OrdersCaptureRequest, OrdersCreateRequest
+from paypalcheckoutsdk.orders import OrdersCaptureRequest
+from sqlalchemy import func, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from event_service.schemas.bookings import (
@@ -16,12 +18,20 @@ from event_service.schemas.bookings import (
     SimpleOrganizerBookingsResponse,
     UserBookingsListResponse,
 )
+from event_service.services.booking_helpers import (
+    check_paypal_payment_status,
+    create_paypal_order,
+    release_event_slot_on_cancel,
+    release_held,
+    update_event_slot_after_payment,
+    validate_booking,
+    verify_and_hold_seats,
+)
 from event_service.services.bookings import (
     build_booking_details_response,
     build_enhanced_booking_response,
     build_user_bookings_list_response,
-    check_existing_booking,
-    create_booking,
+    create_booking_record,
     get_all_bookings_with_details,
     get_booking_by_id,
     get_organizer_bookings_with_events_and_slots,
@@ -30,71 +40,16 @@ from event_service.services.bookings import (
     get_user_bookings,
     mark_booking_as_paid,
     update_booking_status,
-    verify_booking_constraints,
 )
 from event_service.utils.paypal_client import paypal_client
 from shared.core.api_response import api_response
 from shared.core.config import settings
-from shared.db.models.events import BookingStatus
+from shared.db.models import BookingStatus, EventBooking, EventStatus
 from shared.db.sessions.database import get_db
-
-# from shared.utils.email_utils.admin_emails import send_booking_success_email
 from shared.utils.email_utils.admin_emails import send_booking_success_email
 from shared.utils.exception_handlers import exception_handler
 
 router = APIRouter()
-
-
-def extract_approval_url_from_paypal_response(response: Any) -> Optional[str]:
-    """
-    Safely extract the approval URL from PayPal response.
-
-    Args:
-        response: PayPal SDK response object
-
-    Returns:
-        Optional[str]: The approval URL if found, None otherwise
-    """
-    try:
-        if not response or not hasattr(response, "result"):
-            return None
-
-        if not hasattr(response.result, "links") or not response.result.links:
-            return None
-
-        for link in response.result.links:
-            if (
-                hasattr(link, "rel")
-                and hasattr(link, "href")
-                and link.rel == "approve"
-            ):
-                return link.href
-
-        return None
-    except Exception:
-        return None
-
-
-def check_paypal_payment_status(response: Any) -> Optional[str]:
-    """
-    Safely extract the payment status from PayPal response.
-
-    Args:
-        response: PayPal SDK response object
-
-    Returns:
-        Optional[str]: The payment status if found, None otherwise
-    """
-    try:
-        if not response or not hasattr(response, "result"):
-            return None
-
-        if hasattr(response.result, "status"):
-            return response.result.status
-
-        return None
-    except Exception:
-        return None
 
 
 @router.post(
@@ -107,72 +62,74 @@ async def create_event_booking(
     booking_data: BookingCreateRequest,
     db: AsyncSession = Depends(get_db),
 ):
-    # Step 1: Check for duplicate booking
-    can_book_duplicate, duplicate_message, _ = await check_existing_booking(
+    # Step 1: Validate booking
+    can_book, message = await validate_booking(
         db,
-        booking_data.user_id,
-        booking_data.event_id,
-        str(booking_data.slot),
-        booking_data.booking_date,
+        user_id=booking_data.user_id,
+        event_id=booking_data.event_id,
+        slot=str(booking_data.slot),
+        booking_date=booking_data.booking_date,
+        num_seats=booking_data.num_seats,
     )
-
-    if not can_book_duplicate:
-        return api_response(
-            status.HTTP_400_BAD_REQUEST, message=duplicate_message
-        )
-
-    # Step 2: Verify booking constraints
-    can_book, constraint_message = await verify_booking_constraints(
-        db,
-        booking_data.event_id,
-        booking_data.num_seats,
-        str(booking_data.slot),
-    )
-
     if not can_book:
-        return api_response(
-            status.HTTP_400_BAD_REQUEST, message=constraint_message
+        return api_response(status.HTTP_400_BAD_REQUEST, message=message)
+
+    # Step 2: Verify availability and HOLD seats under a transaction
+    try:
+        # Lock, check, hold
+        event, _ = await verify_and_hold_seats(
+            db=db,
+            event_id=booking_data.event_id,
+            booking_date=booking_data.booking_date,
+            slot_key=str(booking_data.slot),
+            num_seats=booking_data.num_seats,
         )
 
-    # Step 3: Create booking
-    booking = await create_booking(db, booking_data)
+        # Create booking record in PROCESSING (still inside the same transaction)
+        # Ensure total_price & price_per_seat are sane (optionally enforce price from JSON)
+        booking = await create_booking_record(db, booking_data)
+        # Transaction committed here: held seats + booking created
+    except ValueError as ve:
+        # Expected business error (availability, validation...)
+        await db.rollback()
+        return api_response(status.HTTP_400_BAD_REQUEST, message=str(ve))
+    except IntegrityError:
+        await db.rollback()
+        return api_response(
+            status.HTTP_409_CONFLICT,
+            message="Concurrent booking conflict. Please try again.",
+        )
+    except Exception as e:
+        await db.rollback()
+        return api_response(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            message=f"Unexpected error: {str(e)}",
+        )
 
-    # Step 4: Generate PayPal Order
-    request = OrdersCreateRequest()
-    request.headers["prefer"] = "return=representation"
-
-    request.request_body(
-        {
-            "intent": "CAPTURE",
-            "purchase_units": [
-                {
-                    "amount": {
-                        "currency_code": "AUD",
-                        "value": str(round(booking_data.total_price, 2)),
-                    }
-                }
-            ],
-            "application_context": {
-                "payment_method_preference": "IMMEDIATE_PAYMENT_REQUIRED",
-                "brand_name": "Events2Go",
-                "landing_page": "LOGIN",
-                "locale": "en-AU",
-                "user_action": "PAY_NOW",
-                # "return_url": f"{settings.USERS_APPLICATION_FRONTEND_URL}/booking-success?booking_id={booking.booking_id}",
-                # "cancel_url": f"{settings.USERS_APPLICATION_FRONTEND_URL}/booking-failure?booking_id={booking.booking_id}",
-                "return_url": f"{settings.API_BACKEND_URL}/api/v1/bookings/confirm?booking_id={booking.booking_id}",
-                "cancel_url": f"{settings.API_BACKEND_URL}/api/v1/bookings/cancel?booking_id={booking.booking_id}",
-            },
-        }
-    )
-
+    # Step 3: Create PayPal order
     try:
-        response = paypal_client.client.execute(request)
-
-        # Extract approval URL using helper function
-        approval_url = extract_approval_url_from_paypal_response(response)
-
+        approval_url = await create_paypal_order(
+            booking_data.total_price, booking.booking_id
+        )
         if not approval_url:
+            # Release held seats & mark booking FAILED
+            async with db.begin():
+                await release_held(
+                    db,
+                    slot_id=event.slot_id,
+                    booking_date=booking_data.booking_date,
+                    slot_key=str(booking_data.slot),
+                    seats=booking_data.num_seats,
+                )
+                # Update booking status to FAILED
+                await db.execute(
+                    update(EventBooking)
+                    .where(EventBooking.booking_id == booking.booking_id)
+                    .values(
+                        booking_status=BookingStatus.FAILED,
+                        updated_at=func.now(),
+                    )
+                )
             return api_response(
                 status.HTTP_500_INTERNAL_SERVER_ERROR,
                 message="Unable to generate PayPal approval URL",
@@ -181,9 +138,29 @@ async def create_event_booking(
         return api_response(
             status_code=status.HTTP_200_OK,
             message="Redirect to PayPal for payment",
-            data={"approval_url": approval_url},
+            data={
+                "approval_url": approval_url,
+                "booking_id": booking.booking_id,
+            },
         )
+
     except Exception as e:
+        # On PayPal errors, release held seats & mark booking FAILED
+        async with db.begin():
+            await release_held(
+                db,
+                slot_id=event.slot_id,
+                booking_date=booking_data.booking_date,
+                slot_key=str(booking_data.slot),
+                seats=booking_data.num_seats,
+            )
+            await db.execute(
+                update(EventBooking)
+                .where(EventBooking.booking_id == booking.booking_id)
+                .values(
+                    booking_status=BookingStatus.FAILED, updated_at=func.now()
+                )
+            )
         return api_response(
             status.HTTP_500_INTERNAL_SERVER_ERROR,
             message=f"PayPal error: {str(e)}",
@@ -205,69 +182,95 @@ async def confirm_booking(
         # Check payment status using helper function
         payment_status = check_paypal_payment_status(response)
 
-        if payment_status == "COMPLETED":
-            await mark_booking_as_paid(db, booking_id)
+        # Fetch booking with relations
+        booking = await get_booking_by_id(db, booking_id, load_relations=True)
 
-            # Get booking details with relations for email
-            booking = await get_booking_by_id(
-                db, booking_id, load_relations=True
+        # 1. Validate booking existence & status
+        if not booking:
+            raise HTTPException(status_code=404, detail="Booking not found.")
+        if booking.booking_status != BookingStatus.PROCESSING:
+            raise HTTPException(
+                status_code=400, detail="Booking is not in processing state."
+            )
+        if booking.payment_status == "COMPLETED":
+            raise HTTPException(
+                status_code=400, detail="Payment already completed."
             )
 
-            if booking and booking.user and booking.booked_event:
-                # Send booking success email
-                try:
-                    # Format the event date
-                    event_date = booking.booked_event.start_date.strftime(
-                        "%B %d, %Y"
-                    )
-                    if (
-                        booking.booked_event.end_date
-                        != booking.booked_event.start_date
-                    ):
-                        event_date += f" - {booking.booked_event.end_date.strftime('%B %d, %Y')}"
+        # 2. Validate event status
+        if (
+            not booking.booked_event
+            or booking.booked_event.event_status != EventStatus.ACTIVE
+        ):
+            raise HTTPException(
+                status_code=400, detail="Event is not active or not found."
+            )
 
-                    # Get user name using the property (automatically decrypts)
-                    user_name = (
-                        booking.user.username
-                        or booking.user.first_name
-                        or "Valued Customer"
-                    )
-                    if booking.user.last_name:
-                        user_name += f" {booking.user.last_name}"
+        if payment_status == "COMPLETED":
+            # 3. Update slot_data JSONB
+            await update_event_slot_after_payment(
+                db=db,
+                slot_id=booking.booked_event.slot_id,
+                booking_date=str(booking.booking_date),
+                slot_key=booking.slot,
+                num_seats=booking.num_seats,
+            )
 
-                    # Get event category name (you might need to adjust this based on your category model)
-                    event_category = (
-                        booking.booked_event.category.category_name or "General"
-                    )
-                    event_location = (
-                        booking.booked_event.location
-                        or (booking.booked_event.extra_data or {}).get(
-                            "address", ""
-                        )
-                        or ""
-                    )
+            # 4. Update booking status
+            booking.booking_status = BookingStatus.APPROVED
+            booking.payment_status = "COMPLETED"
+            await db.commit()
+            await db.refresh(booking)
 
-                    # Send the email
-                    send_booking_success_email(
-                        email=booking.user.email,  # Using the property that automatically decrypts
-                        user_name=user_name,
-                        booking_id=booking.booking_id,
-                        event_title=booking.booked_event.event_title,
-                        event_slug=booking.booked_event.event_slug,
-                        event_date=event_date,
-                        event_location=event_location.title(),
-                        event_category=event_category,
-                        time_slot=booking.slot.replace("_", " ").title(),
-                        num_seats=booking.num_seats,
-                        price_per_seat=float(booking.price_per_seat),
-                        total_price=float(booking.total_price),
-                        booking_date=booking.booking_date.strftime("%B %d, %Y"),
+            # 5. Send booking email
+            try:
+                event_date = booking.booked_event.start_date.strftime(
+                    "%B %d, %Y"
+                )
+                if (
+                    booking.booked_event.end_date
+                    != booking.booked_event.start_date
+                ):
+                    event_date += f" - {booking.booked_event.end_date.strftime('%B %d, %Y')}"
+
+                user_name = (
+                    booking.user.username
+                    or booking.user.first_name
+                    or "Valued Customer"
+                )
+                if booking.user.last_name:
+                    user_name += f" {booking.user.last_name}"
+
+                event_category = (
+                    booking.booked_event.category.category_name or "General"
+                )
+                event_location = (
+                    booking.booked_event.location
+                    or (booking.booked_event.extra_data or {}).get(
+                        "address", ""
                     )
-                except Exception as email_error:
-                    # Log the error but don't fail the booking confirmation
-                    print(
-                        f"Failed to send booking confirmation email: {email_error}"
-                    )
+                    or ""
+                )
+
+                send_booking_success_email(
+                    email=booking.user.email,
+                    user_name=user_name,
+                    booking_id=booking.booking_id,
+                    event_title=booking.booked_event.event_title,
+                    event_slug=booking.booked_event.event_slug,
+                    event_date=event_date,
+                    event_location=event_location.title(),
+                    event_category=event_category,
+                    time_slot=booking.slot.replace("_", " ").title(),
+                    num_seats=booking.num_seats,
+                    price_per_seat=float(booking.price_per_seat),
+                    total_price=float(booking.total_price),
+                    booking_date=booking.booking_date.strftime("%B %d, %Y"),
+                )
+            except Exception as email_error:
+                print(
+                    f"Failed to send booking confirmation email: {email_error}"
+                )
 
             # Redirect to frontend success page
             return RedirectResponse(
@@ -281,8 +284,9 @@ async def confirm_booking(
                 status_code=302,
             )
 
+    except HTTPException:
+        raise
     except Exception as e:
-        # Redirect to error page with optional message
         return RedirectResponse(
             url=f"{settings.USERS_APPLICATION_FRONTEND_URL}/booking/error?message={str(e)}",
             status_code=302,
@@ -294,16 +298,45 @@ async def confirm_booking(
 )
 @exception_handler
 async def cancel_booking(booking_id: str, db: AsyncSession = Depends(get_db)):
-    update_data = BookingStatusUpdateRequest(
-        booking_status=BookingStatus.CANCELLED
-    )
-    booking = await update_booking_status(db, booking_id, update_data)
+    # Fetch booking with relations
+    booking = await get_booking_by_id(db, booking_id, load_relations=True)
 
-    # return api_response(
-    #     status_code=status.HTTP_200_OK,
-    #     message="Booking cancelled by user",
-    #     data={"booking_id": booking_id},
-    # )
+    # 1. Validate booking existence & status
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found.")
+    if booking.booking_status != BookingStatus.PROCESSING:
+        raise HTTPException(
+            status_code=400, detail="Booking is not in processing state."
+        )
+    if booking.payment_status == "COMPLETED":
+        raise HTTPException(
+            status_code=400, detail="Cannot cancel a completed payment."
+        )
+
+    # 2. Validate event status
+    if (
+        not booking.booked_event
+        or booking.booked_event.event_status != EventStatus.ACTIVE
+    ):
+        raise HTTPException(
+            status_code=400, detail="Event is not active or not found."
+        )
+
+    # 3. Release held seats from slot_data
+    await release_event_slot_on_cancel(
+        db=db,
+        slot_id=booking.booked_event.slot_id,
+        booking_date=str(booking.booking_date),
+        slot_key=booking.slot,
+        num_seats=booking.num_seats,
+    )
+
+    # 4. Update booking status & payment status
+    booking.booking_status = BookingStatus.CANCELLED
+    booking.payment_status = "FAILED"
+
+    await db.commit()
+    await db.refresh(booking)
 
     # Redirect to frontend booking failure page
     return RedirectResponse(
@@ -590,104 +623,3 @@ async def get_organizer_revenue_endpoint(
         data=revenue_data,
         status_code=status.HTTP_200_OK,
     )
-
-
-# @router.get(
-#     "/event/{event_id}",
-#     status_code=status.HTTP_200_OK,
-#     response_model=BookingWithUserListResponse,
-# )
-# @exception_handler
-# async def get_event_bookings_endpoint(
-#     event_id: str,
-#     status_filter: Optional[BookingStatus] = Query(
-#         None,
-#         description="Filter by booking status (failed, processing, approved, cancelled)",
-#     ),
-#     page: int = Query(1, ge=1, description="Page number"),
-#     per_page: int = Query(10, ge=1, le=100, description="Items per page"),
-#     db: AsyncSession = Depends(get_db),
-# ):
-#     """
-#     Get all bookings for a specific event (for organizers)
-
-#     - **event_id**: ID of the event
-#     - **status_filter**: Optional filter by booking status (failed, processing, approved, cancelled)
-#     - **page**: Page number for pagination
-#     - **per_page**: Number of items per page (max 100)
-#     """
-
-#     bookings, total = await get_event_bookings(
-#         db, event_id, status_filter, page, per_page
-#     )
-
-#     # Build response with user details
-#     booking_responses = [
-#         build_booking_with_user_response(booking) for booking in bookings
-#     ]
-
-#     total_pages = (total + per_page - 1) // per_page
-
-#     response_data = BookingWithUserListResponse(
-#         bookings=booking_responses,
-#         total=total,
-#         page=page,
-#         per_page=per_page,
-#         total_pages=total_pages,
-#     )
-
-#     return api_response(
-#         message=f"Retrieved {len(bookings)} bookings for event",
-#         data=response_data,
-#         status_code=status.HTTP_200_OK,
-#     )
-
-
-# @router.get(
-#     "/stats/user/{user_id}",
-#     status_code=status.HTTP_200_OK,
-#     response_model=BookingStatsResponse,
-# )
-# @exception_handler
-# async def get_user_booking_stats(
-#     user_id: str,
-#     db: AsyncSession = Depends(get_db),
-# ):
-#     """
-#     Get booking statistics for a specific user
-
-#     - **user_id**: ID of the user
-#     """
-
-#     stats = await get_booking_stats_for_user(db, user_id)
-
-#     return api_response(
-#         message="User booking statistics retrieved successfully",
-#         data=BookingStatsResponse(**stats),
-#         status_code=status.HTTP_200_OK,
-#     )
-
-
-# @router.get(
-#     "/stats/event/{event_id}",
-#     status_code=status.HTTP_200_OK,
-#     response_model=BookingStatsResponse,
-# )
-# @exception_handler
-# async def get_event_booking_stats(
-#     event_id: str,
-#     db: AsyncSession = Depends(get_db),
-# ):
-#     """
-#     Get booking statistics for a specific event
-
-#     - **event_id**: ID of the event
-#     """
-
-#     stats = await get_booking_stats_for_event(db, event_id)
-
-#     return api_response(
-#         message="Event booking statistics retrieved successfully",
-#         data=BookingStatsResponse(**stats),
-#         status_code=status.HTTP_200_OK,
-#     )

@@ -1,0 +1,341 @@
+from __future__ import annotations
+
+from datetime import date, datetime
+from enum import Enum
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
+from sqlalchemy import (
+    Boolean,
+    Date,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    Numeric,
+    String,
+    Text,
+)
+from sqlalchemy.dialects.postgresql import ARRAY as PG_ARRAY
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.sql import func
+from sqlalchemy.types import Enum as SQLAlchemyEnum
+
+from shared.db.models.base import EventsBase
+
+if TYPE_CHECKING:
+    from shared.db.models.admin_users import AdminUser
+    from shared.db.models.categories import Category, SubCategory
+    from shared.db.models.users import User
+
+
+# -------------------- ENUMS -------------------- #
+
+
+class BookingStatus(str, Enum):
+    """Possible statuses for an event booking."""
+
+    PROCESSING = "PROCESSING"
+    APPROVED = "APPROVED"
+    CANCELLED = "CANCELLED"
+    FAILED = "FAILED"
+
+    def __str__(self) -> str:
+        return self.value.lower()
+
+
+class PaymentStatus(str, Enum):
+    """Possible payment statuses for an event booking."""
+
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    FAILED = "FAILED"
+    REFUNDED = "REFUNDED"
+    PARTIALLY_REFUNDED = "PARTIALLY_REFUNDED"
+    CANCELLED = "CANCELLED"
+
+    def __str__(self) -> str:
+        return self.value.lower()
+
+
+class EventStatus(str, Enum):
+    """Possible statuses for an event."""
+
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
+    PENDING = "PENDING"
+
+    def __str__(self) -> str:
+        return self.value.lower()
+
+
+# -------------------- MAIN EVENT TABLE -------------------- #
+
+
+class NewEvent(EventsBase):
+    """Represents an event with multiple slots and seat categories."""
+
+    __tablename__ = "e2geventsnew"
+
+    event_id: Mapped[str] = mapped_column(
+        String(6), primary_key=True, unique=True, nullable=False
+    )
+    category_id: Mapped[str] = mapped_column(
+        ForeignKey("e2gcategories.category_id"), nullable=False
+    )
+    subcategory_id: Mapped[Optional[str]] = mapped_column(
+        ForeignKey("e2gsubcategories.subcategory_id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    organizer_id: Mapped[str] = mapped_column(
+        String(6),
+        ForeignKey("e2gadminusers.user_id"),
+        nullable=False,
+        index=True,
+    )
+
+    event_slug: Mapped[str] = mapped_column(String, nullable=False, unique=True)
+    event_title: Mapped[str] = mapped_column(Text, nullable=False)
+
+    event_dates: Mapped[List[date]] = mapped_column(
+        PG_ARRAY(Date), nullable=False, default=list
+    )
+
+    location: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    is_online: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+
+    card_image: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    banner_image: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    event_extra_images: Mapped[Optional[List[str]]] = mapped_column(
+        JSONB, default=list, nullable=True
+    )
+
+    extra_data: Mapped[Optional[Dict[str, Any]]] = mapped_column(
+        JSONB, default={}, nullable=True
+    )
+    hash_tags: Mapped[Optional[List[str]]] = mapped_column(JSONB, nullable=True)
+
+    event_status: Mapped[EventStatus] = mapped_column(
+        SQLAlchemyEnum(
+            EventStatus, name="event_status_enum", native_enum=False
+        ),
+        default=EventStatus.INACTIVE,
+        nullable=False,
+        index=True,
+    )
+    featured_event: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    # Relationships
+    category: Mapped[Category] = relationship("Category", lazy="selectin")
+    subcategory: Mapped[Optional[SubCategory]] = relationship(
+        "SubCategory", lazy="selectin"
+    )
+    organizer: Mapped[AdminUser] = relationship("AdminUser", lazy="selectin")
+    slots: Mapped[List[EventSlot]] = relationship(
+        "EventSlot",
+        back_populates="event",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+    bookings: Mapped[List[EventBooking]] = relationship(
+        "EventBooking", back_populates="booked_event", lazy="selectin"
+    )
+
+    __table_args__ = (
+        Index("ix_events_organizer_created", "organizer_id", "created_at"),
+        Index("ix_events_title_search", "event_title"),
+    )
+
+
+# -------------------- EVENT SLOT TABLE -------------------- #
+
+
+class EventSlot(EventsBase):
+    """Represents a specific date/time slot for an event."""
+
+    __tablename__ = "event_slots"
+
+    slot_id: Mapped[str] = mapped_column(String(20), primary_key=True)
+    event_id: Mapped[str] = mapped_column(
+        String(6),
+        ForeignKey("e2geventsnew.event_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    slot_date: Mapped[date] = mapped_column(Date, nullable=False)
+    start_time: Mapped[str] = mapped_column(
+        String(8), nullable=False
+    )  # e.g., "10:00 AM"
+    duration_minutes: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    slot_status: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    # Relationships
+    event: Mapped[NewEvent] = relationship("NewEvent", back_populates="slots")
+    seat_categories: Mapped[List[EventSeatCategory]] = relationship(
+        "EventSeatCategory",
+        back_populates="slot",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+    bookings: Mapped[List[EventBooking]] = relationship(
+        "EventBooking", back_populates="slot", lazy="selectin"
+    )
+
+
+# -------------------- SEAT CATEGORY TABLE -------------------- #
+
+
+class EventSeatCategory(EventsBase):
+    """Represents a category of seats within an event slot."""
+
+    __tablename__ = "event_seat_categories"
+
+    id: Mapped[int] = mapped_column(
+        Integer, primary_key=True, autoincrement=True
+    )
+    slot_id: Mapped[str] = mapped_column(
+        String(20),
+        ForeignKey("event_slots.slot_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    category_id: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )  # e.g., "platinum"
+    category_label: Mapped[str] = mapped_column(String(50), nullable=False)
+    price: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+
+    total_tickets: Mapped[int] = mapped_column(Integer, nullable=False)
+    booked: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    held: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    # Relationships
+    slot: Mapped[EventSlot] = relationship(
+        "EventSlot", back_populates="seat_categories"
+    )
+    bookings: Mapped[List[EventBooking]] = relationship(
+        "EventBooking", back_populates="seat_category", lazy="selectin"
+    )
+
+
+# -------------------- EVENT BOOKING TABLE -------------------- #
+
+
+class EventBooking(EventsBase):
+    """Represents a booking made by a user for an event slot."""
+
+    __tablename__ = "event_bookings"
+
+    booking_id: Mapped[str] = mapped_column(
+        String(12), primary_key=True, index=True
+    )
+
+    user_id: Mapped[str] = mapped_column(
+        String(6),
+        ForeignKey("e2gusers.user_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    event_id: Mapped[str] = mapped_column(
+        String(6),
+        ForeignKey("e2geventsnew.event_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    slot_id: Mapped[str] = mapped_column(
+        String(20),
+        ForeignKey("event_slots.slot_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    seat_category_id: Mapped[int] = mapped_column(
+        ForeignKey("event_seat_categories.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    num_seats: Mapped[int] = mapped_column(Integer, nullable=False)
+    price_per_seat: Mapped[float] = mapped_column(
+        Numeric(10, 2), nullable=False
+    )
+    total_price: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+
+    booking_status: Mapped[BookingStatus] = mapped_column(
+        SQLAlchemyEnum(
+            BookingStatus, name="booking_status_enum", native_enum=False
+        ),
+        default=BookingStatus.PROCESSING,
+        nullable=False,
+        index=True,
+    )
+    payment_status: Mapped[PaymentStatus] = mapped_column(
+        SQLAlchemyEnum(
+            PaymentStatus, name="payment_status_enum", native_enum=False
+        ),
+        default=PaymentStatus.PENDING,
+        nullable=False,
+        index=True,
+    )
+
+    payment_reference: Mapped[Optional[str]] = mapped_column(
+        String(255), nullable=True, index=True
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    # Relationships
+    user: Mapped[User] = relationship(
+        "User", back_populates="event_bookings", lazy="selectin"
+    )
+    booked_event: Mapped[NewEvent] = relationship(
+        "NewEvent", back_populates="bookings", lazy="selectin"
+    )
+    slot: Mapped[EventSlot] = relationship(
+        "EventSlot", back_populates="bookings", lazy="selectin"
+    )
+    seat_category: Mapped[EventSeatCategory] = relationship(
+        "EventSeatCategory", back_populates="bookings", lazy="selectin"
+    )
+
+    __table_args__ = (
+        Index(
+            "ix_booking_event_slot_cat",
+            "event_id",
+            "slot_id",
+            "seat_category_id",
+        ),
+    )

@@ -185,6 +185,11 @@ class EventSlotCreateRequest(BaseModel):
             validated_slot = EventSlotCreateRequest._validate_slot_details(
                 date_key, slot_key, slot_details
             )
+            # Ensure booked & held fields are always present
+            if "booked" not in validated_slot:
+                validated_slot["booked"] = 0
+            if "held" not in validated_slot:
+                validated_slot["held"] = 0
             validated_date_slots[slot_key] = validated_slot
 
         return validated_date_slots
@@ -407,6 +412,11 @@ class EventSlotUpdateRequest(BaseModel):
             validated_slot = EventSlotCreateRequest._validate_slot_details(
                 date_key, slot_key, slot_details
             )
+            # Ensure booked & held fields are always present
+            if "booked" not in validated_slot:
+                validated_slot["booked"] = 0
+            if "held" not in validated_slot:
+                validated_slot["held"] = 0
             validated_date_slots[slot_key] = validated_slot
 
         return validated_date_slots

@@ -19,6 +19,7 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from sqlalchemy.types import Enum as SQLAlchemyEnum
@@ -195,10 +196,9 @@ class EventSlot(EventsBase):
         nullable=False,
         index=True,
     )
-
     slot_data: Mapped[Dict[str, Any]] = mapped_column(
-        JSONB,  # Contains json data for the slot like date, slots, price, members etc like that
-        nullable=False,
+        MutableDict.as_mutable(JSONB),  # Tracks in-place changes
+        nullable=False,  # Contains json data for the slot like date, slots, price, members etc like that
     )
     slot_status: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False

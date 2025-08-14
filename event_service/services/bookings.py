@@ -198,8 +198,7 @@ async def create_booking_record(
             price_per_seat=booking_data.price_per_seat,
             total_price=booking_data.total_price,
             slot=str(booking_data.slot),
-            booking_date=booking_data.booking_date
-            or func.current_date(),  # Use date object or default
+            booking_date=booking_data.booking_date or func.current_date(),
             booking_status=BookingStatus.PROCESSING,
         )
         .returning(EventBooking)
@@ -222,39 +221,6 @@ async def create_booking_record(
         logger.error(f"Failed to create booking: {str(e)}")
         await db.rollback()
         raise
-
-
-async def create_booking(db: AsyncSession, booking_data: BookingCreateRequest):
-    # Log the slot value for debugging
-    print(
-        f"Received slot: {booking_data.slot}, type: {type(booking_data.slot)}"
-    )
-
-    can_book, message, existing_booking = await check_existing_booking(
-        db,
-        booking_data.user_id,
-        booking_data.event_id,
-        str(booking_data.slot),  # Ensure string
-        booking_data.booking_date,
-    )
-    if not can_book:
-        raise HTTPException(status_code=400, detail=message)
-
-    # Verify other constraints including held seats
-    can_book, message = await verify_booking_constraints(
-        db,
-        booking_data.event_id,
-        booking_data.num_seats,
-        str(booking_data.slot),
-    )
-    if not can_book:
-        raise HTTPException(status_code=400, detail=message)
-
-    # Proceed to create the booking
-    booking = await create_booking_record(
-        db, booking_data
-    )  # Assuming this is the function
-    return booking
 
 
 async def get_booking_by_id(
