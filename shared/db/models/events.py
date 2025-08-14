@@ -340,3 +340,133 @@ class EventBooking(EventsBase):
             name="uq_user_event_slot_booking_date",
         ),
     )
+
+
+class DiscountType(str, Enum):
+    PERCENTAGE = "PERCENTAGE"
+    FIXED = "FIXED"
+
+    def __str__(self):
+        return self.name.lower()
+
+
+class Coupon(EventsBase):
+    __tablename__ = "e2gcoupons"
+
+    coupon_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    coupon_code: Mapped[str] = mapped_column(
+        String(50), unique=True, nullable=False, index=True
+    )
+    description: Mapped[Optional[str]] = mapped_column(String(255))
+
+    discount_type: Mapped[DiscountType] = mapped_column(
+        SQLAlchemyEnum(
+            DiscountType, name="discount_type_enum", native_enum=False
+        ),
+        nullable=False,
+        default=DiscountType.PERCENTAGE,
+    )
+
+    discount_value: Mapped[float] = mapped_column(
+        Numeric(10, 2), nullable=False
+    )
+    max_uses: Mapped[Optional[int]] = mapped_column(
+        Integer
+    )  # total usage limit
+    used_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    valid_from: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    valid_until: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    # Business logic methods
+    def is_valid(self) -> bool:
+        """Check if coupon is currently valid."""
+        if not self.is_active:
+            return False
+
+        now = datetime.now()
+
+        # Check if coupon has started
+        if self.valid_from and now < self.valid_from:
+            return False
+
+        # Check if coupon has expired
+        if self.valid_until and now > self.valid_until:
+            return False
+
+        # Check usage limit
+        if self.max_uses and self.used_count >= self.max_uses:
+            return False
+
+        return True
+
+    def can_be_used(self) -> bool:
+        """Check if coupon can be used (alias for is_valid for clarity)."""
+        return self.is_valid()
+
+    def calculate_discount(self, original_price: float) -> float:
+        """Calculate discount amount based on original price."""
+        if not self.is_valid():
+            return 0.0
+
+        if self.discount_type == DiscountType.PERCENTAGE:
+            discount = original_price * (self.discount_value / 100)
+            # Ensure percentage discount doesn't exceed original price
+            return min(discount, original_price)
+        else:  # FIXED
+            # Ensure fixed discount doesn't exceed original price
+            return min(self.discount_value, original_price)
+
+    def calculate_final_price(self, original_price: float) -> float:
+        """Calculate final price after applying discount."""
+        discount = self.calculate_discount(original_price)
+        return max(0.0, original_price - discount)
+
+    def increment_usage(self) -> None:
+        """Increment the usage count."""
+        self.used_count += 1
+
+    def is_usage_limit_reached(self) -> bool:
+        """Check if usage limit has been reached."""
+        return self.max_uses is not None and self.used_count >= self.max_uses
+
+    # Table constraints and indexes
+    __table_args__ = (
+        # Indexes for common queries
+        Index("ix_coupons_code", "coupon_code"),
+        Index("ix_coupons_active", "is_active"),
+        Index("ix_coupons_valid_dates", "valid_from", "valid_until"),
+        Index("ix_coupons_created", "created_at"),
+        # Business logic constraints
+        CheckConstraint("discount_value > 0", name="positive_discount_value"),
+        CheckConstraint(
+            "(discount_type = 'PERCENTAGE' AND discount_value <= 100) OR discount_type = 'FIXED'",
+            name="valid_percentage_discount",
+        ),
+        CheckConstraint(
+            "max_uses IS NULL OR max_uses > 0", name="positive_max_uses"
+        ),
+        CheckConstraint("used_count >= 0", name="non_negative_used_count"),
+        CheckConstraint(
+            "valid_from IS NULL OR valid_until IS NULL OR valid_from <= valid_until",
+            name="valid_date_range",
+        ),
+    )
