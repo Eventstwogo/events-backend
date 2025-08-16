@@ -1,6 +1,6 @@
 import json
 import re
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Any, Dict, Optional
 
 
@@ -120,3 +120,31 @@ def minutes_to_duration_string(minutes: int) -> str:
         parts.append(f"{mins}minutes")
 
     return " ".join(parts) if parts else "0 minutes"
+
+
+def calculate_end_time(start_time_str: str, duration_str: str) -> str:
+    """
+    start_time_str: "10:00 AM"
+    duration_str: "3 hours" or "2 hours 30 minutes"
+    returns: "01:00 PM"
+    """
+    # Parse start time
+    start_dt = datetime.strptime(start_time_str, "%I:%M %p")
+
+    # Parse duration
+    hours = 0
+    minutes = 0
+
+    hour_match = re.search(r"(\d+)\s*hours?", duration_str)
+    if hour_match:
+        hours = int(hour_match.group(1))
+
+    minute_match = re.search(r"(\d+)\s*minutes?", duration_str)
+    if minute_match:
+        minutes = int(minute_match.group(1))
+
+    # Add duration
+    end_dt = start_dt + timedelta(hours=hours, minutes=minutes)
+
+    # Return formatted time
+    return end_dt.strftime("%I:%M %p")

@@ -193,7 +193,7 @@ class NewEventSlot(EventsBase):
     duration_minutes: Mapped[int] = mapped_column(Integer, nullable=False)
 
     slot_status: Mapped[bool] = mapped_column(
-        Boolean, default=True, nullable=False
+        Boolean, default=False, nullable=False
     )
 
     created_at: Mapped[datetime] = mapped_column(
@@ -248,6 +248,19 @@ class NewEventSeatCategory(EventsBase):
     total_tickets: Mapped[int] = mapped_column(Integer, nullable=False)
     booked: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     held: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    seat_category_status: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
 
     # Relationships
     new_slot: Mapped["NewEventSlot"] = relationship(

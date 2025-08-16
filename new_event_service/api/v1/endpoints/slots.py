@@ -64,6 +64,7 @@ async def create_event_slot_endpoint(
     existing_dates: List[date] = event.event_dates or []
     new_dates = set(existing_dates) | set(slot_request.event_dates)
     event.event_dates = sorted(new_dates)
+    event.event_status = EventStatus.ACTIVE
 
     # 4. Validate slot data
     if not slot_request.slot_data:

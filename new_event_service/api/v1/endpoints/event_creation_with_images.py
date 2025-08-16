@@ -316,7 +316,7 @@ async def create_event_with_images(
     )
 
 
-@router.patch(
+@router.put(
     "/update-with-images/{event_id}", summary="Update event with images"
 )
 @exception_handler

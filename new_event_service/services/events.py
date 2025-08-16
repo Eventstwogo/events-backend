@@ -223,7 +223,7 @@ async def fetch_event_by_id_with_relations(
         .filter(NewEvent.event_id == event_id)
     )
     result = await db.execute(query)
-    return result.scalars().first()
+    return result.scalars().one_or_none()
 
 
 async def fetch_events_without_filters(
