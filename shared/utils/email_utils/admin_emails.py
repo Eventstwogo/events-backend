@@ -229,6 +229,54 @@ def send_event_creation_email(
     return success
 
 
+def send_event_creation_email_new(
+    email: EmailStr,
+    organizer_name: str,
+    event_title: str,
+    event_id: str,
+    event_location: str,
+    is_online: bool,
+    event_category: str,
+    created_by_role: str = "organizer",  # "admin" or "organizer"
+) -> bool:
+    # Determine the appropriate URL based on who created the event
+    if created_by_role.lower() == "organizer":
+        event_url = f"{settings.ORGANIZER_FRONTEND_URL}/Events/view/{event_id}"
+    else:
+        event_url = f"{settings.ADMIN_FRONTEND_URL}/Events/view/{event_id}"
+
+    context = {
+        "organizer_name": organizer_name,
+        "event_title": event_title,
+        "is_online": is_online,
+        "event_location": event_location,
+        "event_category": event_category,
+        "event_url": event_url,
+        "event_id": event_id,
+        "created_by_role": created_by_role.upper(),
+        "creation_date": datetime.now(tz=timezone.utc).strftime(
+            "%B %d, %Y at %I:%M %p UTC"
+        ),
+        "year": str(datetime.now(tz=timezone.utc).year),
+    }
+
+    success = email_sender.send_email(
+        to=email,
+        subject=f"Event Created Successfully - {event_title}",
+        template_file="organizer/event_created.html",
+        context=context,
+    )
+
+    if not success:
+        logger.warning(
+            "Failed to send event creation email to %s for event %s",
+            email,
+            event_id,
+        )
+
+    return success
+
+
 def send_organizer_approval_notification(
     email: EmailStr,
     organizer_name: str,

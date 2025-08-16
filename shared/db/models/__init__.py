@@ -38,6 +38,12 @@ from .categories import Category, SubCategory
 from .config import Config
 from .contact_us import ContactUs, ContactUsStatus
 from .events import BookingStatus, Event, EventBooking, EventSlot, EventStatus
+from .new_events import (
+    NewEvent,
+    NewEventBooking,
+    NewEventSeatCategory,
+    NewEventSlot,
+)
 
 # Models that depend on Organization Profile
 from .organizer import BusinessProfile, OrganizerQuery, QueryStatus
@@ -64,6 +70,11 @@ __all__ = [
     "EventSlot",
     "BookingStatus",
     "EventStatus",
+    # New Events
+    "NewEvent",
+    "NewEventSlot",
+    "NewEventSeatCategory",
+    "NewEventBooking",
     # Role-Based Access Control
     "Role",
     "Permission",

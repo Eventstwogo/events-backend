@@ -19,6 +19,7 @@ from sqlalchemy.sql.selectable import Select
 
 from shared.core.security import generate_searchable_hash
 from shared.db.models.base import EventsBase
+from shared.db.models.new_events import NewEventBooking
 from shared.db.types import EncryptedString
 
 if TYPE_CHECKING:
@@ -117,6 +118,12 @@ class User(EventsBase):
     )
     event_bookings: Mapped[List["EventBooking"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
+    )
+    new_event_bookings: Mapped[List["NewEventBooking"]] = relationship(
+        "NewEventBooking",
+        back_populates="new_user",
+        cascade="all, delete-orphan",
+        lazy="selectin",
     )
 
     # Properties for username, first_name, last_name, email, and phone_number.

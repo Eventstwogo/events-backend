@@ -19,6 +19,7 @@ from sqlalchemy.orm import (
 
 from shared.core.security import generate_searchable_hash
 from shared.db.models.base import EventsBase
+from shared.db.models.new_events import NewEvent
 from shared.db.types import EncryptedString
 
 if TYPE_CHECKING:
@@ -114,6 +115,12 @@ class AdminUser(EventsBase):
         "Event",
         back_populates="organizer",
         lazy="dynamic",
+    )
+    organized_new_events: Mapped[List["NewEvent"]] = relationship(
+        "NewEvent",
+        back_populates="new_organizer",
+        cascade="all, delete-orphan",
+        lazy="selectin",
     )
     business_profile: Mapped[Optional["BusinessProfile"]] = relationship(
         "BusinessProfile",
