@@ -478,7 +478,7 @@ async def get_categories_and_subcategories_by_status(
     return api_response(
         status_code=status.HTTP_200_OK,
         message="Categories fetched successfully",
-        data=categories,
+        data=[CategoryOut.model_validate(cat) for cat in categories],
     )
 
 
