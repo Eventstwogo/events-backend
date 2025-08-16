@@ -1,6 +1,6 @@
 # utils/exception_handlers.py
 
-import traceback
+# import traceback
 from functools import wraps
 from typing import Any, Callable
 
@@ -24,7 +24,7 @@ def handle_general_exception(e: Exception) -> JSONResponse:
     return api_response(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         message=f"Something went wrong. {e}",
-        data={"traceback": traceback.format_exc()},
+        # data={"traceback": traceback.format_exc()},
         log_error=True,
     )
 
