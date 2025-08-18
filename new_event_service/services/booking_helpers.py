@@ -92,7 +92,7 @@ def extract_capture_id(response):
 
 
 async def create_paypal_order(
-    total_price: float, booking_id: str
+    total_price: float, order_id: str
 ) -> Optional[str]:
     """Create PayPal order and return approval URL."""
     request = OrdersCreateRequest()
@@ -114,8 +114,8 @@ async def create_paypal_order(
                 "landing_page": "LOGIN",
                 "locale": "en-AU",
                 "user_action": "PAY_NOW",
-                "return_url": f"{settings.API_BACKEND_URL}/api/v1/bookings/confirm?booking_id={booking_id}",
-                "cancel_url": f"{settings.API_BACKEND_URL}/api/v1/bookings/cancel?booking_id={booking_id}",
+                "return_url": f"{settings.API_BACKEND_URL}/api/v1/new-bookings/confirm?order_id={order_id}",
+                "cancel_url": f"{settings.API_BACKEND_URL}/api/v1/new-bookings/cancel?order_id={order_id}",
             },
         }
     )

@@ -295,8 +295,8 @@ async def create_event_booking_order(
 )
 @exception_handler
 async def confirm_booking(
-    token: Annotated[str, Query(..., description="PayPal order token")],
-    order_id: Annotated[str, Query(..., description="Booking order ID")],
+    token: str,
+    order_id: str,
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -425,8 +425,6 @@ async def confirm_booking(
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error capturing PayPal payment: {str(e)}")
-        logger.error(f"Error capturing PayPal payment: {str(e)}")
         # PayPal capture error → rollback
         order.booking_status = BookingStatus.FAILED
         order.payment_status = PaymentStatus.FAILED
