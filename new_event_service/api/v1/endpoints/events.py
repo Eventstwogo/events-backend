@@ -226,11 +226,55 @@ async def change_event_status(
 ):
     """
     Change the status of an event (ACTIVE = published, INACTIVE = draft)
+    
+    Business Rules:
+    - Events with existing slots cannot be set to PENDING status
+    - Events without slots cannot be set to ACTIVE status
+    - PENDING status is only for events being set up (no slots yet)
+    - Events automatically become ACTIVE when slots are created
     """
     # Fetch event by event_id
     event = await fetch_event_by_id(db, event_id)
     if not event:
         return event_not_found_response()
+
+    # Check if trying to set status to PENDING when event already has slots
+    if event_status == EventStatus.PENDING:
+        # Check if event has any slots
+        query_slots = select(NewEventSlot).where(
+            NewEventSlot.event_ref_id == event_id
+        )
+        existing_slots = (await db.execute(query_slots)).scalars().first()
+        
+        if existing_slots:
+            return api_response(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                message="Cannot set event status to PENDING when event already has slots",
+                data={
+                    "event_id": event.event_id,
+                    "current_status": event.event_status,
+                    "requested_status": event_status,
+                },
+            )
+    
+    # Check if trying to set status to ACTIVE from PENDING when event doesn't have slots
+    if event_status == EventStatus.ACTIVE and event.event_status == EventStatus.PENDING:
+        # Check if event has any slots
+        query_slots = select(NewEventSlot).where(
+            NewEventSlot.event_ref_id == event_id
+        )
+        existing_slots = (await db.execute(query_slots)).scalars().first()
+        
+        if not existing_slots:
+            return api_response(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                message="Cannot set event status to ACTIVE when event has no slots",
+                data={
+                    "event_id": event.event_id,
+                    "current_status": event.event_status,
+                    "requested_status": event_status,
+                },
+            )
 
     # Update status
     event.event_status = event_status
@@ -238,11 +282,20 @@ async def change_event_status(
     await db.commit()
     await db.refresh(event)
 
-    status_text = "published" if event_status == EventStatus.ACTIVE else "draft"
+    # Determine appropriate status text and message
+    if event_status == EventStatus.ACTIVE:
+        status_text = "published"
+        message = "Event status updated to published"
+    elif event_status == EventStatus.INACTIVE:
+        status_text = "draft"
+        message = "Event status updated to draft"
+    else:  # EventStatus.PENDING
+        status_text = "pending"
+        message = "Event status updated to pending"
 
     return api_response(
         status_code=status.HTTP_200_OK,
-        message=f"Event status updated to {status_text}",
+        message=message,
         data={
             "event_id": event.event_id,
             "event_status": event.event_status,
