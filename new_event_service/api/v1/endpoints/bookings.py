@@ -1,6 +1,6 @@
-from typing import Annotated
+from typing import Annotated, Optional
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.params import Query
 from fastapi.responses import JSONResponse, RedirectResponse
 from paypalcheckoutsdk.orders import OrdersCaptureRequest
@@ -39,9 +39,44 @@ from shared.db.models.new_events import (
 from shared.db.sessions.database import get_db
 from shared.utils.email_utils.admin_emails import send_booking_success_email
 from shared.utils.exception_handlers import exception_handler
+from shared.utils.file_uploads import get_media_url
 from shared.utils.id_generators import generate_digits_letters
 
 logger = get_logger(__name__)
+
+
+def _extract_event_address(event: NewEvent) -> Optional[str]:
+    """
+    Extract event address from extra_data field.
+
+    Args:
+        event: The event object with extra_data
+
+    Returns:
+        Address string from extra_data or None if not found
+    """
+    if not event or not event.extra_data:
+        return None
+
+    try:
+        # Look for common address field names in extra_data
+        address_fields = [
+            "address",
+            "event_address",
+            "location_address",
+            "venue_address",
+        ]
+
+        for field in address_fields:
+            if field in event.extra_data and event.extra_data[field]:
+                return str(event.extra_data[field])
+
+        return None
+
+    except Exception as e:
+        logger.warning(f"Error extracting event address: {str(e)}")
+        return None
+
 
 router = APIRouter()
 
@@ -387,7 +422,11 @@ async def confirm_booking(
                 status_code=302,
             )
 
+    except HTTPException:
+        raise
     except Exception as e:
+        print(f"Error capturing PayPal payment: {str(e)}")
+        logger.error(f"Error capturing PayPal payment: {str(e)}")
         # PayPal capture error → rollback
         order.booking_status = BookingStatus.FAILED
         order.payment_status = PaymentStatus.FAILED
@@ -461,7 +500,7 @@ async def get_booking_order_details(
     order_id: str,
     db: AsyncSession = Depends(get_db),
 ):
-    # 1. Fetch order with relationships
+    # 1️. Fetch order with relationships
     order: NewEventBookingOrder | None = (
         await db.execute(
             select(NewEventBookingOrder)
@@ -473,6 +512,9 @@ async def get_booking_order_details(
                 selectinload(
                     NewEventBookingOrder.new_booked_event
                 ).selectinload(NewEvent.new_category),
+                selectinload(
+                    NewEventBookingOrder.new_booked_event
+                ).selectinload(NewEvent.new_organizer),
                 selectinload(NewEventBookingOrder.new_slot),
                 selectinload(NewEventBookingOrder.new_user),
             )
@@ -486,7 +528,7 @@ async def get_booking_order_details(
             data={},
         )
 
-    # 2. Build seat categories list
+    # 2️. Build seat categories list
     seat_categories = [
         SeatCategoryItem(
             seat_category_id=li.seat_category_ref_id,
@@ -498,31 +540,50 @@ async def get_booking_order_details(
         for li in order.line_items
     ]
 
-    # 3. Build response
-    response = BookingDetailsResponse(
-        order_id=order.order_id,
-        user_ref_id=order.user_ref_id,
-        event_ref_id=order.event_ref_id,
-        slot_ref_id=order.slot_ref_id,
-        booking_status=order.booking_status.value,
-        payment_status=order.payment_status.value,
-        payment_reference=order.payment_reference,
-        total_amount=float(order.total_amount),
-        event_title=order.new_booked_event.event_title,
-        event_slug=order.new_booked_event.event_slug,
-        event_category=order.new_booked_event.new_category.category_name,
-        event_location=order.new_booked_event.location or "",
-        event_date=order.new_slot.slot_date.strftime("%B %d, %Y"),
-        event_time=(
-            order.new_slot.start_time if order.new_slot.start_time else None
-        ),
-        duration=(
-            order.new_slot.duration_minutes
-            if order.new_slot.duration_minutes
+    # 3️. Build nested user info
+    user_info = {
+        "user_id": order.new_user.user_id,
+        "email": order.new_user.email,
+        "username": order.new_user.username,
+    }
+
+    # 4. Build nested event info
+    event_address = _extract_event_address(order.new_booked_event)
+    booked_event = order.new_booked_event
+    event_info = {
+        "event_id": booked_event.event_id,
+        "title": booked_event.event_title,
+        "slug": booked_event.event_slug,
+        "organizer_name": (
+            booked_event.new_organizer.username
+            if booked_event.new_organizer
             else None
         ),
-        booking_date=order.created_at.strftime("%B %d, %Y"),
-        seat_categories=seat_categories,
-    )
+        "location": booked_event.location,
+        "address": event_address or "",  # fallback if address is optional
+        "event_date": (
+            order.new_slot.slot_date.strftime("%Y-%m-%d")
+            if order.new_slot
+            else None
+        ),
+        "booking_date": order.created_at.strftime("%Y-%m-%d"),
+        "card_image": get_media_url(booked_event.card_image),
+    }
 
-    return response
+    # 5️. Build response
+    response_data = {
+        "order_id": order.order_id,
+        "booking_status": order.booking_status.value,
+        "payment_status": order.payment_status.value,
+        "payment_reference": order.payment_reference,
+        "total_amount": float(order.total_amount),
+        "event": event_info,
+        "user": user_info,
+        "seat_categories": seat_categories,
+    }
+
+    return api_response(
+        status_code=status.HTTP_200_OK,
+        message="Booking order details fetched successfully",
+        data=response_data,
+    )

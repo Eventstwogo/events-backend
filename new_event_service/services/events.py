@@ -554,6 +554,12 @@ async def search_events(
     return events, total
 
 
+def filter_event_dates(event: NewEvent) -> None:
+    """Mutates event.event_dates to only include today and future dates."""
+    if hasattr(event, "event_dates") and event.event_dates:
+        event.event_dates = [d for d in event.event_dates if d >= date.today()]
+
+
 async def fetch_events_by_slug_comprehensive(
     db: AsyncSession, slug: str, page: int = 1, per_page: int = 10
 ) -> Tuple[List[NewEvent], dict, int, int, Optional[str], Optional[str]]:
@@ -745,6 +751,14 @@ async def fetch_events_by_slug_comprehensive(
             "events": events,
             "total": total_subcategory_events,
         }
+
+    # Filter event_dates for all fetched events
+    for event in category_events:
+        filter_event_dates(event)
+
+    for subcat_id, subcat_data in subcategory_events_grouped.items():
+        for event in subcat_data["events"]:
+            filter_event_dates(event)
 
     return (
         category_events,
