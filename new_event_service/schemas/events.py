@@ -1,7 +1,13 @@
 from datetime import date, datetime
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    computed_field,
+    field_serializer,
+)
 
 from new_event_service.utils.utils import calculate_end_time
 from shared.db.models.new_events import EventStatus
@@ -110,6 +116,12 @@ class SeatCategoryResponse(BaseModel):
     totalTickets: int
     booked: int = 0
     held: int = 0
+
+    @computed_field
+    @property
+    def available(self) -> int:
+        """Available seats = total - (booked + held)."""
+        return self.totalTickets - (self.booked + self.held)
 
 
 class EventSlotResponse(BaseModel):

@@ -770,128 +770,130 @@ async def fetch_events_by_slug_comprehensive(
     )
 
 
-# async def fetch_events_by_category_or_subcategory_slug(
-#     db: AsyncSession,
-#     slug: str,
-#     page: int = 1,
-#     per_page: int = 10,
-#     event_type: str = "all",
-# ) -> Tuple[List[NewEvent], int, Optional[str], bool]:
-#     """Fetch events by category slug or subcategory slug with all related entities loaded
+async def fetch_events_by_category_or_subcategory_slug(
+    db: AsyncSession,
+    slug: str,
+    page: int = 1,
+    per_page: int = 10,
+    event_type: str = "all",
+) -> Tuple[List[NewEvent], int, Optional[str], bool]:
+    """Fetch events by category slug or subcategory slug with all related entities loaded
 
-#     Args:
-#         db: Database session
-#         slug: Category slug or subcategory slug
-#         page: Page number (1-based)
-#         per_page: Number of events per page
-#         event_type: Filter events by type:
-#             - 'all': Return all published events
-#             - 'ongoing': Return events where current date is between start_date and end_date (inclusive)
-#             - 'upcoming': Return events where end_date is greater than or equal to current date
-#     """
+    Args:
+        db: Database session
+        slug: Category slug or subcategory slug
+        page: Page number (1-based)
+        per_page: Number of events per page
+        event_type: Filter events by type:
+            - 'all': Return all published events
+            - 'ongoing': Return events where current date is between start_date and end_date (inclusive)
+            - 'upcoming': Return events where end_date is greater than or equal to current date
+    """
 
-#     # Calculate offset for pagination
-#     offset = (page - 1) * per_page
+    # Calculate offset for pagination
+    offset = (page - 1) * per_page
 
-#     # Get current date for filtering
-#     current_date = date.today()
+    # Get current date for filtering
+    current_date = date.today()
 
-#     # Build base event filter conditions
-#     base_conditions: List[Any] = [
-#         NewEvent.event_status == EventStatus.ACTIVE
-#     ]  # Only published events
+    # Build base event filter conditions
+    base_conditions: List[Any] = [
+        NewEvent.event_status == EventStatus.ACTIVE
+    ]  # Only published events
 
-#     # Add date-based filtering conditions
-#     if event_type == "ongoing":
-#         # Events where current date is between start_date and end_date (inclusive)
-#         base_conditions.extend(
-#             [NewEvent.start_date <= current_date, NewEvent.end_date >= current_date]
-#         )
-#     elif event_type == "upcoming":
-#         # Events where end_date is greater than or equal to current date
-#         base_conditions.append(NewEvent.end_date >= current_date)
-#     # For 'all', no additional date filtering is needed
+    # Add array-based date filters
+    if event_type == "ongoing":
+        # current_date is present in event_dates
+        base_conditions.append(current_date == any_(NewEvent.event_dates))  # type: ignore
+    elif event_type == "upcoming":
+        # any date in event_dates > current_date
+        base_conditions.append(any_(NewEvent.event_dates) > current_date)
+    # For 'all', no additional date filtering is needed
 
-#     # First try to find events by category slug (active events only)
-#     category_conditions = [
-#         Category.category_slug == slug.lower(),
-#         *base_conditions,
-#     ]
+    # First try to find events by category slug (active events only)
+    category_conditions = [
+        Category.category_slug == slug.lower(),
+        *base_conditions,
+    ]
 
-#     category_query = (
-#         select(NewEvent)
-#         .options(
-#             selectinload(NewEvent.new_category),
-#             selectinload(NewEvent.new_subcategory),
-#             selectinload(NewEvent.new_organizer),
-#             selectinload(NewEvent.new_slots),
-#         )
-#         .join(Category, NewEvent.category_id == Category.category_id)
-#         .filter(and_(*category_conditions))
-#         .order_by(desc(NewEvent.created_at))
-#         .offset(offset)
-#         .limit(per_page)
-#     )
+    category_query = (
+        select(NewEvent)
+        .options(
+            selectinload(NewEvent.new_category),
+            selectinload(NewEvent.new_subcategory),
+            selectinload(NewEvent.new_organizer),
+            selectinload(NewEvent.new_slots),
+        )
+        .join(Category, NewEvent.category_id == Category.category_id)
+        .filter(and_(*category_conditions))
+        .order_by(desc(NewEvent.created_at))
+        .offset(offset)
+        .limit(per_page)
+    )
 
-#     category_result = await db.execute(category_query)
-#     category_events = list(category_result.scalars().all())
+    category_result = await db.execute(category_query)
+    category_events = list(category_result.scalars().all())
 
-#     if category_events:
-#         # Get total count for category (active events only)
-#         count_query = (
-#             select(func.count(NewEvent.event_id))
-#             .join(Category, NewEvent.category_id == Category.category_id)
-#             .filter(and_(*category_conditions))
-#         )
-#         total_result = await db.execute(count_query)
-#         total = total_result.scalar() or 0
-#         return category_events, total, slug, True
+    if category_events:
+        # Get total count for category (active events only)
+        count_query = (
+            select(func.count(NewEvent.event_id))
+            .join(Category, NewEvent.category_id == Category.category_id)
+            .filter(and_(*category_conditions))
+        )
+        total_result = await db.execute(count_query)
+        total = total_result.scalar() or 0
+        return category_events, total, slug, True
 
-#     # If no events found by category slug, check if category exists at all
-#     category_exists_query = select(Category).filter(
-#         Category.category_slug == slug.lower()
-#     )
-#     category_exists_result = await db.execute(category_exists_query)
-#     category_exists = category_exists_result.scalars().first() is not None
+    # If no events found by category slug, check if category exists at all
+    category_exists_query = select(Category).filter(
+        Category.category_slug == slug.lower()
+    )
+    category_exists_result = await db.execute(category_exists_query)
+    category_exists = category_exists_result.scalars().first() is not None
 
-#     if category_exists:
-#         # Category exists but no active events, return empty result
-#         return [], 0, slug, True
+    if category_exists:
+        # Category exists but no active events, return empty result
+        return [], 0, slug, True
 
-#     # If category doesn't exist, try subcategory slug (active events only)
-#     subcategory_conditions = [
-#         SubCategory.subcategory_slug == slug.lower(),
-#         *base_conditions,
-#     ]
+    # If category doesn't exist, try subcategory slug (active events only)
+    subcategory_conditions = [
+        SubCategory.subcategory_slug == slug.lower(),
+        *base_conditions,
+    ]
 
-#     subcategory_query = (
-#         select(NewEvent)
-#         .options(
-#             selectinload(NewEvent.new_category),
-#             selectinload(NewEvent.new_subcategory),
-#             selectinload(NewEvent.new_organizer),
-#             selectinload(NewEvent.new_slots),
-#         )
-#         .join(SubCategory, NewEvent.subcategory_id == SubCategory.subcategory_id)
-#         .filter(and_(*subcategory_conditions))
-#         .order_by(desc(NewEvent.created_at))
-#         .offset(offset)
-#         .limit(per_page)
-#     )
+    subcategory_query = (
+        select(NewEvent)
+        .options(
+            selectinload(NewEvent.new_category),
+            selectinload(NewEvent.new_subcategory),
+            selectinload(NewEvent.new_organizer),
+            selectinload(NewEvent.new_slots),
+        )
+        .join(
+            SubCategory, NewEvent.subcategory_id == SubCategory.subcategory_id
+        )
+        .filter(and_(*subcategory_conditions))
+        .order_by(desc(NewEvent.created_at))
+        .offset(offset)
+        .limit(per_page)
+    )
 
-#     subcategory_result = await db.execute(subcategory_query)
-#     subcategory_events = list(subcategory_result.scalars().all())
+    subcategory_result = await db.execute(subcategory_query)
+    subcategory_events = list(subcategory_result.scalars().all())
 
-#     # Get total count for subcategory (active events only)
-#     count_query = (
-#         select(func.count(NewEvent.event_id))
-#         .join(SubCategory, NewEvent.subcategory_id == SubCategory.subcategory_id)
-#         .filter(and_(*subcategory_conditions))
-#     )
-#     total_result = await db.execute(count_query)
-#     total = total_result.scalar() or 0
+    # Get total count for subcategory (active events only)
+    count_query = (
+        select(func.count(NewEvent.event_id))
+        .join(
+            SubCategory, NewEvent.subcategory_id == SubCategory.subcategory_id
+        )
+        .filter(and_(*subcategory_conditions))
+    )
+    total_result = await db.execute(count_query)
+    total = total_result.scalar() or 0
 
-#     return subcategory_events, total, slug, False
+    return subcategory_events, total, slug, False
 
 
 async def filter_events_advanced(

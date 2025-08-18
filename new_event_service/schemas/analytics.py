@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 from shared.db.models.events import EventStatus
 
@@ -64,6 +64,12 @@ class SeatCategory(BaseModel):
     booked: int
     held: int
     seat_category_status: bool
+
+    @computed_field
+    @property
+    def available(self) -> int:
+        """Available seats = total - (booked + held)."""
+        return self.total_tickets - (self.booked + self.held)
 
 
 class NewEventSlot(BaseModel):

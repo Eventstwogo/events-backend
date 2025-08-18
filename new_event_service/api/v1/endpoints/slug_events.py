@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Dict, List, Literal
 
 from fastapi import APIRouter, Depends, Form, Query, status
@@ -25,6 +26,7 @@ from new_event_service.services.events import (
     fetch_event_by_id,
     fetch_event_by_id_with_relations,
     fetch_event_by_slug_with_relations,
+    fetch_events_by_category_or_subcategory_slug,
     fetch_events_by_slug_comprehensive,
     fetch_latest_event_from_each_category,
 )
@@ -346,4 +348,112 @@ async def get_latest_events_from_each_category(
             "total": total,
             "event_type": event_type,
         },
+    )
+
+
+@router.get(
+    "/latest/category-or-subcategory/{slug}",
+    status_code=status.HTTP_200_OK,
+    summary="Integrated in application frontend",
+)
+@exception_handler
+async def get_latest_5_events_by_category_or_subcategory_slug(
+    slug: str,
+    event_type: Literal["all", "ongoing", "upcoming"] = Query(
+        "upcoming",
+        description="Filter events by type: 'all' for all events, 'ongoing' for current events (current date between start_date and end_date), 'upcoming' for future events (end_date >= current date)",
+    ),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Get the latest 5 events by category slug or subcategory slug.
+
+    Args:
+        slug: Category slug or subcategory slug
+        event_type: Filter events by type:
+            - 'all': Return all published events
+            - 'ongoing': Return events where current date is between start_date and end_date (inclusive)
+            - 'upcoming': Return events where end_date is greater than or equal to current date
+        db: Database session
+
+    Returns:
+        - Latest 5 events ordered by creation date
+        - Only returns active events (event_status = false)
+    """
+
+    # Fetch latest 5 events by category or subcategory slug
+    events, total, matched_slug, is_category = (
+        await fetch_events_by_category_or_subcategory_slug(
+            db, slug.lower(), page=1, per_page=5, event_type=event_type
+        )
+    )
+
+    if not events:
+        return api_response(
+            status_code=status.HTTP_200_OK,
+            message=f"No active {event_type} events found for '{slug}'",
+            data={
+                "events": [],
+                "total": 0,
+                "event_type": event_type,
+            },
+        )
+
+    # Convert to response format without organizer, category, and subcategory details
+    event_responses = []
+    for event in events:
+        event.event_dates = [d for d in event.event_dates if d >= date.today()]
+        event_data = NewEventSlotResponse.model_validate(event)
+        # Convert to dict and remove organizer, category, and subcategory
+        event_dict = event_data.model_dump()
+        event_dict.pop("organizer", None)
+        event_dict.pop("subcategory", None)
+        event_dict.pop("category", None)
+        event_responses.append(event_dict)
+
+    # Prepare response data based on whether it's category or subcategory
+    if is_category:
+        # Category slug provided - show category info and events without subcategory details
+        response_data = {
+            "category_id": (
+                events[0].new_category.category_id
+                if events[0].new_category
+                else None
+            ),
+            "category_slug": (
+                events[0].new_category.category_slug
+                if events[0].new_category
+                else None
+            ),
+            "events": event_responses,
+            "total": len(events),
+            "event_type": event_type,
+        }
+    else:
+        # Subcategory slug provided - show subcategory info and events
+        response_data = {
+            "subcategory_id": (
+                events[0].new_subcategory.subcategory_id
+                if events[0].new_subcategory
+                else None
+            ),
+            "subcategory_slug": (
+                events[0].new_subcategory.subcategory_slug
+                if events[0].new_subcategory
+                else None
+            ),
+            "events": event_responses,
+            "total": len(events),
+            "event_type": event_type,
+        }
+
+    entity_type = "category" if is_category else "subcategory"
+    message = (
+        f"Latest {len(events)} {event_type} events retrieved successfully for "
+        f"{entity_type} '{matched_slug}'"
+    )
+    return api_response(
+        status_code=status.HTTP_200_OK,
+        message=message,
+        data=response_data,
     )
