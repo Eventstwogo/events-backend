@@ -26,18 +26,12 @@ class SeatCategoryBooking(BaseModel):
 
     @field_validator("seat_category_ref_id")
     @classmethod
-    def validate_ids(cls, v: str, field) -> str:
+    def validate_id_format(cls, v: str) -> str:
         if not ID_REGEX.match(v):
             raise ValueError(
-                f"{field.name} must be alphanumeric with no spaces or special characters"
+                f"{cls.__name__} ID must be alphanumeric with no spaces or special characters"
             )
-        if not (
-            field.field_info.min_length <= len(v) <= field.field_info.max_length
-        ):
-            raise ValueError(
-                f"{field.name} must be between {field.field_info.min_length} and {field.field_info.max_length} characters long"
-            )
-        return v.strip().upper()
+        return v
 
     @field_validator("num_seats")
     @classmethod
@@ -83,18 +77,12 @@ class BookingCreateRequest(BaseModel):
 
     @field_validator("user_ref_id", "event_ref_id", "slot_ref_id")
     @classmethod
-    def validate_ids(cls, v: str, field) -> str:
+    def validate_id_format(cls, v: str) -> str:
         if not ID_REGEX.match(v):
             raise ValueError(
-                f"{field.name} must be alphanumeric with no spaces or special characters"
+                f"{cls.__name__} ID must be alphanumeric with no spaces or special characters"
             )
-        if not (
-            field.field_info.min_length <= len(v) <= field.field_info.max_length
-        ):
-            raise ValueError(
-                f"{field.name} must be between {field.field_info.min_length} and {field.field_info.max_length} characters long"
-            )
-        return v.strip().upper()
+        return v
 
     @field_validator("event_date", mode="before")
     @classmethod
