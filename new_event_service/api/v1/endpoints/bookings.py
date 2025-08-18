@@ -509,10 +509,10 @@ async def get_all_bookings(
     - Optional status filtering (PROCESSING, APPROVED, FAILED, CANCELLED)
     - Returns booking orders with event and user details
     """
-    
+
     # Calculate offset for pagination
     offset = (page - 1) * limit
-    
+
     # Build base query
     query = select(NewEventBookingOrder).options(
         selectinload(NewEventBookingOrder.line_items).selectinload(
@@ -527,37 +527,45 @@ async def get_all_bookings(
         selectinload(NewEventBookingOrder.new_slot),
         selectinload(NewEventBookingOrder.new_user),
     )
-    
+
     # Apply status filter if provided
     if status_filter:
         try:
             booking_status = BookingStatus(status_filter.upper())
-            query = query.where(NewEventBookingOrder.booking_status == booking_status)
+            query = query.where(
+                NewEventBookingOrder.booking_status == booking_status
+            )
         except ValueError:
             return api_response(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 message=f"Invalid status filter: {status_filter}. Valid values: PROCESSING, APPROVED, FAILED, CANCELLED",
                 data={},
             )
-    
+
     # Apply pagination and ordering
-    query = query.order_by(NewEventBookingOrder.created_at.desc()).offset(offset).limit(limit)
-    
+    query = (
+        query.order_by(NewEventBookingOrder.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+
     # Execute query
     result = await db.execute(query)
     orders = result.scalars().all()
-    
+
     # Get total count for pagination info
     count_query = select(func.count(NewEventBookingOrder.order_id))
     if status_filter:
         try:
             booking_status = BookingStatus(status_filter.upper())
-            count_query = count_query.where(NewEventBookingOrder.booking_status == booking_status)
+            count_query = count_query.where(
+                NewEventBookingOrder.booking_status == booking_status
+            )
         except ValueError:
             pass  # Already handled above
-    
-    total_count = (await db.execute(count_query)).scalar()
-    
+
+    total_count = (await db.execute(count_query)).scalar() or 0
+
     # Build response data
     bookings_data = []
     for order in orders:
@@ -572,7 +580,7 @@ async def get_all_bookings(
             }
             for li in order.line_items
         ]
-        
+
         # Build user info
         user_info = {
             "user_id": order.new_user.user_id,
@@ -581,7 +589,7 @@ async def get_all_bookings(
             "first_name": order.new_user.first_name,
             "last_name": order.new_user.last_name,
         }
-        
+
         # Build event info
         event_address = _extract_event_address(order.new_booked_event)
         booked_event = order.new_booked_event
@@ -603,7 +611,7 @@ async def get_all_bookings(
             ),
             "card_image": get_media_url(booked_event.card_image),
         }
-        
+
         booking_data = {
             "order_id": order.order_id,
             "booking_status": order.booking_status.value,
@@ -617,7 +625,7 @@ async def get_all_bookings(
             "seat_categories": seat_categories,
         }
         bookings_data.append(booking_data)
-    
+
     # Build pagination info
     total_pages = (total_count + limit - 1) // limit
     pagination_info = {
@@ -628,7 +636,7 @@ async def get_all_bookings(
         "has_next": page < total_pages,
         "has_prev": page > 1,
     }
-    
+
     return api_response(
         status_code=status.HTTP_200_OK,
         message=f"Retrieved {len(bookings_data)} booking orders successfully",
@@ -661,7 +669,7 @@ async def get_bookings_by_user(
     - Optional status filtering (PROCESSING, APPROVED, FAILED, CANCELLED)
     - Returns booking orders with event details for the specified user
     """
-    
+
     # Validate user_id format
     if not ID_REGEX.match(user_id):
         return api_response(
@@ -669,46 +677,54 @@ async def get_bookings_by_user(
             message="User ID must be alphanumeric with no spaces or special characters",
             data={},
         )
-    
+
     # Calculate offset for pagination
     offset = (page - 1) * limit
-    
+
     # Build base query
-    query = select(NewEventBookingOrder).where(
-        NewEventBookingOrder.user_ref_id == user_id
-    ).options(
-        selectinload(NewEventBookingOrder.line_items).selectinload(
-            NewEventBooking.new_seat_category
-        ),
-        selectinload(NewEventBookingOrder.new_booked_event).selectinload(
-            NewEvent.new_category
-        ),
-        selectinload(NewEventBookingOrder.new_booked_event).selectinload(
-            NewEvent.new_organizer
-        ),
-        selectinload(NewEventBookingOrder.new_slot),
-        selectinload(NewEventBookingOrder.new_user),
+    query = (
+        select(NewEventBookingOrder)
+        .where(NewEventBookingOrder.user_ref_id == user_id)
+        .options(
+            selectinload(NewEventBookingOrder.line_items).selectinload(
+                NewEventBooking.new_seat_category
+            ),
+            selectinload(NewEventBookingOrder.new_booked_event).selectinload(
+                NewEvent.new_category
+            ),
+            selectinload(NewEventBookingOrder.new_booked_event).selectinload(
+                NewEvent.new_organizer
+            ),
+            selectinload(NewEventBookingOrder.new_slot),
+            selectinload(NewEventBookingOrder.new_user),
+        )
     )
-    
+
     # Apply status filter if provided
     if status_filter:
         try:
             booking_status = BookingStatus(status_filter.upper())
-            query = query.where(NewEventBookingOrder.booking_status == booking_status)
+            query = query.where(
+                NewEventBookingOrder.booking_status == booking_status
+            )
         except ValueError:
             return api_response(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 message=f"Invalid status filter: {status_filter}. Valid values: PROCESSING, APPROVED, FAILED, CANCELLED",
                 data={},
             )
-    
+
     # Apply pagination and ordering
-    query = query.order_by(NewEventBookingOrder.created_at.desc()).offset(offset).limit(limit)
-    
+    query = (
+        query.order_by(NewEventBookingOrder.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+
     # Execute query
     result = await db.execute(query)
     orders = result.scalars().all()
-    
+
     # Get total count for pagination info
     count_query = select(func.count(NewEventBookingOrder.order_id)).where(
         NewEventBookingOrder.user_ref_id == user_id
@@ -716,12 +732,14 @@ async def get_bookings_by_user(
     if status_filter:
         try:
             booking_status = BookingStatus(status_filter.upper())
-            count_query = count_query.where(NewEventBookingOrder.booking_status == booking_status)
+            count_query = count_query.where(
+                NewEventBookingOrder.booking_status == booking_status
+            )
         except ValueError:
             pass  # Already handled above
-    
-    total_count = (await db.execute(count_query)).scalar()
-    
+
+    total_count = (await db.execute(count_query)).scalar() or 0
+
     # Build response data
     bookings_data = []
     for order in orders:
@@ -736,7 +754,7 @@ async def get_bookings_by_user(
             }
             for li in order.line_items
         ]
-        
+
         # Build event info
         event_address = _extract_event_address(order.new_booked_event)
         booked_event = order.new_booked_event
@@ -758,7 +776,7 @@ async def get_bookings_by_user(
             ),
             "card_image": get_media_url(booked_event.card_image),
         }
-        
+
         booking_data = {
             "order_id": order.order_id,
             "booking_status": order.booking_status.value,
@@ -771,7 +789,7 @@ async def get_bookings_by_user(
             "seat_categories": seat_categories,
         }
         bookings_data.append(booking_data)
-    
+
     # Build pagination info
     total_pages = (total_count + limit - 1) // limit
     pagination_info = {
@@ -782,7 +800,7 @@ async def get_bookings_by_user(
         "has_next": page < total_pages,
         "has_prev": page > 1,
     }
-    
+
     return api_response(
         status_code=status.HTTP_200_OK,
         message=f"Retrieved {len(bookings_data)} booking orders for user {user_id}",
@@ -816,7 +834,7 @@ async def get_bookings_by_organizer(
     - Optional status filtering (PROCESSING, APPROVED, FAILED, CANCELLED)
     - Returns booking orders with event and user details for events by the specified organizer
     """
-    
+
     # Validate organizer_id format
     if not ID_REGEX.match(organizer_id):
         return api_response(
@@ -824,63 +842,72 @@ async def get_bookings_by_organizer(
             message="Organizer ID must be alphanumeric with no spaces or special characters",
             data={},
         )
-    
+
     # Calculate offset for pagination
     offset = (page - 1) * limit
-    
+
     # Build base query - join with NewEvent to filter by organizer
-    query = select(NewEventBookingOrder).join(
-        NewEvent, NewEventBookingOrder.event_ref_id == NewEvent.event_id
-    ).where(
-        NewEvent.organizer_id == organizer_id
-    ).options(
-        selectinload(NewEventBookingOrder.line_items).selectinload(
-            NewEventBooking.new_seat_category
-        ),
-        selectinload(NewEventBookingOrder.new_booked_event).selectinload(
-            NewEvent.new_category
-        ),
-        selectinload(NewEventBookingOrder.new_booked_event).selectinload(
-            NewEvent.new_organizer
-        ),
-        selectinload(NewEventBookingOrder.new_slot),
-        selectinload(NewEventBookingOrder.new_user),
+    query = (
+        select(NewEventBookingOrder)
+        .join(NewEvent, NewEventBookingOrder.event_ref_id == NewEvent.event_id)
+        .where(NewEvent.organizer_id == organizer_id)
+        .options(
+            selectinload(NewEventBookingOrder.line_items).selectinload(
+                NewEventBooking.new_seat_category
+            ),
+            selectinload(NewEventBookingOrder.new_booked_event).selectinload(
+                NewEvent.new_category
+            ),
+            selectinload(NewEventBookingOrder.new_booked_event).selectinload(
+                NewEvent.new_organizer
+            ),
+            selectinload(NewEventBookingOrder.new_slot),
+            selectinload(NewEventBookingOrder.new_user),
+        )
     )
-    
+
     # Apply status filter if provided
     if status_filter:
         try:
             booking_status = BookingStatus(status_filter.upper())
-            query = query.where(NewEventBookingOrder.booking_status == booking_status)
+            query = query.where(
+                NewEventBookingOrder.booking_status == booking_status
+            )
         except ValueError:
             return api_response(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 message=f"Invalid status filter: {status_filter}. Valid values: PROCESSING, APPROVED, FAILED, CANCELLED",
                 data={},
             )
-    
+
     # Apply pagination and ordering
-    query = query.order_by(NewEventBookingOrder.created_at.desc()).offset(offset).limit(limit)
-    
+    query = (
+        query.order_by(NewEventBookingOrder.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
+
     # Execute query
     result = await db.execute(query)
     orders = result.scalars().all()
-    
+
     # Get total count for pagination info
-    count_query = select(func.count(NewEventBookingOrder.order_id)).join(
-        NewEvent, NewEventBookingOrder.event_ref_id == NewEvent.event_id
-    ).where(
-        NewEvent.organizer_id == organizer_id
+    count_query = (
+        select(func.count(NewEventBookingOrder.order_id))
+        .join(NewEvent, NewEventBookingOrder.event_ref_id == NewEvent.event_id)
+        .where(NewEvent.organizer_id == organizer_id)
     )
     if status_filter:
         try:
             booking_status = BookingStatus(status_filter.upper())
-            count_query = count_query.where(NewEventBookingOrder.booking_status == booking_status)
+            count_query = count_query.where(
+                NewEventBookingOrder.booking_status == booking_status
+            )
         except ValueError:
             pass  # Already handled above
-    
-    total_count = (await db.execute(count_query)).scalar()
-    
+
+    total_count = (await db.execute(count_query)).scalar() or 0
+
     # Build response data
     bookings_data = []
     for order in orders:
@@ -895,7 +922,7 @@ async def get_bookings_by_organizer(
             }
             for li in order.line_items
         ]
-        
+
         # Build user info
         user_info = {
             "user_id": order.new_user.user_id,
@@ -904,7 +931,7 @@ async def get_bookings_by_organizer(
             "first_name": order.new_user.first_name,
             "last_name": order.new_user.last_name,
         }
-        
+
         # Build event info
         event_address = _extract_event_address(order.new_booked_event)
         booked_event = order.new_booked_event
@@ -926,7 +953,7 @@ async def get_bookings_by_organizer(
             ),
             "card_image": get_media_url(booked_event.card_image),
         }
-        
+
         booking_data = {
             "order_id": order.order_id,
             "booking_status": order.booking_status.value,
@@ -940,7 +967,7 @@ async def get_bookings_by_organizer(
             "seat_categories": seat_categories,
         }
         bookings_data.append(booking_data)
-    
+
     # Build pagination info
     total_pages = (total_count + limit - 1) // limit
     pagination_info = {
@@ -951,7 +978,7 @@ async def get_bookings_by_organizer(
         "has_next": page < total_pages,
         "has_prev": page > 1,
     }
-    
+
     return api_response(
         status_code=status.HTTP_200_OK,
         message=f"Retrieved {len(bookings_data)} booking orders for organizer {organizer_id}",
@@ -1039,6 +1066,16 @@ async def get_booking_order_details(
             order.new_slot.slot_date.strftime("%Y-%m-%d")
             if order.new_slot
             else None
+        ),
+        "event_time": (
+            order.new_slot.start_time
+            if order.new_slot and order.new_slot.start_time
+            else "TBA"
+        ),
+        "event_duration": (
+            f"{order.new_slot.duration_minutes} mins"
+            if order.new_slot and order.new_slot.duration_minutes
+            else "N/A"
         ),
         "booking_date": order.created_at.strftime("%Y-%m-%d"),
         "card_image": get_media_url(booked_event.card_image),

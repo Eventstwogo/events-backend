@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -229,8 +228,8 @@
             justify-content: center;
         }
 
-        /* Specific formatting for different data types */
-        .ticket-detail.date .ticket-detail-value {
+        .ticket-detail.date .ticket-detail-value,
+        .ticket-detail.location .ticket-detail-value {
             font-size: 13px;
             line-height: 1.3;
         }
@@ -239,41 +238,21 @@
             text-transform: capitalize;
         }
 
-        .ticket-detail.location .ticket-detail-value {
-            font-size: 13px;
-            line-height: 1.3;
-        }
-
         .ticket-detail.seats .ticket-detail-value {
             font-variant-numeric: tabular-nums;
         }
 
-        /* Enhanced responsive grid for better text handling */
         @media (max-width: 480px) {
             .ticket-details {
                 grid-template-columns: 1fr !important;
             }
         }
 
-        /* Text overflow handling for very long content */
         .ticket-detail-value.long-text {
             font-size: 12px !important;
             line-height: 1.2 !important;
         }
 
-        /* Date range formatting */
-        .ticket-detail.date .ticket-detail-value {
-            white-space: pre-line;
-            text-align: center;
-        }
-
-        /* Location text handling */
-        .ticket-detail.location .ticket-detail-value {
-            white-space: normal;
-            max-width: 100%;
-        }
-
-        /* Ensure consistent icon alignment */
         .ticket-detail-label .emoji {
             flex-shrink: 0;
         }
@@ -501,10 +480,9 @@
         <!-- Header -->
         <div class="header">
             {% if logo_url %}
-            <img src="{{ logo_url }}" alt="Events2Go" class="logo">
+                <img src="{{ logo_url }}" alt="Events2Go" class="logo">
             {% else %}
-            <img src="https://drive.google.com/uc?export=view&id=11A_iCjfgjonUXMhjptwsNk6FvzIqZRvi" alt="Events2Go"
-                class="logo">
+                <img src="https://drive.google.com/uc?export=view&id=11A_iCjfgjonUXMhjptwsNk6FvzIqZRvi" alt="Events2Go" class="logo">
             {% endif %}
             <h1 class="header-title">🎉 Booking Confirmed!</h1>
         </div>
@@ -516,15 +494,14 @@
             <p class="greeting">Hi <strong>{{ user_name }}</strong>,</p>
 
             <p class="message">
-                Great news! Your booking has been confirmed and payment processed successfully. Your digital ticket is
-                ready!
+                Great news! Your booking has been confirmed and payment processed successfully. Your digital ticket is ready!
             </p>
 
             <!-- Digital Ticket -->
             <article class="ticket-container" aria-label="Digital Ticket">
                 <header class="ticket-header">
                     <h3 class="ticket-title">🎫 Digital Ticket</h3>
-                    <div class="booking-id" aria-label="Booking ID">ID: #{{ booking_id }}</div>
+                    <div class="booking-id" aria-label="Order ID">ID: #{{ order_id }}</div>
                 </header>
 
                 <h2 class="event-name">{{ event_title }}</h2>
@@ -541,9 +518,9 @@
                     <div class="ticket-detail time">
                         <div class="ticket-detail-label">
                             <span class="emoji" aria-hidden="true">⏰</span>
-                            <span class="label-text">Time Slot</span>
+                            <span class="label-text">Time</span>
                         </div>
-                        <div class="ticket-detail-value">{{ time_slot }}</div>
+                        <div class="ticket-detail-value">{{ event_time }} ({{ event_duration }})</div>
                     </div>
 
                     <div class="ticket-detail location">
@@ -554,12 +531,12 @@
                         <address class="ticket-detail-value">{{ event_location }}</address>
                     </div>
 
-                    <div class="ticket-detail seats">
+                    <div class="ticket-detail category">
                         <div class="ticket-detail-label">
-                            <span class="emoji" aria-hidden="true">👥</span>
-                            <span class="label-text">Seats</span>
+                            <span class="emoji" aria-hidden="true">🏷️</span>
+                            <span class="label-text">Category</span>
                         </div>
-                        <div class="ticket-detail-value">{{ num_seats }} seat(s)</div>
+                        <div class="ticket-detail-value">{{ event_category }}</div>
                     </div>
                 </section>
             </article>
@@ -569,8 +546,8 @@
                 <h3 style="margin-bottom: 16px; color: #24292f;">Booking Details</h3>
 
                 <div class="detail-item">
-                    <span class="detail-label">Booking ID:</span>
-                    <span class="detail-value">#{{ booking_id }}</span>
+                    <span class="detail-label">Order ID:</span>
+                    <span class="detail-value">#{{ order_id }}</span>
                 </div>
 
                 <div class="detail-item">
@@ -589,56 +566,48 @@
                 </div>
             </div>
 
-            <!-- Price Summary -->
+            <!-- Seat & Price Breakdown -->
             <div class="price-summary">
-                <h4 style="margin-bottom: 12px; color: #24292f;">Payment Summary</h4>
+                <h4 style="margin-bottom: 12px; color: #24292f;">Payment Breakdown</h4>
 
+                {% for category in seat_categories %}
                 <div class="price-item">
-                    <span>Price per seat:</span>
-                    <span>AUD ${{ price_per_seat }}</span>
+                    <span>{{ category.label }} ({{ category.num_seats }} × AUD ${{ category.price_per_seat }}):</span>
+                    <span>AUD ${{ category.total_price }}</span>
                 </div>
-
-                <div class="price-item">
-                    <span>Number of seats:</span>
-                    <span>{{ num_seats }}</span>
-                </div>
+                {% endfor %}
 
                 <div class="price-total">
                     <span>Total Paid:</span>
-                    <span>AUD ${{ total_price }}</span>
+                    <span>AUD ${{ total_amount }}</span>
                 </div>
             </div>
 
             <!-- Important Information -->
             <div class="important-info">
                 <h4>📋 Important Information</h4>
-                <p>• Please arrive 15 minutes before your scheduled time slot</p>
+                <p>• Please arrive 15 minutes before your scheduled time</p>
                 <p>• Bring a valid ID for verification</p>
-                <p>• This email serves as your ticket - please keep it safe</p>
-                <p>• For any changes or cancellations, contact us at least 24 hours in advance</p>
+                <p>• This email serves as your ticket – please keep it safe</p>
+                <p>• For changes or cancellations, contact support at least 24 hours in advance</p>
             </div>
 
             <!-- CTA Buttons -->
             <div class="cta-container">
-                <a href="{{ event_url }}" class="cta-button">
-                    View Event Details
-                </a>
-                <a href="{{ my_bookings_url }}" class="cta-button secondary">
-                    My Bookings
-                </a>
+                <a href="{{ event_url }}" class="cta-button">View Event Details</a>
+                <a href="{{ my_bookings_url }}" class="cta-button secondary">My Bookings</a>
             </div>
 
             <p class="message">
-                Thank you for choosing Events2Go! We hope you have an amazing experience at {{ event_title }}.
-                If you have any questions, feel free to contact our support team.
+                Thank you for choosing <strong>Events2Go</strong>! We hope you have an amazing experience at <strong>{{ event_title }}</strong>.
+                If you have any questions, feel free to reach out to our support team.
             </p>
         </div>
 
         <!-- Footer -->
         <div class="footer">
             <div class="footer-text">
-                Need help? Contact our <a href="{{ support_url }}" class="footer-link">support team</a> or visit our <a
-                    href="{{ help_center_url }}" class="footer-link">help center</a>.
+                Need help? Contact our <a href="{{ support_url }}" class="footer-link">support team</a> or visit our <a href="{{ help_center_url }}" class="footer-link">help center</a>.
             </div>
             <div class="footer-text">
                 © {{ year }} Events2Go. All rights reserved.
@@ -646,5 +615,4 @@
         </div>
     </div>
 </body>
-
 </html>

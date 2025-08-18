@@ -3,10 +3,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from event_service.schemas.featured_events import (
     FeaturedEventCreate,
-    FeaturedEventListResponse,
     FeaturedEventResponse,
     FeaturedEventUpdateRequest,
     FeaturedEventUpdateResponse,
+    OldFeaturedEventListResponse,
+    OldFeaturedEventResponse,
 )
 from event_service.services.featured_events import (
     create_featured_event,
@@ -26,13 +27,13 @@ router = APIRouter()
 
 
 @router.get(
-    "",
+    "/old",
     status_code=status.HTTP_200_OK,
-    response_model=FeaturedEventListResponse,
+    response_model=OldFeaturedEventListResponse,
     summary="Get Featured Events",
 )
 @exception_handler
-async def get_featured_events(
+async def get_featured_eventss(
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -79,7 +80,7 @@ async def get_featured_events(
             "featured_event": event.featured_event,
             "is_online": event.is_online,
         }
-        featured_events_data.append(FeaturedEventResponse(**event_data))
+        featured_events_data.append(OldFeaturedEventResponse(**event_data))
 
     return api_response(
         status_code=status.HTTP_200_OK,
@@ -130,7 +131,6 @@ async def update_event_featured(
         message="Event featured status updated successfully",
         data=response_data,
     )
-
 
 
 # POST: create featured event

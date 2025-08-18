@@ -12,7 +12,7 @@ class FeaturedEventUpdateRequest(BaseModel):
     featured_event: bool = Field(..., description="Featured event status")
 
 
-class FeaturedEventResponse(BaseModel):
+class OldFeaturedEventResponse(BaseModel):
     """Response model for featured event data"""
 
     event_id: str = Field(..., description="Event ID")
@@ -35,14 +35,14 @@ class FeaturedEventResponse(BaseModel):
         return get_media_url(value)
 
 
-class FeaturedEventListResponse(BaseModel):
+class OldFeaturedEventListResponse(BaseModel):
     """Response model for list of featured events"""
 
     success: bool = Field(True, description="Success status")
     message: str = Field(
         "Featured events retrieved successfully", description="Response message"
     )
-    data: List[FeaturedEventResponse] = Field(
+    data: List[OldFeaturedEventResponse] = Field(
         ..., description="List of featured events"
     )
     total: int = Field(..., description="Total number of featured events")
@@ -66,16 +66,17 @@ class FeaturedEventBase(BaseModel):
     end_date: date
     total_weeks: int
     price: float
-   
 
 
 class FeaturedEventCreate(FeaturedEventBase):
     """Request schema for creating a Featured Event"""
+
     pass
 
 
 class FeaturedEventResponse(BaseModel):
     """Response schema for Featured Event"""
+
     id: int
     feature_id: str
     start_date: date
@@ -85,11 +86,11 @@ class FeaturedEventResponse(BaseModel):
     feature_status: bool
 
     # Optional enriched fields
-    event_ref_id: Optional[str] = None   # keep if you want to show FK
+    event_ref_id: Optional[str] = None  # keep if you want to show FK
     user_ref_id: Optional[str] = None
     event_slug: Optional[str] = None
     event_title: Optional[str] = None
-    organizer_name: Optional[str] = None  
+    organizer_name: Optional[str] = None
 
     class Config:
         from_attributes = True
