@@ -57,3 +57,39 @@ class FeaturedEventUpdateResponse(BaseModel):
         description="Response message",
     )
     data: dict = Field(..., description="Updated event data")
+
+
+class FeaturedEventBase(BaseModel):
+    user_ref_id: str
+    event_ref_id: str
+    start_date: date
+    end_date: date
+    total_weeks: int
+    price: float
+   
+
+
+class FeaturedEventCreate(FeaturedEventBase):
+    """Request schema for creating a Featured Event"""
+    pass
+
+
+class FeaturedEventResponse(BaseModel):
+    """Response schema for Featured Event"""
+    id: int
+    feature_id: str
+    start_date: date
+    end_date: date
+    total_weeks: int
+    price: float
+    feature_status: bool
+
+    # Optional enriched fields
+    event_ref_id: Optional[str] = None   # keep if you want to show FK
+    user_ref_id: Optional[str] = None
+    event_slug: Optional[str] = None
+    event_title: Optional[str] = None
+    organizer_name: Optional[str] = None  
+
+    class Config:
+        from_attributes = True

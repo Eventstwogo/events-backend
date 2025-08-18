@@ -19,6 +19,7 @@ from sqlalchemy.orm import (
 
 from shared.core.security import generate_searchable_hash
 from shared.db.models.base import EventsBase
+from shared.db.models.events import FeaturedEvents
 from shared.db.models.new_events import NewEvent
 from shared.db.types import EncryptedString
 
@@ -133,6 +134,9 @@ class AdminUser(EventsBase):
         back_populates="admin_user",
         uselist=False,
         cascade="all, delete-orphan",
+    )
+    featured_refs: Mapped[list["FeaturedEvents"]] = relationship(
+        "FeaturedEvents", back_populates="user_ref"
     )
 
     # Properties for username and email

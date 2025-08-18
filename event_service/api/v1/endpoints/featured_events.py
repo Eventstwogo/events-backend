@@ -2,14 +2,17 @@ from fastapi import APIRouter, Depends, Path, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from event_service.schemas.featured_events import (
+    FeaturedEventCreate,
     FeaturedEventListResponse,
     FeaturedEventResponse,
     FeaturedEventUpdateRequest,
     FeaturedEventUpdateResponse,
 )
 from event_service.services.featured_events import (
+    create_featured_event,
     fetch_featured_events,
     get_featured_events_count,
+    list_featured_events,
     update_event_featured_status,
 )
 from event_service.services.response_builder import (
@@ -125,5 +128,46 @@ async def update_event_featured(
     return api_response(
         status_code=status.HTTP_200_OK,
         message="Event featured status updated successfully",
+        data=response_data,
+    )
+
+
+
+# POST: create featured event
+@router.post(
+    "/",
+    response_model=FeaturedEventResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a featured event",
+)
+@exception_handler
+async def add_featured_event(
+    request: FeaturedEventCreate,
+    db: AsyncSession = Depends(get_db),
+):
+    event = await create_featured_event(db, request)
+    return api_response(
+        status_code=status.HTTP_201_CREATED,
+        message="Featured event created successfully",
+        data=FeaturedEventResponse.model_validate(event),
+    )
+
+
+# GET: fetch featured events
+@router.get(
+    "/",
+    response_model=list[FeaturedEventResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Get all featured events",
+)
+@exception_handler
+async def get_featured_events(
+    db: AsyncSession = Depends(get_db),
+):
+    events = await list_featured_events(db)
+    response_data = [FeaturedEventResponse.model_validate(e) for e in events]
+    return api_response(
+        status_code=status.HTTP_200_OK,
+        message="Fetched featured events successfully",
         data=response_data,
     )
