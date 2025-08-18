@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Dict, List
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Path, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
@@ -343,5 +343,107 @@ async def get_event_slots(
     return api_response(
         status_code=status.HTTP_200_OK,
         message="Event slots fetched successfully",
+        data=response_wrapper.model_dump(),
+    )
+
+
+@router.get(
+    "/date-details/{event_ref_id}/{event_date}",
+    status_code=status.HTTP_200_OK,
+    summary="Get slots and seat categories for a specific event on a given date",
+)
+@exception_handler
+async def get_event_slots_by_date(
+    event_ref_id: str,
+    event_date: str = Path(..., description="Event date in YYYY-MM-DD format"),
+    db: AsyncSession = Depends(get_db),
+) -> JSONResponse:
+    """
+    Fetch slots and seat categories for a given event on a specific date.
+    """
+
+    # 1. Validate event exists
+    event = await check_event_exists(db, event_ref_id)
+    if not event:
+        return event_not_found_response()
+
+    # 2. Validate event status
+    if event.event_status != EventStatus.ACTIVE:
+        return api_response(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message=f"Event '{event_ref_id}' is not active",
+            data={},
+        )
+
+    # 3. Parse and validate date
+    try:
+        target_date = datetime.strptime(event_date, "%Y-%m-%d").date()
+    except ValueError:
+        return api_response(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message=f"Invalid date format '{event_date}', expected YYYY-MM-DD",
+            data={},
+        )
+
+    # 4. Fetch slots for event on this date
+    query_slots = (
+        select(NewEventSlot)
+        .where(
+            NewEventSlot.event_ref_id == event_ref_id,
+            NewEventSlot.slot_date == target_date,
+        )
+        .order_by(NewEventSlot.start_time)
+    )
+    slots = (await db.execute(query_slots)).scalars().all()
+
+    if not slots:
+        return api_response(
+            status_code=status.HTTP_200_OK,
+            message="No slots found for this event on the given date",
+            data={
+                "event_ref_id": event_ref_id,
+                "event_dates": [target_date],
+                "slot_data": {event_date: []},
+            },
+        )
+
+    # 5. Build slot_data_input for wrapper
+    slot_data_input: Dict[str, List[dict]] = {}
+
+    for slot in slots:
+        query_seats = select(NewEventSeatCategory).where(
+            NewEventSeatCategory.slot_ref_id == slot.slot_id
+        )
+        seats = (await db.execute(query_seats)).scalars().all()
+
+        seat_responses = [
+            {
+                "seat_category_id": s.seat_category_id,
+                "label": s.category_label,
+                "price": s.price,
+                "totalTickets": s.total_tickets,
+                "booked": s.booked,
+                "held": s.held,
+            }
+            for s in seats
+        ]
+
+        slot_dict = {
+            "slot_id": slot.slot_id,
+            "time": slot.start_time,
+            "duration": minutes_to_duration_string(slot.duration_minutes),
+            "seatCategories": seat_responses,
+        }
+
+        slot_data_input.setdefault(event_date, []).append(slot_dict)
+
+    # 6. Use wrapper class for consistent response
+    response_wrapper = EventSlotResponseWrapper.from_input(
+        event_ref_id=event_ref_id, slot_data_input=slot_data_input
+    )
+
+    return api_response(
+        status_code=status.HTTP_200_OK,
+        message="Event slots fetched successfully for the given date",
         data=response_wrapper.model_dump(),
     )

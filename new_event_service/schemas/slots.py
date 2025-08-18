@@ -2,7 +2,13 @@ import re
 from datetime import date, datetime
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field, ValidationError, field_validator
+from pydantic import (
+    BaseModel,
+    Field,
+    ValidationError,
+    computed_field,
+    field_validator,
+)
 
 from shared.db.models import EventStatus
 from shared.utils.security_validators import contains_xss
@@ -219,6 +225,12 @@ class SeatCategoryResponse(BaseModel):
     totalTickets: int
     booked: int = 0
     held: int = 0
+
+    @computed_field
+    @property
+    def available(self) -> int:
+        """Available seats = total - (booked + held)."""
+        return self.totalTickets - (self.booked + self.held)
 
 
 class EventSlotResponse(BaseModel):

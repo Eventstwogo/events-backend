@@ -372,7 +372,7 @@ class NewEventBooking(EventsBase):
             "seat_category_ref_id",
         ),
         UniqueConstraint(
-            "user_id",
+            "user_ref_id",
             "event_ref_id",
             "slot_ref_id",
             "seat_category_ref_id",
