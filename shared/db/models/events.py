@@ -60,7 +60,43 @@ class EventStatus(str, Enum):
 
     def __str__(self):
         return self.name.lower()
+    
 
+
+class EventType(EventsBase):
+    __tablename__ = "e2geventtype"
+
+    id: Mapped[int] = mapped_column(
+        Integer, primary_key=True, autoincrement=True
+    )
+    type_id: Mapped[str] = mapped_column(
+        String(6),
+        unique=True,
+        nullable=False,
+    )
+    event_type: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        index=True,
+    )
+
+    type_status: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+   
 
 class Event(EventsBase):
     __tablename__ = "e2gevents"
