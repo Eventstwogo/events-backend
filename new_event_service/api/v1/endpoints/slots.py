@@ -14,6 +14,7 @@ from new_event_service.schemas.slots import (
 from new_event_service.services.events import (
     check_event_exists,
     check_event_status_created_or_not_by_event_id,
+    fetch_event_by_slug,
 )
 from new_event_service.services.response_builder import (
     event_not_created_response,
@@ -348,13 +349,13 @@ async def get_event_slots(
 
 
 @router.get(
-    "/date-details/{event_ref_id}/{event_date}",
+    "/date-details/{event_slug}/{event_date}",
     status_code=status.HTTP_200_OK,
     summary="Get slots and seat categories for a specific event on a given date",
 )
 @exception_handler
 async def get_event_slots_by_date(
-    event_ref_id: str,
+    event_slug: str,
     event_date: str = Path(..., description="Event date in YYYY-MM-DD format"),
     db: AsyncSession = Depends(get_db),
 ) -> JSONResponse:
@@ -363,7 +364,7 @@ async def get_event_slots_by_date(
     """
 
     # 1. Validate event exists
-    event = await check_event_exists(db, event_ref_id)
+    event = await fetch_event_by_slug(db, event_slug)
     if not event:
         return event_not_found_response()
 
@@ -371,7 +372,7 @@ async def get_event_slots_by_date(
     if event.event_status != EventStatus.ACTIVE:
         return api_response(
             status_code=status.HTTP_400_BAD_REQUEST,
-            message=f"Event '{event_ref_id}' is not active",
+            message=f"Event '{event.event_slug}' is not active",
             data={},
         )
 
@@ -389,7 +390,7 @@ async def get_event_slots_by_date(
     query_slots = (
         select(NewEventSlot)
         .where(
-            NewEventSlot.event_ref_id == event_ref_id,
+            NewEventSlot.event_ref_id == event.event_id,
             NewEventSlot.slot_date == target_date,
         )
         .order_by(NewEventSlot.start_time)
@@ -401,7 +402,7 @@ async def get_event_slots_by_date(
             status_code=status.HTTP_200_OK,
             message="No slots found for this event on the given date",
             data={
-                "event_ref_id": event_ref_id,
+                "event_ref_id": event.event_id,
                 "event_dates": [target_date],
                 "slot_data": {event_date: []},
             },
@@ -439,7 +440,7 @@ async def get_event_slots_by_date(
 
     # 6. Use wrapper class for consistent response
     response_wrapper = EventSlotResponseWrapper.from_input(
-        event_ref_id=event_ref_id, slot_data_input=slot_data_input
+        event_ref_id=event.event_id, slot_data_input=slot_data_input
     )
 
     return api_response(

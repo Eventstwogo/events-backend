@@ -1,7 +1,7 @@
 """Admin email functions for Events2Go."""
 
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Dict, List, Optional
 from urllib.parse import quote
 
 from pydantic import EmailStr
@@ -459,17 +459,19 @@ def send_organizer_review_notification(
 def send_booking_success_email(
     email: EmailStr,
     user_name: str,
-    booking_id: str,
+    order_id: str,
     event_title: str,
     event_slug: str,
     event_date: str,
+    event_time: str,
+    event_duration: str,
     event_location: str,
     event_category: str,
-    time_slot: str,
-    num_seats: int,
-    price_per_seat: float,
-    total_price: float,
     booking_date: str,
+    total_amount: float,
+    seat_categories: List[
+        Dict[str, str]
+    ],  # list of {label, num_seats, price_per_seat, total_price}
     event_url: Optional[str] = None,
     my_bookings_url: Optional[str] = None,
     support_url: Optional[str] = None,
@@ -477,21 +479,22 @@ def send_booking_success_email(
     logo_url: Optional[str] = None,
 ) -> bool:
     """
-    Send booking success confirmation email with digital ticket.
+    Send booking success confirmation email with detailed ticket info.
 
     Args:
         email: User's email address
         user_name: Name of the user who made the booking
-        booking_id: Unique booking identifier
+        order_id: Unique booking order identifier
         event_title: Title of the booked event
-        event_date: Event date (formatted string)
-        event_location: Event location/venue
-        event_category: Event category
-        time_slot: Booked time slot
-        num_seats: Number of seats booked
-        price_per_seat: Price per individual seat
-        total_price: Total amount paid
+        event_slug: Slug for event details page
+        event_date: Event date (string)
+        event_time: Event start time (string)
+        event_duration: Duration of the event (string)
+        event_location: Event venue
+        event_category: Event category name
         booking_date: Date when booking was made
+        total_amount: Total order amount
+        seat_categories: List of seat categories booked with details
         event_url: URL to view event details
         my_bookings_url: URL to user's bookings page
         support_url: URL to support page
@@ -501,19 +504,31 @@ def send_booking_success_email(
     Returns:
         bool: True if email sent successfully, False otherwise
     """
+
+    # Build a structured table-like representation for email template
+    seat_categories_summary = [
+        {
+            "label": sc["label"],
+            "num_seats": sc["num_seats"],
+            "price_per_seat": f"{sc['price_per_seat']:.2f}",
+            "total_price": f"{sc['total_price']:.2f}",
+        }
+        for sc in seat_categories
+    ]
+
     context = {
         "user_name": user_name,
         "user_email": email,
-        "booking_id": booking_id,
+        "order_id": order_id,
         "event_title": event_title,
         "event_date": event_date,
+        "event_time": event_time,
+        "event_duration": event_duration,
         "event_location": event_location,
         "event_category": event_category,
-        "time_slot": time_slot,
-        "num_seats": num_seats,
-        "price_per_seat": f"{price_per_seat:.2f}",
-        "total_price": f"{total_price:.2f}",
         "booking_date": booking_date,
+        "total_amount": f"{total_amount:.2f}",
+        "seat_categories": seat_categories_summary,  # ✅ all seat categories
         "event_url": event_url
         or f"{settings.USERS_APPLICATION_FRONTEND_URL}/event/{event_slug}",
         "my_bookings_url": my_bookings_url
@@ -535,9 +550,9 @@ def send_booking_success_email(
 
     if not success:
         logger.warning(
-            "Failed to send booking success email to %s for booking %s",
+            "Failed to send booking success email to %s for order %s",
             email,
-            booking_id,
+            order_id,
         )
 
     return success

@@ -54,6 +54,7 @@ class PaymentStatus(str, Enum):
     REFUNDED = "REFUNDED"
     PARTIALLY_REFUNDED = "PARTIALLY_REFUNDED"
     CANCELLED = "CANCELLED"
+    COMPLETED = "COMPLETED"
 
     def __str__(self) -> str:
         return self.value.lower()
@@ -160,8 +161,10 @@ class NewEvent(EventsBase):
         cascade="all, delete-orphan",
         lazy="selectin",
     )
-    new_bookings: Mapped[List[NewEventBooking]] = relationship(
-        "NewEventBooking", back_populates="new_booked_event", lazy="selectin"
+    new_booking_orders: Mapped[List["NewEventBookingOrder"]] = relationship(
+        "NewEventBookingOrder",
+        back_populates="new_booked_event",
+        lazy="selectin",
     )
 
     __table_args__ = (
@@ -213,8 +216,8 @@ class NewEventSlot(EventsBase):
         cascade="all, delete-orphan",
         lazy="selectin",
     )
-    new_eventbookings: Mapped[List[NewEventBooking]] = relationship(
-        "NewEventBooking", back_populates="new_slot", lazy="selectin"
+    new_booking_orders: Mapped[List["NewEventBookingOrder"]] = relationship(
+        "NewEventBookingOrder", back_populates="new_slot", lazy="selectin"
     )
 
     __table_args__ = (
@@ -275,15 +278,15 @@ class NewEventSeatCategory(EventsBase):
     # )
 
 
-# -------------------- EVENT BOOKING TABLE -------------------- #
+# -------------------- EVENT BOOKING ORDER TABLE -------------------- #
 
 
-class NewEventBooking(EventsBase):
-    """Represents a booking made by a user for an event slot."""
+class NewEventBookingOrder(EventsBase):
+    """Represents a single order for one or more seat category bookings."""
 
-    __tablename__ = "e2gevent_bookings_new"
+    __tablename__ = "e2gevent_booking_orders"
 
-    booking_id: Mapped[str] = mapped_column(
+    order_id: Mapped[str] = mapped_column(
         String(12), primary_key=True, index=True
     )
 
@@ -293,35 +296,26 @@ class NewEventBooking(EventsBase):
         nullable=False,
         index=True,
     )
+
     event_ref_id: Mapped[str] = mapped_column(
         String(6),
         ForeignKey("e2gevents_new.event_id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
+
     slot_ref_id: Mapped[str] = mapped_column(
         String(20),
         ForeignKey("e2geventslots_new.slot_id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
-    seat_category_ref_id: Mapped[str] = mapped_column(
-        ForeignKey(
-            "e2gevent_seat_categories_new.seat_category_id", ondelete="CASCADE"
-        ),
-        nullable=False,
-        index=True,
-    )
 
-    num_seats: Mapped[int] = mapped_column(Integer, nullable=False)
-    price_per_seat: Mapped[float] = mapped_column(
-        Numeric(10, 2), nullable=False
-    )
-    total_price: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    total_amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
 
     booking_status: Mapped[BookingStatus] = mapped_column(
         SQLAlchemyEnum(
-            BookingStatus, name="booking_status_enum", native_enum=False
+            BookingStatus, name="booking_order_status_enum", native_enum=False
         ),
         default=BookingStatus.PROCESSING,
         nullable=False,
@@ -329,7 +323,7 @@ class NewEventBooking(EventsBase):
     )
     payment_status: Mapped[PaymentStatus] = mapped_column(
         SQLAlchemyEnum(
-            PaymentStatus, name="payment_status_enum", native_enum=False
+            PaymentStatus, name="payment_order_status_enum", native_enum=False
         ),
         default=PaymentStatus.PENDING,
         nullable=False,
@@ -352,30 +346,86 @@ class NewEventBooking(EventsBase):
 
     # Relationships
     new_user: Mapped["User"] = relationship(
-        "User", back_populates="new_event_bookings", lazy="selectin"
+        "User",
+        back_populates="new_event_booking_orders",  # ← Add this in User model!
+        lazy="selectin",
     )
     new_booked_event: Mapped["NewEvent"] = relationship(
-        "NewEvent", back_populates="new_bookings", lazy="selectin"
+        "NewEvent",
+        back_populates="new_booking_orders",  # ← Add this in NewEvent
+        lazy="selectin",
     )
     new_slot: Mapped["NewEventSlot"] = relationship(
-        "NewEventSlot", back_populates="new_eventbookings", lazy="selectin"
+        "NewEventSlot",
+        back_populates="new_booking_orders",  # ← Add this in NewEventSlot
+        lazy="selectin",
+    )
+
+    # one order → many booking line items
+    line_items: Mapped[List["NewEventBooking"]] = relationship(
+        "NewEventBooking",
+        back_populates="order",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+
+# -------------------- EVENT BOOKING TABLE -------------------- #
+
+
+class NewEventBooking(EventsBase):
+    """Represents a booking line item (specific seat category) within an order."""
+
+    __tablename__ = "e2gevent_bookings_new"
+
+    booking_id: Mapped[str] = mapped_column(
+        String(12), primary_key=True, index=True
+    )
+
+    order_id: Mapped[str] = mapped_column(
+        String(12),
+        ForeignKey("e2gevent_booking_orders.order_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    seat_category_ref_id: Mapped[str] = mapped_column(
+        ForeignKey(
+            "e2gevent_seat_categories_new.seat_category_id", ondelete="CASCADE"
+        ),
+        nullable=False,
+        index=True,
+    )
+
+    num_seats: Mapped[int] = mapped_column(Integer, nullable=False)
+    price_per_seat: Mapped[float] = mapped_column(
+        Numeric(10, 2), nullable=False
+    )
+    total_price: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    # Relationships
+    order: Mapped["NewEventBookingOrder"] = relationship(
+        "NewEventBookingOrder", back_populates="line_items"
     )
     new_seat_category: Mapped["NewEventSeatCategory"] = relationship(
         "NewEventSeatCategory", back_populates="new_bookings", lazy="selectin"
     )
 
     __table_args__ = (
-        Index(
-            "ix_booking_event_slot_cat",
-            "event_ref_id",
-            "slot_ref_id",
-            "seat_category_ref_id",
-        ),
+        # Ensure one user can’t double-book same seat category in the same slot
         UniqueConstraint(
-            "user_ref_id",
-            "event_ref_id",
-            "slot_ref_id",
+            "order_id",
             "seat_category_ref_id",
-            name="uq_user_booking_once",
+            name="uq_order_seatcategory_once",
         ),
     )

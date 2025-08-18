@@ -55,7 +55,7 @@ async def check_event_status_created_or_not_by_event_id(
 ) -> Optional[NewEvent]:
     query = select(NewEvent).filter(
         NewEvent.event_id == event_id,
-        NewEvent.event_status == EventStatus.PENDING,
+        NewEvent.event_status == EventStatus.ACTIVE,
     )
     result = await db.execute(query)
     return result.scalar_one_or_none()
