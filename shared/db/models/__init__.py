@@ -45,6 +45,8 @@ from .new_events import (
     NewEventSlot,
 )
 
+from .coupons import Coupon
+
 # Models that depend on Organization Profile
 from .organizer import BusinessProfile, OrganizerQuery, QueryStatus
 
@@ -97,6 +99,9 @@ __all__ = [
     # Organizer Queries
     "OrganizerQuery",
     "QueryStatus",
+
+    #coupon
+    "Coupon",
 ]
 
 # Model relationships overview:
