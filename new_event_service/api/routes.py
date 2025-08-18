@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from new_event_service.api.v1.endpoints import (
+    analytics,
     category_events,
     event_creation_with_images,
     events,
@@ -27,4 +28,7 @@ new_event_router.include_router(
     category_events.router,
     prefix="/new-category-events",
     tags=["New Category Events"],
+)
+new_event_router.include_router(
+    analytics.router, prefix="/new-events/new-analytics", tags=["New Event Analytics"]
 )

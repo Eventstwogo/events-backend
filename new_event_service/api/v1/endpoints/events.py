@@ -169,7 +169,7 @@ async def get_event_by_id(
         event_id=event.event_id,
         event_title=event.event_title,
         event_slug=event.event_slug,
-        event_dates=[s.slot_date for s in slots],
+        event_dates=list(set(s.slot_date for s in slots)),
         location=event.location,
         is_online=event.is_online,
         event_status=event.event_status,
