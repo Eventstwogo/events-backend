@@ -287,7 +287,7 @@ class NewEventBooking(EventsBase):
         String(12), primary_key=True, index=True
     )
 
-    user_id: Mapped[str] = mapped_column(
+    user_ref_id: Mapped[str] = mapped_column(
         String(6),
         ForeignKey("e2gusers.user_id", ondelete="CASCADE"),
         nullable=False,

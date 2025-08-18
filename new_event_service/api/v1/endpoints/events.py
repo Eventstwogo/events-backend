@@ -1,6 +1,6 @@
 from typing import Dict, List
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Form, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -14,11 +14,15 @@ from new_event_service.schemas.events import (
     OrganizerInfo,
     SubCategoryInfo,
 )
-from new_event_service.services.events import fetch_event_by_id_with_relations
+from new_event_service.services.events import (
+    fetch_event_by_id,
+    fetch_event_by_id_with_relations,
+)
 from new_event_service.services.response_builder import event_not_found_response
 from new_event_service.utils.utils import minutes_to_duration_string
 from shared.core.api_response import api_response
 from shared.db.models import NewEvent, NewEventSeatCategory, NewEventSlot
+from shared.db.models.new_events import EventStatus
 from shared.db.sessions.database import get_db
 from shared.utils.exception_handlers import exception_handler
 
@@ -202,4 +206,81 @@ async def get_event_by_id(
         status_code=status.HTTP_200_OK,
         message="Event retrieved successfully",
         data=event_response.model_dump(),
+    )
+
+
+@router.patch(
+    "/status/{event_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Update event status (publish/draft)",
+)
+@exception_handler
+async def change_event_status(
+    event_id: str,
+    event_status: EventStatus = Form(
+        ...,
+        example=EventStatus.ACTIVE,
+        description="Event status (ACTIVE for published, INACTIVE for draft)",
+    ),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Change the status of an event (ACTIVE = published, INACTIVE = draft)
+    """
+    # Fetch event by event_id
+    event = await fetch_event_by_id(db, event_id)
+    if not event:
+        return event_not_found_response()
+
+    # Update status
+    event.event_status = event_status
+    db.add(event)
+    await db.commit()
+    await db.refresh(event)
+
+    status_text = "published" if event_status == EventStatus.ACTIVE else "draft"
+
+    return api_response(
+        status_code=status.HTTP_200_OK,
+        message=f"Event status updated to {status_text}",
+        data={
+            "event_id": event.event_id,
+            "event_status": event.event_status,
+            "status_text": status_text,
+        },
+    )
+
+
+@router.delete(
+    "/{event_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Delete event and cascade delete all slots & seat categories",
+)
+@exception_handler
+async def delete_event_by_id(
+    event_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Delete an event by ID. Cascade deletes associated slots and seat categories.
+    """
+
+    # Fetch the event to ensure it exists
+    event = await db.scalar(
+        select(NewEvent)
+        .where(NewEvent.event_id == event_id)
+        .options(selectinload(NewEvent.new_slots))
+    )
+
+    if not event:
+        return event_not_found_response()
+
+    # Delete the event (cascade delete will remove slots and seat categories)
+    await db.delete(event)
+    await db.commit()
+
+    return api_response(
+        status_code=status.HTTP_200_OK,
+        message="Event deleted successfully",
+        data={"event_id": event_id, "deleted": True},
     )
