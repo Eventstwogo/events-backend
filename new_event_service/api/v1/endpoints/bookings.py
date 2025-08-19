@@ -368,7 +368,7 @@ async def confirm_booking(
                         Coupon.coupon_status == False,
                     )
                 )
-                coupons: list[Coupon] = result.scalars().all()
+                coupons: list[Coupon] = list(result.scalars().all())
                 for coupon in coupons:
                     coupon.sold_coupons += 1
 
@@ -1354,7 +1354,7 @@ async def generate_booking_qrcode(
             content={"error": f"Failed to generate QR code: {str(e)}"},
         )
 
-        
+
 @router.get(
     "/organizer/revenue/{organizer_id}",
     status_code=status.HTTP_200_OK,

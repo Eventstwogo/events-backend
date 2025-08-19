@@ -4,6 +4,8 @@ from typing import Any, AsyncGenerator
 from fastapi import FastAPI
 
 from rbac_service.services.init_roles_permissions import init_roles_permissions
+
+# from schedulers.scheduler_runner import start_schedulers
 from shared.core.logging_config import get_logger
 from shared.db.sessions.database import AsyncSessionLocal, init_db, shutdown_db
 
@@ -23,6 +25,10 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[Any, None]:
         async with AsyncSessionLocal() as session:
             await init_roles_permissions(session)
             logger.info("Default roles and permissions initialized")
+
+        # # Start background schedulers
+        # start_schedulers()
+        # logger.info("Schedulers started successfully")
 
     except Exception as e:
         logger.error(msg=f"Startup failed: {str(e)}")
