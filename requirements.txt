@@ -20,10 +20,11 @@ black==25.1.0
 blinker==1.9.0
 boto3==1.37.3
 botocore==1.37.3
+bs4==0.0.2
 certifi==2025.6.15
 cffi==1.17.1
 cfgv==3.4.0
-charset-normalizer==3.4.2
+charset-normalizer==3.4.3
 click==8.2.1
 colorama==0.4.6
 colorlog==6.9.0
@@ -71,6 +72,7 @@ paypal-checkout-serversdk==1.0.3
 paypalhttp==1.0.1
 pbr==6.1.1
 phonenumbers==9.0.7
+pillow==11.3.0
 platformdirs==4.3.8
 pluggy==1.6.0
 pre_commit==4.2.0
@@ -91,13 +93,14 @@ pytest==8.4.1
 pytest-asyncio==1.0.0
 pytest-cov==6.2.1
 pytest-mock==3.14.1
+python-barcode==0.15.1
 python-dateutil==2.9.0.post0
 python-dotenv==1.1.0
 python-json-logger==3.3.0
 python-multipart==0.0.20
 python-slugify==8.0.4
-python-barcode[images]==0.15.1
 PyYAML==6.0.2
+qrcode==8.0
 requests==2.32.4
 rich==14.0.0
 rich-toolkit==0.14.7
