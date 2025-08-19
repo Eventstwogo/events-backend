@@ -19,12 +19,12 @@ from sqlalchemy.orm import (
 
 from shared.core.security import generate_searchable_hash
 from shared.db.models.base import EventsBase
-from shared.db.models.events import FeaturedEvents
-from shared.db.models.new_events import NewEvent
 from shared.db.types import EncryptedString
 
 if TYPE_CHECKING:
     from shared.db.models.events import Event
+    from shared.db.models.featured_events import FeaturedEvents
+    from shared.db.models.new_events import NewEvent
     from shared.db.models.organizer import BusinessProfile
     from shared.db.models.rbac import Role
 

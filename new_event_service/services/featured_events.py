@@ -4,15 +4,15 @@ from sqlalchemy import desc, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
-from event_service.schemas.featured_events import FeaturedEventResponse
-from shared.db.models import Event
-from shared.db.models.events import FeaturedEvents
+from new_event_service.schemas.featured_events import FeaturedEventResponse
+from shared.db.models import NewEvent
+from shared.db.models.featured_events import FeaturedEvents
 from shared.utils.id_generators import generate_lower_uppercase
 
 
 async def fetch_featured_events(
     db: AsyncSession, limit: int = 6
-) -> List[Event]:
+) -> List[NewEvent]:
     """
     Fetch featured events in descending order with specified limit
 
@@ -24,10 +24,13 @@ async def fetch_featured_events(
         List of featured events with category and subcategory relationships
     """
     query = (
-        select(Event)
-        .options(selectinload(Event.category), selectinload(Event.subcategory))
-        .where(Event.featured_event == True)
-        .order_by(desc(Event.created_at))
+        select(NewEvent)
+        .options(
+            selectinload(NewEvent.new_category),
+            selectinload(NewEvent.new_subcategory),
+        )
+        .where(NewEvent.featured_event == True)
+        .order_by(desc(NewEvent.created_at))
         .limit(limit)
     )
 
@@ -38,7 +41,7 @@ async def fetch_featured_events(
 
 async def update_event_featured_status(
     db: AsyncSession, event_id: str, featured_status: bool
-) -> Optional[Event]:
+) -> Optional[NewEvent]:
     """
     Update the featured status of an event
 
@@ -51,7 +54,7 @@ async def update_event_featured_status(
         Updated event object or None if event not found
     """
     # First, fetch the event
-    query = select(Event).where(Event.event_id == event_id)
+    query = select(NewEvent).where(NewEvent.event_id == event_id)
     result = await db.execute(query)
     event = result.scalar_one_or_none()
 
@@ -78,7 +81,7 @@ async def get_featured_events_count(db: AsyncSession) -> int:
     Returns:
         Total number of featured events
     """
-    query = select(Event).where(Event.featured_event == True)
+    query = select(NewEvent).where(NewEvent.featured_event == True)
     result = await db.execute(query)
     events = result.scalars().all()
     return len(list(events))
@@ -91,8 +94,8 @@ async def create_featured_event(db: AsyncSession, event_data) -> FeaturedEvents:
     db.add(new_event)
 
     await db.execute(
-        update(Event)
-        .where(Event.event_id == event_data.event_ref_id)
+        update(NewEvent)
+        .where(NewEvent.event_id == event_data.event_ref_id)
         .values(featured_event=True)
     )
 
@@ -104,8 +107,8 @@ async def create_featured_event(db: AsyncSession, event_data) -> FeaturedEvents:
 
 async def list_featured_events(db: AsyncSession) -> list[FeaturedEventResponse]:
     query = select(FeaturedEvents).options(
-        joinedload(FeaturedEvents.event).joinedload(
-            Event.organizer
+        joinedload(FeaturedEvents.new_event).joinedload(
+            NewEvent.new_organizer
         ),  # event + organizer
         joinedload(FeaturedEvents.user_ref),  # user_ref from admin users
     )
@@ -125,11 +128,11 @@ async def list_featured_events(db: AsyncSession) -> list[FeaturedEventResponse]:
                 total_weeks=fe.total_weeks,
                 price=float(fe.price),
                 feature_status=fe.feature_status,
-                event_slug=fe.event.event_slug if fe.event else None,
-                event_title=fe.event.event_title if fe.event else None,
+                event_slug=fe.new_event.event_slug if fe.new_event else None,
+                event_title=fe.new_event.event_title if fe.new_event else None,
                 organizer_name=(
-                    fe.event.organizer.username_encrypted
-                    if fe.event and fe.event.organizer
+                    fe.new_event.new_organizer.username
+                    if fe.new_event and fe.new_event.new_organizer
                     else None
                 ),
                 # if you want to also include the user_ref name:

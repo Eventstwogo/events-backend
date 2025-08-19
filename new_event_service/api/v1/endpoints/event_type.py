@@ -2,12 +2,12 @@ from fastapi import APIRouter, Body, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
 
-from event_service.schemas.event_type import (
+from new_event_service.schemas.event_type import (
     EventTypeCreateRequest,
     EventTypeResponse,
     UpdateStatusRequest,
 )
-from event_service.services.event_type import (
+from new_event_service.services.event_type import (
     create_event_type_service,
     list_active_event_types_service,
     list_event_types_service,

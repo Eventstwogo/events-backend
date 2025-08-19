@@ -3,13 +3,13 @@ from typing import List
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from event_service.schemas.coupons import (
+from new_event_service.schemas.coupons import (
     CouponCreateRequest,
     CouponResponse,
     ValidateCouponRequest,
     ValidateCouponResponse,
 )
-from event_service.services.coupons import (
+from new_event_service.services.coupons import (
     create_coupon_service,
     delete_coupon_service,
     get_all_coupons_service,

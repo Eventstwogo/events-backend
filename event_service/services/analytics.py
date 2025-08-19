@@ -1,5 +1,5 @@
-from datetime import date, datetime, timedelta
-from typing import Dict, List, Optional, Tuple
+from datetime import date, timedelta
+from typing import Dict, List, Optional
 
 from sqlalchemy import and_, any_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,8 +9,6 @@ from shared.core.logging_config import get_logger
 from shared.db.models import (
     AdminUser,
     BookingStatus,
-    Event,
-    EventBooking,
     EventStatus,
     Role,
 )

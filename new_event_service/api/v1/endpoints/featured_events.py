@@ -1,7 +1,10 @@
 from fastapi import APIRouter, Depends, Path, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from event_service.schemas.featured_events import (
+from event_service.services.response_builder import (
+    event_not_found_response,
+)
+from new_event_service.schemas.featured_events import (
     FeaturedEventCreate,
     FeaturedEventResponse,
     FeaturedEventUpdateRequest,
@@ -9,15 +12,12 @@ from event_service.schemas.featured_events import (
     OldFeaturedEventListResponse,
     OldFeaturedEventResponse,
 )
-from event_service.services.featured_events import (
+from new_event_service.services.featured_events import (
     create_featured_event,
     fetch_featured_events,
     get_featured_events_count,
     list_featured_events,
     update_event_featured_status,
-)
-from event_service.services.response_builder import (
-    event_not_found_response,
 )
 from shared.core.api_response import api_response
 from shared.db.sessions.database import get_db
@@ -63,20 +63,18 @@ async def get_featured_eventss(
     for event in events:
         event_data = {
             "event_id": event.event_id,
-            "slot_id": event.slot_id,
             "event_title": event.event_title,
             "card_image": event.card_image,
             "event_slug": event.event_slug,
             "category_title": (
-                event.category.category_name if event.category else ""
+                event.new_category.category_name if event.new_category else ""
             ),
             "sub_category_title": (
-                event.subcategory.subcategory_name
-                if event.subcategory
+                event.new_subcategory.subcategory_name
+                if event.new_subcategory
                 else None
             ),
-            "start_date": event.start_date,
-            "end_date": event.end_date,
+            "event_dates": event.event_dates,
             "featured_event": event.featured_event,
             "is_online": event.is_online,
         }

@@ -1,8 +1,8 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from event_service.schemas.event_type import EventTypeCreateRequest
-from shared.db.models.events import EventType
+from new_event_service.schemas.event_type import EventTypeCreateRequest
+from shared.db.models.featured_events import EventType
 from shared.utils.id_generators import generate_lower_uppercase
 
 

@@ -39,6 +39,7 @@ from .config import Config
 from .contact_us import ContactUs, ContactUsStatus
 from .coupons import Coupon
 from .events import BookingStatus, Event, EventBooking, EventSlot, EventStatus
+from .featured_events import EventType, FeaturedEvents
 from .new_events import (
     NewEvent,
     NewEventBooking,
@@ -76,6 +77,9 @@ __all__ = [
     "NewEventSlot",
     "NewEventSeatCategory",
     "NewEventBooking",
+    # Featured Events
+    "FeaturedEvents",
+    "EventType",
     # Role-Based Access Control
     "Role",
     "Permission",

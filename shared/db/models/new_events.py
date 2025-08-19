@@ -24,6 +24,7 @@ from sqlalchemy.types import Enum as SQLAlchemyEnum
 
 from shared.db.models.base import EventsBase
 from shared.db.models.coupons import Coupon
+from shared.db.models.featured_events import FeaturedEvents
 
 if TYPE_CHECKING:
     from shared.db.models.admin_users import AdminUser
@@ -173,6 +174,11 @@ class NewEvent(EventsBase):
         back_populates="new_event",
         cascade="all, delete-orphan",
         lazy="selectin",
+    )
+    featured_events: Mapped[list["FeaturedEvents"]] = relationship(
+        "FeaturedEvents",
+        back_populates="new_event",
+        cascade="all, delete-orphan",
     )
 
     __table_args__ = (
