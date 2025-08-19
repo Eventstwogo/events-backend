@@ -39,7 +39,9 @@ def create_app() -> FastAPI:
         },
     )
 
-    @fastapi_app.get(path="/", tags=["System"])
+    @fastapi_app.get(
+        path="/", tags=["System"], summary="Not Integrated in any frontend"
+    )
     async def root() -> dict[str, str]:
         return {
             "message": "Welcome to Events2go API Services",
@@ -48,11 +50,19 @@ def create_app() -> FastAPI:
             "redoc_url": "/redoc",
         }
 
-    @fastapi_app.get(path="/health", tags=["System"])
+    @fastapi_app.get(
+        path="/health",
+        tags=["System"],
+        summary="Not Integrated in any frontend",
+    )
     async def health_check() -> dict[str, str]:
         return {"status": "healthy", "message": "API is running fine!"}
 
-    @fastapi_app.get("/favicon.ico", tags=["System"])
+    @fastapi_app.get(
+        "/favicon.ico",
+        tags=["System"],
+        summary="Not Integrated in any frontend",
+    )
     async def favicon():
         return RedirectResponse(url="/media/favicon.ico")
 

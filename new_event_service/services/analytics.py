@@ -13,8 +13,8 @@ from shared.db.models import (
 from shared.db.models.new_events import (
     EventStatus,
     NewEvent,
-    NewEventSlot,
     NewEventSeatCategory,
+    NewEventSlot,
 )
 from shared.utils.data_utils import process_business_profile_data
 from shared.utils.file_uploads import get_media_url
@@ -62,7 +62,7 @@ async def get_organizer_full_details(user_id: str, db: AsyncSession) -> Dict:
         return {
             "status_code": 404,
             "message": "Organizer not found",
-            "data": None
+            "data": None,
         }
 
     # Step 2: Check if business profile exists
@@ -118,7 +118,9 @@ async def get_organizer_full_details(user_id: str, db: AsyncSession) -> Dict:
         .options(
             selectinload(NewEvent.new_category),
             selectinload(NewEvent.new_subcategory),
-            selectinload(NewEvent.new_slots).selectinload(NewEventSlot.new_seat_categories),
+            selectinload(NewEvent.new_slots).selectinload(
+                NewEventSlot.new_seat_categories
+            ),
         )
         .where(NewEvent.organizer_id == user_id)
         .order_by(NewEvent.created_at.desc())
@@ -142,24 +144,28 @@ async def get_organizer_full_details(user_id: str, db: AsyncSession) -> Dict:
             # Process seat categories for each slot
             seat_categories = []
             for seat_category in slot.new_seat_categories:
-                seat_categories.append({
-                    "seat_category_id": seat_category.seat_category_id,
-                    "category_label": seat_category.category_label,
-                    "price": float(seat_category.price),
-                    "total_tickets": seat_category.total_tickets,
-                    "booked": seat_category.booked,
-                    "held": seat_category.held,
-                    "seat_category_status": seat_category.seat_category_status,
-                })
-            
-            slots_data.append({
-                "slot_id": slot.slot_id,
-                "slot_date": slot.slot_date,
-                "start_time": slot.start_time,
-                "duration_minutes": slot.duration_minutes,
-                "slot_status": slot.slot_status,
-                "seat_categories": seat_categories,
-            })
+                seat_categories.append(
+                    {
+                        "seat_category_id": seat_category.seat_category_id,
+                        "category_label": seat_category.category_label,
+                        "price": float(seat_category.price),
+                        "total_tickets": seat_category.total_tickets,
+                        "booked": seat_category.booked,
+                        "held": seat_category.held,
+                        "seat_category_status": seat_category.seat_category_status,
+                    }
+                )
+
+            slots_data.append(
+                {
+                    "slot_id": slot.slot_id,
+                    "slot_date": slot.slot_date,
+                    "start_time": slot.start_time,
+                    "duration_minutes": slot.duration_minutes,
+                    "slot_status": slot.slot_status,
+                    "seat_categories": seat_categories,
+                }
+            )
 
         event_data = {
             "event_id": event.event_id,
@@ -244,7 +250,7 @@ async def get_organizer_full_details(user_id: str, db: AsyncSession) -> Dict:
     return {
         "status_code": 200,
         "message": "New event organizer details retrieved successfully",
-        "data": response_data
+        "data": response_data,
     }
 
 
@@ -274,7 +280,7 @@ async def get_organizer_summary(user_id: str, db: AsyncSession) -> Dict:
         return {
             "status_code": 404,
             "message": "Organizer not found",
-            "data": None
+            "data": None,
         }
 
     # Check business profile status
@@ -344,5 +350,5 @@ async def get_organizer_summary(user_id: str, db: AsyncSession) -> Dict:
     return {
         "status_code": 200,
         "message": "New event organizer summary retrieved successfully",
-        "data": summary_data
+        "data": summary_data,
     }

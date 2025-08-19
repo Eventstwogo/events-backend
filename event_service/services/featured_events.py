@@ -2,7 +2,7 @@ from typing import List, Optional
 
 from sqlalchemy import desc, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload, joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
 from event_service.schemas.featured_events import FeaturedEventResponse
 from shared.db.models import Event
@@ -84,16 +84,11 @@ async def get_featured_events_count(db: AsyncSession) -> int:
     return len(list(events))
 
 
-
 async def create_featured_event(db: AsyncSession, event_data) -> FeaturedEvents:
     feature_id = generate_lower_uppercase()
 
-    new_event = FeaturedEvents(
-        feature_id=feature_id,
-        **event_data.dict()
-    )
+    new_event = FeaturedEvents(feature_id=feature_id, **event_data.dict())
     db.add(new_event)
-
 
     await db.execute(
         update(Event)
@@ -101,21 +96,18 @@ async def create_featured_event(db: AsyncSession, event_data) -> FeaturedEvents:
         .values(featured_event=True)
     )
 
-
     await db.commit()
     await db.refresh(new_event)
 
     return new_event
 
 
-
 async def list_featured_events(db: AsyncSession) -> list[FeaturedEventResponse]:
-    query = (
-        select(FeaturedEvents)
-        .options(
-            joinedload(FeaturedEvents.event).joinedload(Event.organizer),  # event + organizer
-            joinedload(FeaturedEvents.user_ref),  # user_ref from admin users
-        )
+    query = select(FeaturedEvents).options(
+        joinedload(FeaturedEvents.event).joinedload(
+            Event.organizer
+        ),  # event + organizer
+        joinedload(FeaturedEvents.user_ref),  # user_ref from admin users
     )
     result = await db.execute(query)
     featured_events = result.scalars().all()

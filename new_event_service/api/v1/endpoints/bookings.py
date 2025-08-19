@@ -1,6 +1,6 @@
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status, Path
+from fastapi import APIRouter, Depends, HTTPException, Path, status
 from fastapi.params import Query
 from fastapi.responses import JSONResponse, RedirectResponse
 from paypalcheckoutsdk.orders import OrdersCaptureRequest
@@ -356,12 +356,12 @@ async def confirm_booking(
                 result = await db.execute(
                     select(Coupon).where(
                         Coupon.event_id == order.event_ref_id,
-                        Coupon.coupon_status == False
+                        Coupon.coupon_status == False,
                     )
                 )
                 coupons: list[Coupon] = result.scalars().all()
                 for coupon in coupons:
-                    coupon.sold_coupons += 1    
+                    coupon.sold_coupons += 1
 
             await db.commit()
 
@@ -411,8 +411,6 @@ async def confirm_booking(
                     seat_categories=seat_categories,
                 )
 
-
-                
             except Exception as email_error:
                 logger.warning(
                     "Failed to send booking confirmation email for order %s: %s",
@@ -1162,7 +1160,10 @@ async def get_booking_order_details(
 )
 @exception_handler
 async def generate_booking_barcode(
-    order_id: Annotated[str, Path(description="Order ID for booking", min_length=6, max_length=12)],
+    order_id: Annotated[
+        str,
+        Path(description="Order ID for booking", min_length=6, max_length=12),
+    ],
     db: AsyncSession = Depends(get_db),
 ) -> JSONResponse:
     """
@@ -1171,12 +1172,12 @@ async def generate_booking_barcode(
     - Barcode image (Base64 encoded)
     - Basic event and booking details
     """
-    
+
     # Validate order ID format
     if not ID_REGEX.match(order_id):
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
-            content={"error": "Invalid order ID format"}
+            content={"error": "Invalid order ID format"},
         )
 
     # Fetch booking order with all related data
@@ -1194,19 +1195,24 @@ async def generate_booking_barcode(
         )
         .where(NewEventBookingOrder.order_id == order_id)
     )
-    
+
     order = (await db.execute(query)).scalar_one_or_none()
     if not order:
         return JSONResponse(
             status_code=status.HTTP_404_NOT_FOUND,
-            content={"error": f"Booking order '{order_id}' not found"}
+            content={"error": f"Booking order '{order_id}' not found"},
         )
 
     # Verify booking is in a valid state for barcode generation
-    if order.booking_status not in [BookingStatus.APPROVED, BookingStatus.PROCESSING]:
+    if order.booking_status not in [
+        BookingStatus.APPROVED,
+        BookingStatus.PROCESSING,
+    ]:
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
-            content={"error": f"Cannot generate barcode for booking with status: {order.booking_status.value}"}
+            content={
+                "error": f"Cannot generate barcode for booking with status: {order.booking_status.value}"
+            },
         )
 
     try:
@@ -1224,34 +1230,34 @@ async def generate_booking_barcode(
             user_name += f" {user.last_name}"
 
         # Calculate total tickets
-        total_tickets = sum(line_item.num_seats for line_item in order.line_items)
-        
+        total_tickets = sum(
+            line_item.num_seats for line_item in order.line_items
+        )
+
         # Convert to compact string format for barcode (exclude order_id)
         barcode_content = f"EVENT:{booked_event.event_title[:20]}|DATE:{slot.slot_date.strftime('%Y-%m-%d') if slot else 'TBA'}|TIME:{slot.start_time if slot and slot.start_time else 'TBA'}|TICKETS:{total_tickets}"
-        
+
         # Generate barcode with essential booking data
         barcode_image = BarcodeGenerator.generate_booking_barcode(
             order_id=barcode_content,
             barcode_type="code128",
-            width=0.15,  
-            height=12.0,  
-            font_size=0,  
-            text_distance=0.0  # No text
+            width=0.15,
+            height=12.0,
+            font_size=0,
+            text_distance=0.0,  # No text
         )
 
         # Return only the barcode
         return JSONResponse(
             status_code=status.HTTP_200_OK,
-            content={
-                "barcode_image": barcode_image
-            }
+            content={"barcode_image": barcode_image},
         )
 
     except Exception as e:
         logger.error(f"Error generating barcode for order {order_id}: {str(e)}")
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"error": f"Failed to generate barcode: {str(e)}"}
+            content={"error": f"Failed to generate barcode: {str(e)}"},
         )
 
 

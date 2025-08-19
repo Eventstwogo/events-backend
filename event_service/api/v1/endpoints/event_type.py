@@ -1,17 +1,24 @@
-
 from fastapi import APIRouter, Body, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
 
-from event_service.schemas.event_type import EventTypeCreateRequest, EventTypeResponse, UpdateStatusRequest
-from event_service.services.event_type import create_event_type_service, list_active_event_types_service, list_event_types_service, update_event_type_service, update_event_type_status_service
+from event_service.schemas.event_type import (
+    EventTypeCreateRequest,
+    EventTypeResponse,
+    UpdateStatusRequest,
+)
+from event_service.services.event_type import (
+    create_event_type_service,
+    list_active_event_types_service,
+    list_event_types_service,
+    update_event_type_service,
+    update_event_type_status_service,
+)
 from shared.core.api_response import api_response
 from shared.db.sessions.database import get_db
 from shared.utils.exception_handlers import exception_handler
 
 router = APIRouter()
-
-
 
 
 @router.post(
@@ -42,7 +49,6 @@ async def create_event_type(
     )
 
 
-
 @router.get(
     "/all",
     status_code=status.HTTP_200_OK,
@@ -54,7 +60,9 @@ async def get_all_event_types(
 ) -> JSONResponse:
     event_types = await list_event_types_service(db)
 
-    response_data = [EventTypeResponse.model_validate(et).model_dump() for et in event_types]
+    response_data = [
+        EventTypeResponse.model_validate(et).model_dump() for et in event_types
+    ]
 
     return api_response(
         status_code=status.HTTP_200_OK,
@@ -74,7 +82,9 @@ async def get_active_event_types(
 ) -> JSONResponse:
     event_types = await list_active_event_types_service(db)
 
-    response_data = [EventTypeResponse.model_validate(et).model_dump() for et in event_types]
+    response_data = [
+        EventTypeResponse.model_validate(et).model_dump() for et in event_types
+    ]
 
     return api_response(
         status_code=status.HTTP_200_OK,
@@ -110,6 +120,7 @@ async def update_event_type(
         data=response_data.model_dump(),
     )
 
+
 @router.patch(
     "/status/{type_id}",
     status_code=status.HTTP_200_OK,
@@ -122,7 +133,9 @@ async def update_event_type_status(
     db: AsyncSession = Depends(get_db),
 ) -> JSONResponse:
     try:
-        updated_type = await update_event_type_status_service(db, type_id, request.status)
+        updated_type = await update_event_type_status_service(
+            db, type_id, request.status
+        )
     except ValueError as e:
         return api_response(
             status_code=status.HTTP_404_NOT_FOUND,

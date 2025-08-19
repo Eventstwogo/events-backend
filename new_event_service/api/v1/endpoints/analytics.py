@@ -38,13 +38,13 @@ async def get_new_event_organizer_full_details(
     2. Checks if business profile exists using business_id from admin user table
     3. Fetches any new events associated with the user and their event slots
     """
-    
+
     result = await get_organizer_full_details(user_id, db)
-    
+
     return api_response(
         status_code=result["status_code"],
         message=result["message"],
-        data=result["data"]
+        data=result["data"],
     )
 
 
@@ -68,11 +68,11 @@ async def get_new_event_organizer_summary(
     This is a lighter version that provides basic organizer info,
     business profile status, and new event statistics.
     """
-    
+
     result = await get_organizer_summary(user_id, db)
-    
+
     return api_response(
         status_code=result["status_code"],
         message=result["message"],
-        data=result["data"]
+        data=result["data"],
     )

@@ -1,9 +1,10 @@
 from datetime import datetime
+
 from pydantic import BaseModel
 
 
 class EventTypeCreateRequest(BaseModel):
-    
+
     event_type: str
 
 
@@ -19,6 +20,5 @@ class EventTypeResponse(BaseModel):
         from_attributes = True
 
 
-
 class UpdateStatusRequest(BaseModel):
-    status: bool        
+    status: bool

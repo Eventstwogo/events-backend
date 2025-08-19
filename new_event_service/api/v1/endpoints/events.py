@@ -226,7 +226,7 @@ async def change_event_status(
 ):
     """
     Change the status of an event (ACTIVE = published, INACTIVE = draft)
-    
+
     Business Rules:
     - Events with existing slots cannot be set to PENDING status
     - Events without slots cannot be set to ACTIVE status
@@ -245,7 +245,7 @@ async def change_event_status(
             NewEventSlot.event_ref_id == event_id
         )
         existing_slots = (await db.execute(query_slots)).scalars().first()
-        
+
         if existing_slots:
             return api_response(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -256,15 +256,18 @@ async def change_event_status(
                     "requested_status": event_status,
                 },
             )
-    
+
     # Check if trying to set status to ACTIVE from PENDING when event doesn't have slots
-    if event_status == EventStatus.ACTIVE and event.event_status == EventStatus.PENDING:
+    if (
+        event_status == EventStatus.ACTIVE
+        and event.event_status == EventStatus.PENDING
+    ):
         # Check if event has any slots
         query_slots = select(NewEventSlot).where(
             NewEventSlot.event_ref_id == event_id
         )
         existing_slots = (await db.execute(query_slots)).scalars().first()
-        
+
         if not existing_slots:
             return api_response(
                 status_code=status.HTTP_400_BAD_REQUEST,

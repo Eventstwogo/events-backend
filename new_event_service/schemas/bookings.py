@@ -155,19 +155,23 @@ class OrganizerEventsStatsResponse(BaseModel):
 
 class BarcodeResponse(BaseModel):
     """Response model for barcode generation"""
+
     barcode_image: str = Field(..., description="Base64 encoded barcode image")
-    barcode_type: str = Field(..., description="Type of barcode generated (code128, code39, etc.)")
+    barcode_type: str = Field(
+        ..., description="Type of barcode generated (code128, code39, etc.)"
+    )
     encoded_value: str = Field(..., description="Value encoded in the barcode")
 
 
 class BookingBarcodeResponse(BaseModel):
     """Complete response model for booking with barcode"""
+
     booking_details: BookingDetailsResponse
     payment_details: dict = Field(..., description="Payment information")
     barcode: BarcodeResponse
-    booking_info: dict = Field(..., description="Formatted booking information for display")
-    
+    booking_info: dict = Field(
+        ..., description="Formatted booking information for display"
+    )
+
     class Config:
-        json_encoders = {
-            float: lambda x: round(x, 2)
-        }
+        json_encoders = {float: lambda x: round(x, 2)}

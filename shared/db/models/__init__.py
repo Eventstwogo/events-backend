@@ -37,6 +37,7 @@ from .categories import Category, SubCategory
 # Models with no model dependencies
 from .config import Config
 from .contact_us import ContactUs, ContactUsStatus
+from .coupons import Coupon
 from .events import BookingStatus, Event, EventBooking, EventSlot, EventStatus
 from .new_events import (
     NewEvent,
@@ -44,8 +45,6 @@ from .new_events import (
     NewEventSeatCategory,
     NewEventSlot,
 )
-
-from .coupons import Coupon
 
 # Models that depend on Organization Profile
 from .organizer import BusinessProfile, OrganizerQuery, QueryStatus
@@ -99,8 +98,7 @@ __all__ = [
     # Organizer Queries
     "OrganizerQuery",
     "QueryStatus",
-
-    #coupon
+    # coupon
     "Coupon",
 ]
 

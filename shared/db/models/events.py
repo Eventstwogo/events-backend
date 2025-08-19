@@ -60,7 +60,6 @@ class EventStatus(str, Enum):
 
     def __str__(self):
         return self.name.lower()
-    
 
 
 class EventType(EventsBase):
@@ -96,7 +95,6 @@ class EventType(EventsBase):
         onupdate=func.now(),
     )
 
-   
 
 class Event(EventsBase):
     __tablename__ = "e2gevents"
@@ -394,13 +392,12 @@ class FeaturedEvents(EventsBase):
     )
     user_ref_id: Mapped[str] = mapped_column(
         String(6),
-        ForeignKey("e2gadminusers.user_id"),   
-        
+        ForeignKey("e2gadminusers.user_id"),
         nullable=False,
     )
     event_ref_id: Mapped[str] = mapped_column(
         String(6),
-        ForeignKey("e2gevents.event_id"),   
+        ForeignKey("e2gevents.event_id"),
         unique=True,
         nullable=False,
     )
@@ -410,13 +407,9 @@ class FeaturedEvents(EventsBase):
     end_date: Mapped[date] = mapped_column(
         Date(), nullable=False, server_default=func.current_date()
     )
-    total_weeks: Mapped[int] = mapped_column(
-        Integer, nullable=False
-    )
-    price: Mapped[float] = mapped_column(
-        Numeric(10, 2), nullable=False
-    )
-   
+    total_weeks: Mapped[int] = mapped_column(Integer, nullable=False)
+    price: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+
     feature_status: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False
     )
@@ -432,6 +425,9 @@ class FeaturedEvents(EventsBase):
         onupdate=func.now(),
     )
 
-
-    event: Mapped["Event"] = relationship("Event", back_populates="featured_events")
-    user_ref: Mapped["AdminUser"] = relationship("AdminUser", back_populates="featured_refs")
+    event: Mapped["Event"] = relationship(
+        "Event", back_populates="featured_events"
+    )
+    user_ref: Mapped["AdminUser"] = relationship(
+        "AdminUser", back_populates="featured_refs"
+    )

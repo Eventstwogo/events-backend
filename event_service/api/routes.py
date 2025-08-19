@@ -13,7 +13,6 @@ from event_service.api.v1.endpoints import (
     slots,
 )
 
-
 event_router = APIRouter(prefix="/api/v1")
 event_router.include_router(
     event_creation_with_images.router,
@@ -48,9 +47,7 @@ event_router.include_router(
 event_router.include_router(
     featured_events.router, prefix="/featured-events", tags=["Featured Events"]
 )
-event_router.include_router(
-    coupons.router, prefix="/coupons", tags=["Coupons"]
-)
+event_router.include_router(coupons.router, prefix="/coupons", tags=["Coupons"])
 # event_router.include_router(
 #     advanced_slots.router, prefix="/advanced-slots", tags=["Advanced Slots"]
 # )

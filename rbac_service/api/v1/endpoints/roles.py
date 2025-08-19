@@ -18,7 +18,11 @@ from shared.utils.validators import is_single_reserved_word
 router = APIRouter()
 
 
-@router.post("", summary="Create a new role")
+@router.post(
+    "",
+    summary="Integrated in Admin Panel rbac.ts file",
+    description="Create a new role in the system. If a role with the same name exists but is soft-deleted, it will be reactivated.",
+)
 @exception_handler
 async def create_role(
     role: CreateRole,
@@ -74,7 +78,10 @@ async def create_role(
 
 
 @router.get(
-    "", response_model=List[RoleDetails], summary="Get roles by active status"
+    "",
+    response_model=List[RoleDetails],
+    summary="Integrated in Admin Panel in Users Page and rbac.ts file",
+    description="Retrieve all roles, optionally filtered by their active status. If no status is provided, all roles are returned.",
 )
 @exception_handler
 async def get_roles(
@@ -105,7 +112,11 @@ async def get_roles(
     )
 
 
-@router.get("/search", summary="Find role by name")
+@router.get(
+    "/search",
+    summary="Integrated in Admin Panel rbac.ts file",
+    description="Search for a role by its name. The search is case-insensitive.",
+)
 @exception_handler
 async def get_role_by_name(
     role_name: str,
@@ -130,7 +141,11 @@ async def get_role_by_name(
     )
 
 
-@router.put("/{role_id}", summary="Update a role by ID")
+@router.put(
+    "/{role_id}",
+    summary="Integrated in Admin Panel rbac.ts file",
+    description="Update the details of an existing role by its ID. If the role name is updated, it checks for duplicates.",
+)
 @exception_handler
 async def update_role(
     role_id: str,
@@ -182,7 +197,11 @@ async def update_role(
     )
 
 
-@router.patch("/status/{role_id}", summary="Update role status")
+@router.patch(
+    "/status/{role_id}",
+    summary="Integrated in Admin Panel rbac.ts file",
+    description="Update the status of a role by its ID. Set to true for inactive (soft-deleted) or false for active.",
+)
 @exception_handler
 async def update_role_status(
     role_id: str,
@@ -212,7 +231,11 @@ async def update_role_status(
     )
 
 
-@router.delete("/{role_id}", summary="Delete role by ID (soft or hard)")
+@router.delete(
+    "/{role_id}",
+    summary="Delete role by ID (soft or hard)",
+    description="Delete a role by its ID. If hard_delete is true, it will permanently delete the role; otherwise, it will soft-delete (mark as inactive).",
+)
 @exception_handler
 async def delete_role(
     role_id: str,

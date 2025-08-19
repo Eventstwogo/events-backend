@@ -1,30 +1,27 @@
-from fastapi import APIRouter, Depends, status
-from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
-from shared.db.sessions.database  import get_db
-from shared.core.api_response import api_response
-from shared.utils.exception_handlers import exception_handler
+from fastapi import APIRouter, Depends, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from event_service.services.coupons import (
-    create_coupon_service,
-    get_all_coupons_service,
-    get_coupons_by_event_service,
-    get_coupons_by_user_service,
-    delete_coupon_service,
-    validate_coupon_service,
-)
 from event_service.schemas.coupons import (
     CouponCreateRequest,
     CouponResponse,
     ValidateCouponRequest,
     ValidateCouponResponse,
 )
-
-router = APIRouter(
-    prefix="/coupons",
-    tags=["Coupons"]
+from event_service.services.coupons import (
+    create_coupon_service,
+    delete_coupon_service,
+    get_all_coupons_service,
+    get_coupons_by_event_service,
+    get_coupons_by_user_service,
+    validate_coupon_service,
 )
+from shared.core.api_response import api_response
+from shared.db.sessions.database import get_db
+from shared.utils.exception_handlers import exception_handler
+
+router = APIRouter(prefix="/coupons", tags=["Coupons"])
 
 
 @router.post(
@@ -62,6 +59,7 @@ async def get_coupons_by_event(
         message="Coupons fetched successfully for the event",
         data=coupons,
     )
+
 
 @router.get(
     "",

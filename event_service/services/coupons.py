@@ -1,11 +1,17 @@
-from fastapi import HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
-from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime
 
+from fastapi import HTTPException, status
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+
+from event_service.schemas.coupons import (
+    CouponCreateRequest,
+    CouponResponse,
+    ValidateCouponRequest,
+    ValidateCouponResponse,
+)
 from shared.db.models.coupons import Coupon
-from event_service.schemas.coupons import CouponCreateRequest, CouponResponse, ValidateCouponRequest, ValidateCouponResponse
 from shared.utils.id_generators import generate_lower_uppercase
 
 
@@ -23,7 +29,7 @@ async def create_coupon_service(
             coupon_name=coupon_data.coupon_name,
             coupon_percentage=coupon_data.coupon_percentage,
             number_of_coupons=coupon_data.number_of_coupons,
-            coupon_code= coupon_data.coupon_code,
+            coupon_code=coupon_data.coupon_code,
             sold_coupons=0,
             created_at=datetime.utcnow(),
             coupon_status=False,
@@ -67,6 +73,7 @@ async def get_coupons_by_event_service(
         return [CouponResponse.from_orm(c) for c in coupons]
     except SQLAlchemyError as e:
         raise e
+
 
 async def get_all_coupons_service(db: AsyncSession) -> list[CouponResponse]:
     """

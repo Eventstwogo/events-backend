@@ -23,6 +23,7 @@ from sqlalchemy.sql import func
 from sqlalchemy.types import Enum as SQLAlchemyEnum
 
 from shared.db.models.base import EventsBase
+from shared.db.models.coupons import Coupon
 
 if TYPE_CHECKING:
     from shared.db.models.admin_users import AdminUser
@@ -156,7 +157,7 @@ class NewEvent(EventsBase):
         back_populates="organized_new_events",
         lazy="selectin",
     )
-    new_slots: Mapped[List[NewEventSlot]] = relationship(
+    new_slots: Mapped[List["NewEventSlot"]] = relationship(
         "NewEventSlot",
         back_populates="new_event",
         cascade="all, delete-orphan",
@@ -165,6 +166,12 @@ class NewEvent(EventsBase):
     new_booking_orders: Mapped[List["NewEventBookingOrder"]] = relationship(
         "NewEventBookingOrder",
         back_populates="new_booked_event",
+        lazy="selectin",
+    )
+    coupons: Mapped[List["Coupon"]] = relationship(
+        "Coupon",
+        back_populates="new_event",
+        cascade="all, delete-orphan",
         lazy="selectin",
     )
 
