@@ -38,7 +38,7 @@ from shared.db.models.new_events import (
     PaymentStatus,
 )
 from shared.db.sessions.database import get_db
-from shared.utils.email_utils.admin_emails import send_booking_success_email
+from shared.utils.email_utils.admin_emails import send_new_booking_success_email
 from shared.utils.exception_handlers import exception_handler
 from shared.utils.file_uploads import get_media_url
 from shared.utils.id_generators import generate_digits_letters
@@ -370,7 +370,7 @@ async def confirm_booking(
                 ]
 
                 # Send success email with full details
-                send_booking_success_email(
+                send_new_booking_success_email(
                     email=order.new_user.email,
                     user_name=user_name,
                     order_id=order.order_id,
@@ -483,7 +483,7 @@ async def cancel_booking(
 
     # 3. Redirect to frontend cancellation page
     return RedirectResponse(
-        url=f"{settings.USERS_APPLICATION_FRONTEND_URL}/booking-cancelled?order_id={order_id}",
+        url=f"{settings.USERS_APPLICATION_FRONTEND_URL}/booking-failure?order_id={order_id}",
         status_code=302,
     )
 
