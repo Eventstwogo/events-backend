@@ -1,6 +1,6 @@
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Path
 from fastapi.params import Query
 from fastapi.responses import JSONResponse, RedirectResponse
 from paypalcheckoutsdk.orders import OrdersCaptureRequest
@@ -23,6 +23,7 @@ from new_event_service.services.booking_helpers import (
 from new_event_service.services.bookings import get_organizer_events_with_stats
 from new_event_service.services.events import check_event_exists
 from new_event_service.services.response_builder import event_not_found_response
+from new_event_service.utils.barcode_generator import BarcodeGenerator
 from new_event_service.utils.paypal_client import paypal_client
 from shared.core.api_response import api_response
 from shared.core.config import settings
@@ -1152,6 +1153,106 @@ async def get_booking_order_details(
         message="Booking order details fetched successfully",
         data=response_data,
     )
+
+
+@router.get(
+    "/barcode/{order_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Generate barcode for booking by order ID",
+)
+@exception_handler
+async def generate_booking_barcode(
+    order_id: Annotated[str, Path(description="Order ID for booking", min_length=6, max_length=12)],
+    db: AsyncSession = Depends(get_db),
+) -> JSONResponse:
+    """
+    Generate a barcode for booking details by order ID.
+    Returns only essential booking information with barcode:
+    - Barcode image (Base64 encoded)
+    - Basic event and booking details
+    """
+    
+    # Validate order ID format
+    if not ID_REGEX.match(order_id):
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"error": "Invalid order ID format"}
+        )
+
+    # Fetch booking order with all related data
+    query = (
+        select(NewEventBookingOrder)
+        .options(
+            selectinload(NewEventBookingOrder.new_user),
+            selectinload(NewEventBookingOrder.new_booked_event).selectinload(
+                NewEvent.new_category
+            ),
+            selectinload(NewEventBookingOrder.new_slot),
+            selectinload(NewEventBookingOrder.line_items).selectinload(
+                NewEventBooking.new_seat_category
+            ),
+        )
+        .where(NewEventBookingOrder.order_id == order_id)
+    )
+    
+    order = (await db.execute(query)).scalar_one_or_none()
+    if not order:
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={"error": f"Booking order '{order_id}' not found"}
+        )
+
+    # Verify booking is in a valid state for barcode generation
+    if order.booking_status not in [BookingStatus.APPROVED, BookingStatus.PROCESSING]:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"error": f"Cannot generate barcode for booking with status: {order.booking_status.value}"}
+        )
+
+    try:
+        # Get related entities
+        booked_event = order.new_booked_event
+        user = order.new_user
+        slot = order.new_slot
+
+        # Extract event address from extra_data
+        event_address = _extract_event_address(booked_event)
+
+        # Format user name
+        user_name = user.username or user.first_name or "Valued Customer"
+        if user.last_name:
+            user_name += f" {user.last_name}"
+
+        # Calculate total tickets
+        total_tickets = sum(line_item.num_seats for line_item in order.line_items)
+        
+        # Convert to compact string format for barcode (exclude order_id)
+        barcode_content = f"EVENT:{booked_event.event_title[:20]}|DATE:{slot.slot_date.strftime('%Y-%m-%d') if slot else 'TBA'}|TIME:{slot.start_time if slot and slot.start_time else 'TBA'}|TICKETS:{total_tickets}"
+        
+        # Generate barcode with essential booking data
+        barcode_image = BarcodeGenerator.generate_booking_barcode(
+            order_id=barcode_content,
+            barcode_type="code128",
+            width=0.15,  
+            height=12.0,  
+            font_size=0,  
+            text_distance=0.0  # No text
+        )
+
+        # Return only the barcode
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "barcode_image": barcode_image
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"Error generating barcode for order {order_id}: {str(e)}")
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"error": f"Failed to generate barcode: {str(e)}"}
+        )
 
 
 @router.get(
