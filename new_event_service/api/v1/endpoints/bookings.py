@@ -25,6 +25,7 @@ from new_event_service.services.events import check_event_exists
 from new_event_service.services.response_builder import event_not_found_response
 from new_event_service.utils.barcode_generator import BarcodeGenerator
 from new_event_service.utils.paypal_client import paypal_client
+from new_event_service.utils.qrcode_generator import generate_qr_code
 from shared.core.api_response import api_response
 from shared.core.config import settings
 from shared.core.logging_config import get_logger
@@ -1268,6 +1269,91 @@ async def generate_booking_barcode(
         )
 
 
+@router.get(
+    "/qrcode/{order_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Generate QR code for booking by order ID",
+)
+@exception_handler
+async def generate_booking_qrcode(
+    order_id: str = Path(
+        ..., description="Order ID for booking", min_length=6, max_length=12
+    ),
+    db: AsyncSession = Depends(get_db),
+) -> JSONResponse:
+    """
+    Generate a QR code for booking details by order ID.
+    Returns only essential booking information with QR code:
+    - QR image (Base64 encoded)
+    - Basic event and booking details
+    """
+
+    if not ID_REGEX.match(order_id):
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"error": "Invalid order ID format"},
+        )
+
+    query = (
+        select(NewEventBookingOrder)
+        .options(
+            selectinload(NewEventBookingOrder.new_user),
+            selectinload(NewEventBookingOrder.new_booked_event).selectinload(
+                NewEvent.new_category
+            ),
+            selectinload(NewEventBookingOrder.new_slot),
+            selectinload(NewEventBookingOrder.line_items).selectinload(
+                NewEventBooking.new_seat_category
+            ),
+        )
+        .where(NewEventBookingOrder.order_id == order_id)
+    )
+
+    order = (await db.execute(query)).scalar_one_or_none()
+    if not order:
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={"error": f"Booking order '{order_id}' not found"},
+        )
+
+    if order.booking_status not in [
+        BookingStatus.APPROVED,
+        BookingStatus.PROCESSING,
+    ]:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={
+                "error": f"Cannot generate QR code for booking with status: {order.booking_status.value}"
+            },
+        )
+
+    try:
+        booked_event = order.new_booked_event
+        user = order.new_user
+        slot = order.new_slot
+
+        total_tickets = sum(
+            line_item.num_seats for line_item in order.line_items
+        )
+
+        # Compact string data for QR
+        qr_content = f"EVENT:{booked_event.event_title[:20]}|DATE:{slot.slot_date.strftime('%Y-%m-%d') if slot else 'TBA'}|TIME:{slot.start_time if slot and slot.start_time else 'TBA'}|TICKETS:{total_tickets}"
+
+        qr_image = generate_qr_code(qr_content)
+
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={"qr_code_image": qr_image},
+        )
+
+    except Exception as e:
+        logger.error(f"Error generating QR code for order {order_id}: {str(e)}")
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"error": f"Failed to generate QR code: {str(e)}"},
+        )
+
+        
 @router.get(
     "/organizer/revenue/{organizer_id}",
     status_code=status.HTTP_200_OK,
