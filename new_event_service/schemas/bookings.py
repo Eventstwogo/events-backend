@@ -74,6 +74,11 @@ class BookingCreateRequest(BaseModel):
     seatCategories: List[SeatCategoryBooking] = Field(
         ..., description="List of seat category bookings"
     )
+    total_price: float = Field(
+        ...,
+        gt=0,
+        description="Total booking amount (must be greater than 0)",
+    )
     coupon_status: Optional[bool] = Field(
         False,
         description="Indicates if a coupon was applied (default is False)",

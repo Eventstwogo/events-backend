@@ -235,6 +235,13 @@ async def create_event_booking_order(
         # Hold seats
         db_seat.held += seat_req.num_seats
 
+    # Based on frontend coupon applied discounted amount
+    total_amount = booking_req.total_price
+    logger.info(
+        f"Total booking amount calculated: {total_amount} for user "
+        f"{booking_req.user_ref_id} after coupon discount"
+    )
+
     # 6. Create booking order
     order = NewEventBookingOrder(
         order_id=generate_digits_letters(12),

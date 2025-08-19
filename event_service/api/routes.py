@@ -1,7 +1,6 @@
 from fastapi import APIRouter
 
 from event_service.api.v1.endpoints import (
-    analytics,
     bookings,
     category_events,
     event_creation_with_images,
@@ -31,9 +30,6 @@ event_router.include_router(
 #     utility_events.router, prefix="/utility-events", tags=["Utility Events"]
 # )
 event_router.include_router(slots.router, prefix="/slots", tags=["Event Slots"])
-event_router.include_router(
-    analytics.router, prefix="/analytics", tags=["Event Analytics"]
-)
 event_router.include_router(
     bookings.router, prefix="/bookings", tags=["Event Bookings"]
 )
