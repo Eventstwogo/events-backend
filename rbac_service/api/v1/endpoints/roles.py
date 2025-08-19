@@ -233,7 +233,7 @@ async def update_role_status(
 
 @router.delete(
     "/{role_id}",
-    summary="Delete role by ID (soft or hard)",
+    summary="Integrated in Admin Panel rbac.ts file",
     description="Delete a role by its ID. If hard_delete is true, it will permanently delete the role; otherwise, it will soft-delete (mark as inactive).",
 )
 @exception_handler

@@ -226,7 +226,11 @@ async def _create_category(
     )
 
 
-@router.post("")
+@router.post(
+    "",
+    summary="Integrated in Admin frontend at Categories/AddCategory page",
+    description="Creates a new category or subcategory based on the provided form data.",
+)
 @exception_handler
 async def create_category_or_subcategory(  # pylint: disable=too-many-arguments
     # pylint: disable=too-many-positional-arguments
@@ -290,7 +294,11 @@ async def create_category_or_subcategory(  # pylint: disable=too-many-arguments
     )
 
 
-@router.get("")
+@router.get(
+    "",
+    summary="Integrated in Admin frontend at Categories/AddCategory page",
+    description="Returns a list of all categories with their subcategories, optionally filtered by status.",
+)
 @exception_handler
 async def get_all_categories(
     status_filter: Optional[bool] = Query(
@@ -352,7 +360,11 @@ async def get_all_categories(
     )
 
 
-@router.get("/analytics")
+@router.get(
+    "/analytics",
+    summary="Not Integrated in any frontend",
+    description="Returns aggregated statistics about categories and subcategories.",
+)
 @exception_handler
 async def category_analytics(
     db: AsyncSession = Depends(get_db),
@@ -440,7 +452,14 @@ async def category_analytics(
 @router.get(
     "/list",
     response_model=List[CategoryOut],
-    summary="Fetch all categories and subcategories by status",
+    summary=(
+        "Integrated in Admin Categories, Events/BasicInfo pages, Organizer Events/BasicInfo page "
+        "and Application ZunstanStore/Categories Store frontend"
+    ),
+    description=(
+        "Returns all categories and their subcategories, "
+        "optionally filtered by category status."
+    ),
 )
 @exception_handler
 async def get_categories_and_subcategories_by_status(
@@ -482,7 +501,11 @@ async def get_categories_and_subcategories_by_status(
     )
 
 
-@router.get("/count")
+@router.get(
+    "/count",
+    summary="Not Integrated in any frontend",
+    description="Returns total, active, inactive counts of categories and subcategories.",
+)
 @exception_handler
 async def total_categories_count(
     db: AsyncSession = Depends(get_db),

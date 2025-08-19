@@ -242,7 +242,11 @@ async def _handle_file_upload_by_slug(
         )
 
 
-@router.get("/slug/{slug}")
+@router.get(
+    "/slug/{slug}",
+    summary="Integrated in Application ZunstanStore/Categories Store frontend",
+    description="Fetch a category and its subcategories by slug.",
+)
 @exception_handler
 async def get_category_by_slug(
     slug: str, db: AsyncSession = Depends(get_db)
@@ -365,7 +369,11 @@ async def get_update_form_data_by_slug(
     )
 
 
-@router.put("/slug/{category_slug}")
+@router.put(
+    "/slug/{category_slug}",
+    summary="Not Integrated in any frontend",
+    description="Update a category by its slug.",
+)
 @exception_handler
 async def update_category_by_slug(
     category_slug: str,
@@ -469,7 +477,11 @@ async def update_category_by_slug(
     )
 
 
-@router.delete("/slug/soft/{category_slug}")
+@router.delete(
+    "/slug/soft/{category_slug}",
+    summary="Not Integrated in any frontend",
+    description="Soft delete a category and its subcategories by slug.",
+)
 @exception_handler
 async def soft_delete_category_by_slug(
     category_slug: str, db: AsyncSession = Depends(get_db)
@@ -495,7 +507,11 @@ async def soft_delete_category_by_slug(
     )
 
 
-@router.put("/slug/restore/{category_slug}")
+@router.put(
+    "/slug/restore/{category_slug}",
+    summary="Not Integrated in any frontend",
+    description="Restore a soft-deleted category and its subcategories by slug.",
+)
 @exception_handler
 async def restore_category_by_slug(
     category_slug: str, db: AsyncSession = Depends(get_db)
@@ -521,7 +537,11 @@ async def restore_category_by_slug(
     )
 
 
-@router.delete("/slug/hard/{category_slug}")
+@router.delete(
+    "/slug/hard/{category_slug}",
+    summary="Not Integrated in any frontend",
+    description="Permanently delete a category and its subcategories by slug.",
+)
 @exception_handler
 async def hard_delete_category_by_slug(
     category_slug: str, db: AsyncSession = Depends(get_db)

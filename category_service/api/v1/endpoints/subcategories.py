@@ -16,7 +16,11 @@ from shared.utils.file_uploads import get_media_url
 router = APIRouter()
 
 
-@router.get("")
+@router.get(
+    "",
+    summary="Not Integrated in any frontend",
+    description="Returns all subcategories, optionally filtered by status.",
+)
 @exception_handler
 async def get_all_subcategories(
     status_filter: Optional[bool] = Query(
@@ -64,7 +68,11 @@ async def get_all_subcategories(
     )
 
 
-@router.get("/analytics")
+@router.get(
+    "/analytics",
+    summary="Not Integrated in any frontend",
+    description="Returns analytics for subcategories.",
+)
 @exception_handler
 async def subcategory_analytics(
     db: AsyncSession = Depends(get_db),

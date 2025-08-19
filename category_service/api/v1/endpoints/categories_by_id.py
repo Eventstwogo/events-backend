@@ -45,7 +45,11 @@ class UpdateCategoryParams:  # pylint: disable=too-many-instance-attributes
     file: Optional[UploadFile] = None
 
 
-@router.get("/{category_id}")
+@router.get(
+    "/{category_id}",
+    summary="Not Integrated in any frontend",
+    description="Returns detailed information about a category, including its subcategories if available.",
+)
 @exception_handler
 async def get_category_details(
     category_id: str, db: AsyncSession = Depends(get_db)
@@ -402,7 +406,11 @@ async def _fetch_category(
     return result.scalars().first()
 
 
-@router.put("/{category_id}")
+@router.put(
+    "/{category_id}",
+    summary="Not Integrated in any frontend",
+    description="Updates an existing category with the provided form data.",
+)
 @exception_handler
 async def update_category(
     category_id: str,
@@ -436,7 +444,11 @@ async def update_category(
     return await _process_category_update(category, params, category_id, db)
 
 
-@router.delete("/soft/{category_id}")
+@router.delete(
+    "/soft/{category_id}",
+    summary="Not Integrated in any frontend",
+    description="Soft-deletes a category by ID.",
+)
 @exception_handler
 async def soft_delete_category(
     category_id: str, db: AsyncSession = Depends(get_db)
@@ -473,7 +485,11 @@ async def soft_delete_category(
     )
 
 
-@router.put("/restore/{category_id}")
+@router.put(
+    "/restore/{category_id}",
+    summary="Not Integrated in any frontend",
+    description="Restores a soft-deleted category by ID.",
+)
 @exception_handler
 async def restore_category(
     category_id: str, db: AsyncSession = Depends(get_db)
@@ -510,7 +526,11 @@ async def restore_category(
     )
 
 
-@router.delete("/hard/{category_id}")
+@router.delete(
+    "/hard/{category_id}",
+    summary="Not Integrated in any frontend",
+    description="Permanently deletes a category by ID, including its subcategories.",
+)
 @exception_handler
 async def hard_delete_category(
     category_id: str, db: AsyncSession = Depends(get_db)

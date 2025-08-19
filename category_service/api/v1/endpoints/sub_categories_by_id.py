@@ -31,7 +31,11 @@ from shared.utils.format_validators import is_valid_filename
 router = APIRouter()
 
 
-@router.get("/{subcategory_id}")
+@router.get(
+    "/{subcategory_id}",
+    summary="Not Integrated in any frontend",
+    description="Fetches a subcategory by its ID, including its parent category details.",
+)
 @exception_handler
 async def get_subcategory_by_id(
     subcategory_id: str, db: AsyncSession = Depends(get_db)
@@ -85,7 +89,11 @@ async def get_subcategory_by_id(
     )
 
 
-@router.put("/{subcategory_id}")
+@router.put(
+    "/{subcategory_id}",
+    summary="Not Integrated in any frontend",
+    description="Update a subcategory by ID.",
+)
 @exception_handler
 async def update_subcategory(
     subcategory_id: str,
@@ -331,7 +339,11 @@ async def handle_file_upload(
     return None
 
 
-@router.delete("/soft/{subcategory_id}")
+@router.delete(
+    "/soft/{subcategory_id}",
+    summary="Not Integrated in any frontend",
+    description="Soft delete a subcategory by ID.",
+)
 @exception_handler
 async def soft_delete_subcategory(
     subcategory_id: str, db: AsyncSession = Depends(get_db)
@@ -357,7 +369,11 @@ async def soft_delete_subcategory(
     )
 
 
-@router.put("/restore/{subcategory_id}")
+@router.put(
+    "/restore/{subcategory_id}",
+    summary="Not Integrated in any frontend",
+    description="Restore a soft-deleted subcategory by ID.",
+)
 @exception_handler
 async def restore_subcategory(
     subcategory_id: str, db: AsyncSession = Depends(get_db)
@@ -381,7 +397,11 @@ async def restore_subcategory(
     return api_response(status.HTTP_200_OK, "Subcategory restored successfully")
 
 
-@router.delete("/hard/{subcategory_id}")
+@router.delete(
+    "/hard/{subcategory_id}",
+    summary="Not Integrated in any frontend",
+    description="Permanently delete a subcategory by ID.",
+)
 @exception_handler
 async def hard_delete_subcategory(
     subcategory_id: str, db: AsyncSession = Depends(get_db)

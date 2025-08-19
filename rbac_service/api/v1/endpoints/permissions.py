@@ -22,7 +22,11 @@ from shared.utils.validators import is_single_reserved_word
 router = APIRouter()
 
 
-@router.post("", summary="Create a new permission")
+@router.post(
+    "",
+    summary="Integrated in Admin Panel rbac.ts file",
+    description="Create a new permission in the system. If a permission with the same name exists but is soft-deleted, it will be reactivated.",
+)
 @exception_handler
 async def create_permission(
     permission: CreatePermission,
@@ -83,7 +87,8 @@ async def create_permission(
 @router.get(
     "",
     response_model=List[PermissionDetails],
-    summary="Get permissions by active status",
+    summary="Integrated in Admin Panel rbac.ts file",
+    description="Retrieve a list of permissions filtered by their active status. If no status is provided, all permissions will be returned.",
 )
 @exception_handler
 async def get_permissions(
@@ -114,7 +119,11 @@ async def get_permissions(
     )
 
 
-@router.get("/search", summary="Find permission by name")
+@router.get(
+    "/search",
+    summary="Integrated in Admin Panel rbac.ts file",
+    description="Retrieve a permission ID by its name.",
+)
 @exception_handler
 async def get_permission_id_by_name(
     permission_name: str,
@@ -139,7 +148,11 @@ async def get_permission_id_by_name(
     )
 
 
-@router.put("/{permission_id}", summary="Update permission details")
+@router.put(
+    "/{permission_id}",
+    summary="Integrated in Admin Panel rbac.ts file",
+    description="Update the details of an existing permission.",
+)
 @exception_handler
 async def update_permission(
     permission_id: str,
@@ -193,7 +206,11 @@ async def update_permission(
     )
 
 
-@router.patch("/status/{permission_id}", summary="Update permission status")
+@router.patch(
+    "/status/{permission_id}",
+    summary="Integrated in Admin Panel rbac.ts file",
+    description="Update the status of a permission (active/inactive).",
+)
 @exception_handler
 async def update_permission_status(
     permission_id: str,
@@ -223,7 +240,11 @@ async def update_permission_status(
     )
 
 
-@router.delete("/{permission_id}", summary="Delete a permission (soft or hard)")
+@router.delete(
+    "/{permission_id}",
+    summary="Integrated in Admin Panel rbac.ts file",
+    description="Delete a permission by its ID. If the permission is soft-deleted, it can be permanently deleted with a hard delete flag.",
+)
 @exception_handler
 async def delete_permission(
     permission_id: str,

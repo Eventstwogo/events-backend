@@ -499,7 +499,11 @@ async def _handle_file_upload(
     setattr(metadata.item, metadata.fields.img_field, uploaded_url)
 
 
-@router.get("/{item_id}")
+@router.get(
+    "/{item_id}",
+    summary="Integrated in Admin AddCategory page",
+    description="Fetch details of a category or subcategory by its ID.",
+)
 @exception_handler
 async def get_category_or_subcategory_details(
     item_id: str, db: AsyncSession = Depends(get_db)
@@ -668,7 +672,11 @@ async def _process_item_update(
     )
 
 
-@router.put("/{item_id}")
+@router.put(
+    "/{item_id}",
+    summary="Integrated in Admin AddCategory page",
+    description="Update details of a category or subcategory by its ID.",
+)
 @exception_handler
 async def update_category_or_subcategory(  # pylint: disable=too-many-arguments
     # pylint: disable=too-many-positional-arguments
@@ -774,7 +782,11 @@ async def get_update_form_data(
     )
 
 
-@router.delete("/soft/{item_id}")
+@router.delete(
+    "/soft/{item_id}",
+    summary="Integrated in Admin Categories page",
+    description="Soft delete a category or subcategory by its ID.",
+)
 @exception_handler
 async def soft_delete_category_or_subcategory(
     item_id: str, db: AsyncSession = Depends(get_db)
@@ -832,7 +844,11 @@ async def soft_delete_category_or_subcategory(
     )
 
 
-@router.put("/restore/{item_id}")
+@router.put(
+    "/restore/{item_id}",
+    summary="Integrated in Admin Categories page",
+    description="Restore a soft-deleted category or subcategory by its ID.",
+)
 @exception_handler
 async def restore_category_or_subcategory(
     item_id: str, db: AsyncSession = Depends(get_db)

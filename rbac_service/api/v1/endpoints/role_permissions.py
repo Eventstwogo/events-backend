@@ -19,7 +19,11 @@ from shared.utils.exception_handlers import exception_handler
 router = APIRouter()
 
 
-@router.post("", summary="Create a new role-permission relationship")
+@router.post(
+    "",
+    summary="Integrated in Admin Panel rbac.ts file",
+    description="Create a new role-permission relationship. If a relationship with the same role and permission exists but is soft-deleted, it will be reactivated.",
+)
 @exception_handler
 async def create_role_permission(
     role_permission: CreateRolePermission,
@@ -99,7 +103,8 @@ async def create_role_permission(
 @router.get(
     "",
     response_model=List[RolePermissionDetails],
-    summary="Get role-permission records by status",
+    summary="Integrated in Admin Panel rbac.ts file",
+    description="Retrieve a list of role-permission relationships filtered by their active status. If no status is provided, all relationships will be returned.",
 )
 @exception_handler
 async def get_all_role_permissions(
@@ -130,7 +135,11 @@ async def get_all_role_permissions(
     )
 
 
-@router.get("/{record_id}", summary="Get a specific role-permission record")
+@router.get(
+    "/{record_id}",
+    summary="Integrated in Admin Panel rbac.ts file",
+    description="Retrieve a specific role-permission relationship by its ID.",
+)
 @exception_handler
 async def get_specific_role_permission(
     record_id: int,
@@ -155,7 +164,11 @@ async def get_specific_role_permission(
     )
 
 
-@router.put("/{record_id}", summary="Update role-permission relationship")
+@router.put(
+    "/{record_id}",
+    summary="Integrated in Admin Panel rbac.ts file",
+    description="Update the details of an existing role-permission relationship.",
+)
 @exception_handler
 async def update_role_permission(
     record_id: int,
@@ -191,7 +204,9 @@ async def update_role_permission(
 
 
 @router.patch(
-    "/status/{record_id}", summary="Update status of a role-permission"
+    "/status/{record_id}",
+    summary="Integrated in Admin Panel rbac.ts file",
+    description="Update the status of a role-permission relationship (active/inactive).",
 )
 @exception_handler
 async def update_role_permission_status(
@@ -226,7 +241,8 @@ async def update_role_permission_status(
 
 @router.delete(
     "/{record_id}",
-    summary="Delete a role-permission relationship (soft or hard)",
+    summary="Integrated in Admin Panel rbac.ts file",
+    description="Delete a role-permission relationship by its ID. If the relationship is soft-deleted, it can be permanently deleted with a hard delete flag.",
 )
 @exception_handler
 async def delete_role_permission(
