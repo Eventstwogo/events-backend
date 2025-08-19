@@ -12,6 +12,7 @@ from new_event_service.schemas.bookings import (
     ID_REGEX,
     BookingCreateRequest,
     BookingDetailsResponse,
+    OrganizerEventsStatsResponse,
     SeatCategoryItem,
 )
 from new_event_service.services.booking_helpers import (
@@ -19,6 +20,7 @@ from new_event_service.services.booking_helpers import (
     create_paypal_order,
     extract_capture_id,
 )
+from new_event_service.services.bookings import get_organizer_events_with_stats
 from new_event_service.services.events import check_event_exists
 from new_event_service.services.response_builder import event_not_found_response
 from new_event_service.utils.paypal_client import paypal_client
@@ -1132,4 +1134,35 @@ async def get_booking_order_details(
         status_code=status.HTTP_200_OK,
         message="Booking order details fetched successfully",
         data=response_data,
+    )
+
+
+@router.get(
+    "/organizer/revenue/{organizer_id}",
+    status_code=status.HTTP_200_OK,
+    response_model=OrganizerEventsStatsResponse,
+    summary="Not integrated in any frontend",
+)
+@exception_handler
+async def get_organizer_revenue_endpoint(
+    organizer_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Get total revenue for an organizer based on approved bookings with completed payments
+
+    - **organizer_id**: ID of the organizer
+
+    Returns:
+    - Total revenue from approved bookings with completed payments
+    - Total number of qualifying bookings
+    - Currency (AUD)
+    """
+
+    revenue_data = await get_organizer_events_with_stats(db, organizer_id)
+
+    return api_response(
+        message="Organizer revenue retrieved successfully",
+        data=revenue_data,
+        status_code=status.HTTP_200_OK,
     )

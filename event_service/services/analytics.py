@@ -1,7 +1,7 @@
 from datetime import date, datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
-from sqlalchemy import and_, desc, func, select
+from sqlalchemy import and_, any_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -14,44 +14,49 @@ from shared.db.models import (
     EventStatus,
     Role,
 )
+from shared.db.models.new_events import (
+    NewEvent,
+    NewEventBooking,
+    NewEventBookingOrder,
+    PaymentStatus,
+)
 
 logger = get_logger(__name__)
 
 
 async def fetch_organizer_events_analytics(db: AsyncSession) -> Dict:
     """
-    Fetch analytics for all organizer-created events.
-    No user authentication required - returns system-wide organizer analytics.
+    Fetch analytics for all organizer-created events (new tables).
     """
 
     # Get all events created by organizers
     events_query = (
-        select(Event)
+        select(NewEvent)
         .options(
-            selectinload(Event.category),
-            selectinload(Event.subcategory),
-            selectinload(Event.organizer).selectinload(AdminUser.role),
-            selectinload(Event.slots),
+            selectinload(NewEvent.new_category),
+            selectinload(NewEvent.new_subcategory),
+            selectinload(NewEvent.new_organizer).selectinload(AdminUser.role),
+            selectinload(NewEvent.new_slots),
         )
-        .join(AdminUser, Event.organizer_id == AdminUser.user_id)
+        .join(AdminUser, NewEvent.organizer_id == AdminUser.user_id)
         .join(Role, AdminUser.role_id == Role.role_id)
         .filter(Role.role_name.ilike("organizer"))
-        .order_by(desc(Event.created_at))
+        .order_by(desc(NewEvent.created_at))
     )
     events_result = await db.execute(events_query)
     events = list(events_result.scalars().all())
 
-    # Calculate analytics for all organizer events
+    # Calculate analytics
     analytics = calculate_events_analytics(events)
 
-    # Get organizer statistics
+    # Organizer statistics
     organizer_stats_query = (
         select(
             AdminUser.user_id,
             AdminUser.username_hash,
-            func.count(Event.event_id).label("event_count"),
+            func.count(NewEvent.event_id).label("event_count"),
         )
-        .join(Event, AdminUser.user_id == Event.organizer_id)
+        .join(NewEvent, AdminUser.user_id == NewEvent.organizer_id)
         .join(Role, AdminUser.role_id == Role.role_id)
         .filter(Role.role_name.ilike("organizer"))
         .group_by(AdminUser.user_id, AdminUser.username_hash)
@@ -68,7 +73,7 @@ async def fetch_organizer_events_analytics(db: AsyncSession) -> Dict:
         for row in organizer_stats_result
     ]
 
-    # Get total organizers count
+    # Total organizers
     total_organizers_query = (
         select(func.count(AdminUser.user_id))
         .join(Role, AdminUser.role_id == Role.role_id)
@@ -89,44 +94,43 @@ async def fetch_organizer_events_analytics(db: AsyncSession) -> Dict:
 
 async def fetch_admin_events_analytics(db: AsyncSession) -> Dict:
     """
-    Fetch comprehensive analytics for all events in the system.
-    No user authentication required - returns system-wide analytics.
+    Fetch comprehensive analytics for all events in the system (new tables).
     Separates organizer-created and admin-created events.
     """
 
-    # Get all events with organizer and role information
+    # Fetch all events with organizer & role
     all_events_query = (
-        select(Event)
+        select(NewEvent)
         .options(
-            selectinload(Event.category),
-            selectinload(Event.subcategory),
-            selectinload(Event.organizer).selectinload(AdminUser.role),
-            selectinload(Event.slots),
+            selectinload(NewEvent.new_category),
+            selectinload(NewEvent.new_subcategory),
+            selectinload(NewEvent.new_organizer).selectinload(AdminUser.role),
+            selectinload(NewEvent.new_slots),
         )
-        .order_by(desc(Event.created_at))
+        .order_by(desc(NewEvent.created_at))
     )
     all_events_result = await db.execute(all_events_query)
     all_events = list(all_events_result.scalars().all())
 
-    # Separate events by creator role
+    # Separate organizer vs admin created
     organizer_events = []
     admin_events = []
-
     for event in all_events:
         if (
-            event.organizer
-            and event.organizer.role.role_name.lower() == "organizer"
+            event.new_organizer
+            and event.new_organizer.role
+            and event.new_organizer.role.role_name.lower() == "organizer"
         ):
             organizer_events.append(event)
         else:
             admin_events.append(event)
 
-    # Calculate analytics for different categories
+    # Calculate analytics
     organizer_analytics = calculate_events_analytics(organizer_events)
     admin_analytics = calculate_events_analytics(admin_events)
     overall_analytics = calculate_events_analytics(all_events)
 
-    # Get comprehensive user statistics
+    # User statistics
     # Total users by role
     user_stats_query = (
         select(
@@ -143,9 +147,9 @@ async def fetch_admin_events_analytics(db: AsyncSession) -> Dict:
         select(
             AdminUser.user_id,
             AdminUser.username_hash,
-            func.count(Event.event_id).label("event_count"),
+            func.count(NewEvent.event_id).label("event_count"),
         )
-        .join(Event, AdminUser.user_id == Event.organizer_id)
+        .join(NewEvent, AdminUser.user_id == NewEvent.organizer_id)
         .join(Role, AdminUser.role_id == Role.role_id)
         .filter(Role.role_name.ilike("organizer"))
         .group_by(AdminUser.user_id, AdminUser.username_hash)
@@ -167,9 +171,9 @@ async def fetch_admin_events_analytics(db: AsyncSession) -> Dict:
         select(
             AdminUser.user_id,
             AdminUser.username_hash,
-            func.count(Event.event_id).label("event_count"),
+            func.count(NewEvent.event_id).label("event_count"),
         )
-        .join(Event, AdminUser.user_id == Event.organizer_id)
+        .join(NewEvent, AdminUser.user_id == NewEvent.organizer_id)
         .join(Role, AdminUser.role_id == Role.role_id)
         .filter(Role.role_name.ilike("admin"))
         .group_by(AdminUser.user_id, AdminUser.username_hash)
@@ -207,10 +211,11 @@ async def fetch_admin_events_analytics(db: AsyncSession) -> Dict:
     }
 
 
-def calculate_events_analytics(events: List[Event]) -> Dict:
+def calculate_events_analytics(events: List[NewEvent]) -> Dict:
     """
-    Helper function to calculate analytics for a list of events.
+    Calculate analytics for a list of new events.
     """
+
     total_events = len(events)
     active_events = len(
         [e for e in events if e.event_status == EventStatus.ACTIVE]
@@ -221,45 +226,52 @@ def calculate_events_analytics(events: List[Event]) -> Dict:
     pending_events = len(
         [e for e in events if e.event_status == EventStatus.PENDING]
     )
-    featured_events = len([e for e in events if e.featured_event == True])
+    featured_events = len([e for e in events if e.featured_event])
 
-    # Calculate upcoming and past events
     today = date.today()
+
+    # Upcoming = has future date in event_dates or slots
     upcoming_events = len(
         [
             e
             for e in events
             if e.event_status == EventStatus.ACTIVE
-            and (e.start_date >= today or e.end_date >= today)
+            and (
+                any(d >= today for d in e.event_dates)
+                or any(slot.slot_date >= today for slot in e.new_slots)
+            )
         ]
     )
 
+    # Past = all event dates and slots are < today
     past_events = len(
         [
             e
             for e in events
-            if e.event_status == EventStatus.ACTIVE and e.end_date < today
+            if e.event_status == EventStatus.ACTIVE
+            and all(d < today for d in e.event_dates)
+            and all(slot.slot_date < today for slot in e.new_slots)
         ]
     )
 
-    # Calculate slots analytics
+    # Slots analytics
     total_slots = 0
     active_slots = 0
     draft_slots = 0
 
     for event in events:
-        for slot in event.slots:
+        for slot in event.new_slots:
             total_slots += 1
-            if slot.slot_status:
+            if slot.slot_status:  # True = draft (based on your schema)
                 draft_slots += 1
             else:
                 active_slots += 1
 
-    # Get events by category
+    # Events by category
     events_by_category = {}
     for event in events:
-        if event.category:
-            category_name = event.category.category_name
+        if event.new_category:
+            category_name = event.new_category.category_name
             if category_name not in events_by_category:
                 events_by_category[category_name] = {
                     "total": 0,
@@ -275,7 +287,7 @@ def calculate_events_analytics(events: List[Event]) -> Dict:
             else:
                 events_by_category[category_name]["pending"] += 1
 
-    # Get events by month (last 12 months)
+    # Events by month (created_at)
     events_by_month = {}
     for event in events:
         month_key = event.created_at.strftime("%Y-%m")
@@ -288,8 +300,8 @@ def calculate_events_analytics(events: List[Event]) -> Dict:
             "total_events": total_events,
             "active_events": active_events,
             "draft_events": draft_events,
-            "featured_events": featured_events,
             "pending_events": pending_events,
+            "featured_events": featured_events,
             "upcoming_events": upcoming_events,
             "past_events": past_events,
             "events_by_category": events_by_category,
@@ -306,7 +318,7 @@ def calculate_events_analytics(events: List[Event]) -> Dict:
 async def fetch_event_statistics(db: AsyncSession) -> Dict:
     """
     Fetch simple event statistics including active events, upcoming events,
-    and monthly growth percentage.
+    and monthly growth percentage based on new event tables.
     """
     logger.info("Fetching event statistics")
 
@@ -314,7 +326,7 @@ async def fetch_event_statistics(db: AsyncSession) -> Dict:
     today = date.today()
     current_month_start = today.replace(day=1)
 
-    # Calculate previous month start and end
+    # Calculate previous month start
     if current_month_start.month == 1:
         previous_month_start = current_month_start.replace(
             year=current_month_start.year - 1, month=12
@@ -324,40 +336,41 @@ async def fetch_event_statistics(db: AsyncSession) -> Dict:
             month=current_month_start.month - 1
         )
 
-    # Get active events count
-    active_events_query = select(func.count(Event.event_id)).filter(
-        Event.event_status == EventStatus.ACTIVE
+    # -------------------- Active events -------------------- #
+    active_events_query = select(func.count(NewEvent.event_id)).filter(
+        NewEvent.event_status == EventStatus.ACTIVE
     )
     active_events_result = await db.execute(active_events_query)
     active_events_count = active_events_result.scalar() or 0
 
-    # Get upcoming events count (active events with start_date >= today)
-    upcoming_events_query = select(func.count(Event.event_id)).filter(
+    # -------------------- Upcoming events -------------------- #
+    upcoming_events_query = select(func.count(NewEvent.event_id)).filter(
         and_(
-            Event.event_status == EventStatus.ACTIVE, Event.start_date >= today
+            NewEvent.event_status == EventStatus.ACTIVE,
+            any_(NewEvent.event_dates) >= today,  # ✅ array-based check
         )
     )
     upcoming_events_result = await db.execute(upcoming_events_query)
     upcoming_events_count = upcoming_events_result.scalar() or 0
 
-    # Get current month events count
-    current_month_events_query = select(func.count(Event.event_id)).filter(
-        Event.created_at >= current_month_start
+    # -------------------- Current month events -------------------- #
+    current_month_events_query = select(func.count(NewEvent.event_id)).filter(
+        NewEvent.created_at >= current_month_start
     )
     current_month_events_result = await db.execute(current_month_events_query)
     current_month_events = current_month_events_result.scalar() or 0
 
-    # Get previous month events count
-    previous_month_events_query = select(func.count(Event.event_id)).filter(
+    # -------------------- Previous month events -------------------- #
+    previous_month_events_query = select(func.count(NewEvent.event_id)).filter(
         and_(
-            Event.created_at >= previous_month_start,
-            Event.created_at < current_month_start,
+            NewEvent.created_at >= previous_month_start,
+            NewEvent.created_at < current_month_start,
         )
     )
     previous_month_events_result = await db.execute(previous_month_events_query)
     previous_month_events = previous_month_events_result.scalar() or 0
 
-    # Calculate monthly growth percentage
+    # -------------------- Growth percentage -------------------- #
     if previous_month_events > 0:
         monthly_growth_percentage = round(
             (
@@ -368,11 +381,11 @@ async def fetch_event_statistics(db: AsyncSession) -> Dict:
             2,
         )
     else:
-        # If no events in previous month, show 100% if current month has events, else 0%
         monthly_growth_percentage = 100.0 if current_month_events > 0 else 0.0
 
     logger.info(
-        f"Event statistics calculated: active={active_events_count}, upcoming={upcoming_events_count}, growth={monthly_growth_percentage}%"
+        f"Event stats: active={active_events_count}, upcoming={upcoming_events_count}, "
+        f"growth={monthly_growth_percentage}%, current_month={current_month_events}, prev_month={previous_month_events}"
     )
 
     return {
@@ -386,45 +399,49 @@ async def fetch_event_statistics(db: AsyncSession) -> Dict:
 
 async def fetch_booking_analytics(db: AsyncSession) -> Dict:
     """
-    Fetch comprehensive booking analytics from EventBookings table.
+    Fetch comprehensive booking analytics from new booking tables.
 
     Returns:
-    - Total bookings (total number of seats booked)
-    - Total revenue (sum of booking prices)
-    - Approved bookings (count of bookings with status "approved")
-    - Average booking value (average price per booking)
+    - Total bookings (count of booking line items)
+    - Total revenue (sum of order total_amount for approved+completed payments)
+    - Approved bookings (count of orders with status APPROVED)
+    - Average booking value (average order total_amount)
     """
     logger.info("Fetching booking analytics")
 
-    # Get total bookings (sum of all num_seats)
-    # total_bookings_query = select(func.sum(EventBooking.num_seats))
-    total_bookings_query = select(func.count(EventBooking.booking_id))
+    # -------------------- Total bookings -------------------- #
+    # Count booking line items (not seats)
+    total_bookings_query = select(func.count(NewEventBooking.booking_id))
     total_bookings_result = await db.execute(total_bookings_query)
     total_bookings = total_bookings_result.scalar() or 0
 
-    # Get total revenue (sum of all total_price)
-    total_revenue_query = (
-        select(func.sum(EventBooking.total_price))
-        .filter(EventBooking.booking_status == BookingStatus.APPROVED)
-        .filter(EventBooking.payment_status == "COMPLETED")
+    # -------------------- Total revenue -------------------- #
+    # Use total_amount from orders with APPROVED + COMPLETED
+    total_revenue_query = select(
+        func.coalesce(func.sum(NewEventBookingOrder.total_amount), 0)
+    ).filter(
+        NewEventBookingOrder.booking_status == BookingStatus.APPROVED,
+        NewEventBookingOrder.payment_status == PaymentStatus.COMPLETED,
     )
     total_revenue_result = await db.execute(total_revenue_query)
     total_revenue = float(total_revenue_result.scalar() or 0)
 
-    # Get approved bookings count
+    # -------------------- Approved bookings count -------------------- #
     approved_bookings_query = select(
-        func.count(EventBooking.booking_id)
-    ).filter(EventBooking.booking_status == BookingStatus.APPROVED)
+        func.count(NewEventBookingOrder.order_id)
+    ).filter(NewEventBookingOrder.booking_status == BookingStatus.APPROVED)
     approved_bookings_result = await db.execute(approved_bookings_query)
     approved_bookings = approved_bookings_result.scalar() or 0
 
-    # Get average booking value (average of total_price)
-    avg_booking_value_query = select(func.avg(EventBooking.total_price))
+    # -------------------- Average booking value -------------------- #
+    avg_booking_value_query = select(
+        func.avg(NewEventBookingOrder.total_amount)
+    )
     avg_booking_value_result = await db.execute(avg_booking_value_query)
     average_booking_value = float(avg_booking_value_result.scalar() or 0)
 
     logger.info(
-        f"Booking analytics calculated: total_bookings={total_bookings}, "
+        f"Booking analytics: total_bookings={total_bookings}, "
         f"total_revenue={total_revenue}, approved_bookings={approved_bookings}, "
         f"average_booking_value={average_booking_value}"
     )
@@ -432,7 +449,7 @@ async def fetch_booking_analytics(db: AsyncSession) -> Dict:
     return {
         "booking_analytics": {
             "total_bookings": total_bookings,
-            "total_revenue": total_revenue,
+            "total_revenue": round(total_revenue, 2),
             "approved_bookings": approved_bookings,
             "average_booking_value": round(average_booking_value, 2),
         }
@@ -466,31 +483,39 @@ async def fetch_event_booking_stats_by_time_range(db: AsyncSession) -> Dict:
     # Yearly: current year
     yearly_start = today.replace(month=1, day=1)
 
-    async def get_event_stats_for_period(start_date: Optional[date] = None):
+    async def get_event_stats_for_period(
+        start_date: Optional[date] = None,
+    ) -> List[Dict]:
         """Helper function to get event booking stats for a specific period"""
-        # Base query to get event booking statistics
         query = (
             select(
-                Event.event_id,
-                Event.event_title,
-                func.sum(EventBooking.num_seats).label("total_seats_booked"),
-                func.sum(EventBooking.total_price).label("total_revenue"),
+                NewEvent.event_id,
+                NewEvent.event_title,
+                func.sum(NewEventBooking.num_seats).label("total_seats_booked"),
+                func.sum(NewEventBooking.total_price).label("total_revenue"),
             )
-            .join(EventBooking, Event.event_id == EventBooking.event_id)
-            .group_by(Event.event_id, Event.event_title)
+            .join(
+                NewEventBookingOrder,
+                NewEventBookingOrder.event_ref_id == NewEvent.event_id,
+            )
+            .join(
+                NewEventBooking,
+                NewEventBooking.order_id == NewEventBookingOrder.order_id,
+            )
+            .group_by(NewEvent.event_id, NewEvent.event_title)
             .order_by(desc("total_revenue"))
         )
 
         # Add date filter if specified
         if start_date:
-            query = query.filter(EventBooking.booking_date >= start_date)
+            query = query.filter(NewEventBooking.created_at >= start_date)
 
         result = await db.execute(query)
         return [
             {
                 "event_id": row.event_id,
                 "event_title": row.event_title,
-                "total_seats_booked": row.total_seats_booked or 0,
+                "total_seats_booked": int(row.total_seats_booked or 0),
                 "total_revenue": float(row.total_revenue or 0),
             }
             for row in result
@@ -501,9 +526,7 @@ async def fetch_event_booking_stats_by_time_range(db: AsyncSession) -> Dict:
     weekly_stats = await get_event_stats_for_period(weekly_start)
     monthly_stats = await get_event_stats_for_period(monthly_start)
     yearly_stats = await get_event_stats_for_period(yearly_start)
-    all_time_stats = (
-        await get_event_stats_for_period()
-    )  # No date filter for all-time
+    all_time_stats = await get_event_stats_for_period()  # No filter
 
     logger.info(
         f"Event booking stats calculated: daily={len(daily_stats)}, "

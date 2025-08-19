@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Sequence, Tuple
 
 from sqlalchemy import case, desc, func, select
 from sqlalchemy.engine.row import Row
@@ -13,12 +13,15 @@ from shared.db.models import (
     Config,
     ContactUs,
     ContactUsStatus,
-    Event,
-    EventBooking,
     EventStatus,
     OrganizerQuery,
     QueryStatus,
     User,
+)
+from shared.db.models.new_events import (
+    NewEvent,
+    NewEventBookingOrder,
+    PaymentStatus,
 )
 
 
@@ -314,35 +317,35 @@ async def _get_revenue_analytics(
     db: AsyncSession, current_month_start: datetime, last_month_start: datetime
 ) -> Dict[str, Any]:
     """
-    Get revenue analytics data based on approved bookings with completed payments.
-
-    Filters bookings by:
-    - booking_status = APPROVED
-    - payment_status = APPROVED (completed payments)
+    Get revenue analytics data based on approved orders with completed payments.
     """
 
-    # Get current month revenue from approved bookings with completed payments
+    # Current month revenue (from orders)
     current_month_result = await db.execute(
-        select(func.coalesce(func.sum(EventBooking.total_price), 0)).where(
-            EventBooking.created_at >= current_month_start,
-            EventBooking.booking_status == BookingStatus.APPROVED,
-            EventBooking.payment_status == "COMPLETED",
+        select(
+            func.coalesce(func.sum(NewEventBookingOrder.total_amount), 0)
+        ).where(
+            NewEventBookingOrder.created_at >= current_month_start,
+            NewEventBookingOrder.booking_status == BookingStatus.APPROVED,
+            NewEventBookingOrder.payment_status == PaymentStatus.COMPLETED,
         )
     )
     current_month_revenue = float(current_month_result.scalar() or 0)
 
-    # Get last month revenue from approved bookings with completed payments
+    # Last month revenue
     last_month_result = await db.execute(
-        select(func.coalesce(func.sum(EventBooking.total_price), 0)).where(
-            EventBooking.created_at >= last_month_start,
-            EventBooking.created_at < current_month_start,
-            EventBooking.booking_status == BookingStatus.APPROVED,
-            EventBooking.payment_status == "COMPLETED",
+        select(
+            func.coalesce(func.sum(NewEventBookingOrder.total_amount), 0)
+        ).where(
+            NewEventBookingOrder.created_at >= last_month_start,
+            NewEventBookingOrder.created_at < current_month_start,
+            NewEventBookingOrder.booking_status == BookingStatus.APPROVED,
+            NewEventBookingOrder.payment_status == PaymentStatus.COMPLETED,
         )
     )
     last_month_revenue = float(last_month_result.scalar() or 0)
 
-    # Calculate percentage change
+    # Percentage change
     if last_month_revenue > 0:
         percentage_change = (
             (current_month_revenue - last_month_revenue) / last_month_revenue
@@ -350,16 +353,13 @@ async def _get_revenue_analytics(
     else:
         percentage_change = 100.0 if current_month_revenue > 0 else 0.0
 
-    # Calculate revenue difference
     revenue_difference = current_month_revenue - last_month_revenue
 
-    # Determine trend
-    if percentage_change > 0:
-        trend = "up"
-    elif percentage_change < 0:
-        trend = "down"
-    else:
-        trend = "stable"
+    trend = (
+        "up"
+        if percentage_change > 0
+        else "down" if percentage_change < 0 else "stable"
+    )
 
     return {
         "current_month": round(current_month_revenue, 2),
@@ -367,7 +367,7 @@ async def _get_revenue_analytics(
         "difference": round(revenue_difference, 2),
         "percentage_change": round(percentage_change, 1),
         "trend": trend,
-        "note": "Revenue from approved bookings with completed payments.",
+        "note": "Revenue from approved orders with completed payments.",
     }
 
 
@@ -420,42 +420,45 @@ async def _get_settings_analytics(
 async def _get_events_analytics(
     db: AsyncSession, current_month_start: datetime, last_month_start: datetime
 ) -> Dict[str, Any]:
-    """Get events analytics data."""
+    """Get events analytics data (only successful payment bookings are counted)."""
 
-    # Get total active events count
+    # Total active events
     total_result = await db.execute(
-        select(func.count(Event.event_id)).where(
-            Event.event_status == EventStatus.ACTIVE
+        select(func.count(NewEvent.event_id)).where(
+            NewEvent.event_status == EventStatus.ACTIVE
         )
     )
     total_events = total_result.scalar() or 0
 
-    # Get events created this month
+    # Events created this month
     current_month_result = await db.execute(
-        select(func.count(Event.event_id)).where(
-            Event.created_at >= current_month_start,
-            Event.event_status == EventStatus.ACTIVE,
+        select(func.count(NewEvent.event_id)).where(
+            NewEvent.created_at >= current_month_start,
+            NewEvent.event_status == EventStatus.ACTIVE,
         )
     )
     current_month_count = current_month_result.scalar() or 0
 
-    # Get events created last month
+    # Events created last month
     last_month_result = await db.execute(
-        select(func.count(Event.event_id)).where(
-            Event.created_at >= last_month_start,
-            Event.created_at < current_month_start,
-            Event.event_status == EventStatus.ACTIVE,
+        select(func.count(NewEvent.event_id)).where(
+            NewEvent.created_at >= last_month_start,
+            NewEvent.created_at < current_month_start,
+            NewEvent.event_status == EventStatus.ACTIVE,
         )
     )
     last_month_count = last_month_result.scalar() or 0
 
-    # Get total bookings
+    # Total bookings (only successful payments)
     total_bookings_result = await db.execute(
-        select(func.count(EventBooking.booking_id))
+        select(func.count(NewEventBookingOrder.order_id)).where(
+            NewEventBookingOrder.booking_status == BookingStatus.APPROVED,
+            NewEventBookingOrder.payment_status == PaymentStatus.COMPLETED,
+        )
     )
     total_bookings = total_bookings_result.scalar() or 0
 
-    # Calculate percentage change
+    # Percentage change
     if last_month_count > 0:
         percentage_change = (
             (current_month_count - last_month_count) / last_month_count
@@ -465,7 +468,7 @@ async def _get_events_analytics(
 
     return {
         "total": total_events,
-        "total_bookings": total_bookings,
+        "successful_bookings": total_bookings,
         "added_this_month": current_month_count,
         "percentage_change": round(percentage_change, 1),
         "trend": (

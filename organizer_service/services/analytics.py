@@ -15,6 +15,11 @@ from shared.db.models import (
     Role,
 )
 from shared.db.models.events import BookingStatus, EventStatus
+from shared.db.models.new_events import (
+    NewEvent,
+    NewEventBookingOrder,
+    PaymentStatus,
+)
 from shared.utils.file_uploads import get_media_url
 
 
@@ -68,35 +73,51 @@ def calculate_date_range(period: str) -> Tuple[date, date]:
 async def get_event_statistics(
     db: AsyncSession, user_id: str, today: date
 ) -> Dict[str, Any]:
+    """Fetch statistics about events created by a specific organizer."""
     events = (
-        (await db.execute(select(Event).where(Event.organizer_id == user_id)))
+        (
+            await db.execute(
+                select(NewEvent).where(NewEvent.organizer_id == user_id)
+            )
+        )
         .scalars()
         .all()
     )
 
     return {
         "total_events": len(events),
+        # ACTIVE events
         "active_events": sum(
-            1 for e in events if not e.event_status == EventStatus.ACTIVE
+            1 for e in events if e.event_status == EventStatus.ACTIVE
         ),
-        "upcoming_events": sum(1 for e in events if e.start_date > today),
-        "past_events": sum(1 for e in events if e.end_date < today),
+        # Upcoming: event starts after today (earliest date in event_dates > today)
+        "upcoming_events": sum(
+            1 for e in events if e.event_dates and min(e.event_dates) > today
+        ),
+        # Past: event ended before today (latest date in event_dates < today)
+        "past_events": sum(
+            1 for e in events if e.event_dates and max(e.event_dates) < today
+        ),
     }
 
 
 async def get_booking_statistics_and_revenue(
     db: AsyncSession, user_id: str, start_date: date, end_date: date
 ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    """Fetch booking statistics and revenue for a specific organizer within a date range."""
     bookings = (
         (
             await db.execute(
-                select(EventBooking)
-                .join(Event, EventBooking.event_id == Event.event_id)
+                select(NewEventBookingOrder)
+                .join(
+                    NewEvent,
+                    NewEventBookingOrder.event_ref_id == NewEvent.event_id,
+                )
                 .where(
                     and_(
-                        Event.organizer_id == user_id,
-                        EventBooking.booking_date >= start_date,
-                        EventBooking.booking_date <= end_date,
+                        NewEvent.organizer_id == user_id,
+                        NewEventBookingOrder.created_at >= start_date,
+                        NewEventBookingOrder.created_at <= end_date,
                     )
                 )
             )
@@ -106,10 +127,13 @@ async def get_booking_statistics_and_revenue(
     )
 
     total_bookings = len(bookings)
+
     approved = [
         b for b in bookings if b.booking_status == BookingStatus.APPROVED
     ]
-    completed = [b for b in approved if b.payment_status == "COMPLETED"]
+    completed = [
+        b for b in approved if b.payment_status == PaymentStatus.COMPLETED
+    ]
     pending = [
         b for b in bookings if b.booking_status == BookingStatus.PROCESSING
     ]
@@ -117,14 +141,15 @@ async def get_booking_statistics_and_revenue(
         b for b in bookings if b.booking_status == BookingStatus.CANCELLED
     ]
 
-    total_revenue = sum(float(b.total_price) for b in completed)
+    # Use order total_amount (instead of line items total_price)
+    total_revenue = sum(float(b.total_amount) for b in completed)
     pending_revenue = sum(
-        float(b.total_price)
+        float(b.total_amount)
         for b in bookings
         if (b.booking_status == BookingStatus.PROCESSING)
         or (
             b.booking_status == BookingStatus.APPROVED
-            and b.payment_status != "COMPLETED"
+            and b.payment_status != PaymentStatus.COMPLETED
         )
     )
 

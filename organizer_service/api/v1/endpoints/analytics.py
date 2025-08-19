@@ -1,5 +1,5 @@
 from datetime import date, datetime, timedelta
-from typing import Annotated, List, Optional
+from typing import Annotated, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, Path, Query
 from sqlalchemy import and_, desc, func, select
@@ -35,6 +35,12 @@ from shared.db.models import (
     EventStatus,
     OrganizerQuery,
 )
+from shared.db.models.new_events import (
+    NewEvent,
+    NewEventBookingOrder,
+    PaymentStatus,
+)
+from shared.db.models.rbac import Role
 from shared.db.sessions.database import get_db
 from shared.dependencies.admin import get_current_active_user
 from shared.utils.data_utils import process_business_profile_data
@@ -67,6 +73,7 @@ def extra_images_media_urls(value: Optional[List[str]]) -> Optional[List[str]]:
     response_model=OrganizerFullDetailsApiResponse,
     summary="Get Full Organizer Details",
     description="Fetch complete organizer details including business profile, events, and event slots",
+    deprecated=True,  # Marked as deprecated
 )
 @exception_handler
 async def get_organizer_full_details(
@@ -290,6 +297,7 @@ async def get_organizer_full_details(
     response_model=OrganizerSummaryApiResponse,
     summary="Get Organizer Summary",
     description="Fetch a lightweight summary of organizer details with statistics",
+    deprecated=True,  # Marked as deprecated
 )
 @exception_handler
 async def get_organizer_summary(
@@ -497,7 +505,7 @@ async def get_dashboard_overview(
 )
 @exception_handler
 async def get_event_analytics(
-    current_user: Annotated[AdminUser, Depends(get_current_active_user)],
+    current_user: AdminUser = Depends(get_current_active_user),
     period: str = Query(
         "30d",
         description="Time period for analytics (7d, 30d, 90d, 1y)",
@@ -511,7 +519,7 @@ async def get_event_analytics(
     Requirements:
     - User must have organizer role
     - User must have a business profile
-    - Revenue calculations only include approved bookings with completed payments
+    - Revenue calculations only include approved orders with completed payments
 
     Includes:
     - Event performance metrics
@@ -524,10 +532,14 @@ async def get_event_analytics(
     user_id = current_user.user_id
 
     # Constraint 1: Check if user has organizer role
-    if (
-        not current_user.role
-        or current_user.role.role_name.lower() != "organizer"
-    ):
+    role_name = None
+    if current_user.role_id:
+        role_stmt = select(Role.role_name).where(
+            Role.role_id == current_user.role_id
+        )
+        role_result = await db.execute(role_stmt)
+        role_name = role_result.scalar()
+    if not role_name or role_name.lower() != "organizer":
         return api_response(
             status_code=403,
             message="Access denied. This endpoint is restricted to organizers only.",
@@ -556,7 +568,7 @@ async def get_event_analytics(
             data=None,
         )
 
-    # Calculate date range
+    # -------------------- Calculate date range -------------------- #
     end_date = date.today()
     if period == "7d":
         start_date = end_date - timedelta(days=7)
@@ -569,17 +581,23 @@ async def get_event_analytics(
     else:
         start_date = end_date - timedelta(days=30)
 
-    # Get events with booking data
+    # -------------------- Event performance -------------------- #
     events_with_bookings_stmt = (
         select(
-            Event,
-            func.count(EventBooking.booking_id).label("total_bookings"),
-            func.sum(EventBooking.total_price).label("total_revenue"),
+            NewEvent,
+            func.count(NewEventBookingOrder.order_id).label("total_bookings"),
+            func.sum(NewEventBookingOrder.total_amount).label("total_revenue"),
         )
-        .outerjoin(EventBooking, Event.event_id == EventBooking.event_id)
-        .options(selectinload(Event.category), selectinload(Event.subcategory))
-        .where(Event.organizer_id == user_id)
-        .group_by(Event.event_id)
+        .outerjoin(
+            NewEventBookingOrder,
+            NewEvent.event_id == NewEventBookingOrder.event_ref_id,
+        )
+        .options(
+            selectinload(NewEvent.new_category),
+            selectinload(NewEvent.new_subcategory),
+        )
+        .where(NewEvent.organizer_id == user_id)
+        .group_by(NewEvent.event_id)
         .order_by(desc("total_bookings"))
     )
 
@@ -588,10 +606,9 @@ async def get_event_analytics(
 
     # Process event performance data
     event_performance = []
-    category_stats = {}
+    category_stats: Dict[str, Dict] = {}
 
     for event, booking_count, revenue in events_data:
-        # Calculate event metrics
         event_revenue = float(revenue) if revenue else 0.0
 
         event_performance.append(
@@ -599,12 +616,12 @@ async def get_event_analytics(
                 "event_id": event.event_id,
                 "event_title": event.event_title,
                 "category_name": (
-                    event.category.category_name
-                    if event.category
+                    event.new_category.category_name
+                    if event.new_category
                     else "Uncategorized"
                 ),
-                "start_date": event.start_date,
-                "end_date": event.end_date,
+                "event_dates": event.event_dates,
+                "event_type": event.event_type,
                 "total_bookings": booking_count or 0,
                 "total_revenue": round(event_revenue, 2),
                 "event_status": event.event_status,
@@ -614,9 +631,10 @@ async def get_event_analytics(
             }
         )
 
-        # Aggregate category statistics
         category_name = (
-            event.category.category_name if event.category else "Uncategorized"
+            event.new_category.category_name
+            if event.new_category
+            else "Uncategorized"
         )
         if category_name not in category_stats:
             category_stats[category_name] = {
@@ -630,46 +648,45 @@ async def get_event_analytics(
         category_stats[category_name]["total_bookings"] += booking_count or 0
         category_stats[category_name]["total_revenue"] += event_revenue
 
-    # Convert category stats to list and sort by revenue
+    # Popular categories (sorted by revenue)
     popular_categories = sorted(
         list(category_stats.values()),
         key=lambda x: x["total_revenue"],
         reverse=True,
     )
 
-    # Get booking trends over time
+    # -------------------- Booking trends -------------------- #
     booking_trends_stmt = (
         select(
-            func.date(EventBooking.booking_date).label("booking_date"),
-            func.count(EventBooking.booking_id).label("daily_bookings"),
-            func.sum(EventBooking.total_price).label("daily_revenue"),
+            func.date(NewEventBookingOrder.created_at).label("booking_date"),
+            func.count(NewEventBookingOrder.order_id).label("daily_bookings"),
+            func.sum(NewEventBookingOrder.total_amount).label("daily_revenue"),
         )
-        .join(Event, EventBooking.event_id == Event.event_id)
+        .join(NewEvent, NewEventBookingOrder.event_ref_id == NewEvent.event_id)
         .where(
             and_(
-                Event.organizer_id == user_id,
-                EventBooking.booking_date >= start_date,
-                EventBooking.booking_date <= end_date,
-                EventBooking.booking_status == BookingStatus.APPROVED,
+                NewEvent.organizer_id == user_id,
+                NewEventBookingOrder.created_at >= start_date,
+                NewEventBookingOrder.created_at <= end_date,
+                NewEventBookingOrder.booking_status == BookingStatus.APPROVED,
+                NewEventBookingOrder.payment_status == PaymentStatus.COMPLETED,
             )
         )
-        .group_by(func.date(EventBooking.booking_date))
-        .order_by(func.date(EventBooking.booking_date))
+        .group_by(func.date(NewEventBookingOrder.created_at))
+        .order_by(func.date(NewEventBookingOrder.created_at))
     )
 
     trends_result = await db.execute(booking_trends_stmt)
-    booking_trends = []
+    booking_trends = [
+        {
+            "date": booking_date,
+            "bookings": daily_bookings,
+            "revenue": round(float(daily_revenue or 0), 2),
+        }
+        for booking_date, daily_bookings, daily_revenue in trends_result
+    ]
 
-    for booking_date, daily_bookings, daily_revenue in trends_result:
-        booking_trends.append(
-            {
-                "date": booking_date,
-                "bookings": daily_bookings,
-                "revenue": round(float(daily_revenue), 2),
-            }
-        )
-
-    # Calculate success metrics
+    # -------------------- Success metrics -------------------- #
     total_events = len(events_data)
     events_with_bookings = sum(
         1 for _, bookings, _ in events_data if bookings and bookings > 0
@@ -682,8 +699,8 @@ async def get_event_analytics(
     analytics_data = {
         "period": period,
         "date_range": {"start_date": start_date, "end_date": end_date},
-        "event_performance": event_performance[:10],  # Top 10 events
-        "popular_categories": popular_categories[:5],  # Top 5 categories
+        "event_performance": event_performance[:10],
+        "popular_categories": popular_categories[:5],
         "booking_trends": booking_trends,
         "success_metrics": {
             "total_events": total_events,
@@ -737,7 +754,7 @@ async def get_booking_analytics(
 
     user_id = current_user.user_id
 
-    # Calculate date range
+    # -------------------- Date range -------------------- #
     end_date = date.today()
     if period == "7d":
         start_date = end_date - timedelta(days=7)
@@ -750,25 +767,29 @@ async def get_booking_analytics(
     else:
         start_date = end_date - timedelta(days=30)
 
-    # Get all bookings for the organizer in the period
+    # -------------------- Fetch bookings -------------------- #
     bookings_stmt = (
-        select(EventBooking, Event.event_title, Event.category_id)
-        .join(Event, EventBooking.event_id == Event.event_id)
-        .options(selectinload(EventBooking.user))
+        select(
+            NewEventBookingOrder,
+            NewEvent.event_title,
+            NewEvent.category_id,
+        )
+        .join(NewEvent, NewEventBookingOrder.event_ref_id == NewEvent.event_id)
+        .options(selectinload(NewEventBookingOrder.new_user))
         .where(
             and_(
-                Event.organizer_id == user_id,
-                EventBooking.booking_date >= start_date,
-                EventBooking.booking_date <= end_date,
+                NewEvent.organizer_id == user_id,
+                NewEventBookingOrder.created_at >= start_date,
+                NewEventBookingOrder.created_at <= end_date,
             )
         )
-        .order_by(desc(EventBooking.created_at))
+        .order_by(desc(NewEventBookingOrder.created_at))
     )
 
     bookings_result = await db.execute(bookings_stmt)
     bookings_data = bookings_result.all()
 
-    # Process booking statistics
+    # -------------------- Stats Processing -------------------- #
     total_bookings = len(bookings_data)
     status_distribution = {
         "approved": 0,
@@ -782,71 +803,69 @@ async def get_booking_analytics(
     customer_bookings = {}
     daily_bookings = {}
 
-    for booking, event_title, category_id in bookings_data:
-        # Status distribution
-        if booking.booking_status == BookingStatus.APPROVED:
+    for booking_order, event_title, category_id in bookings_data:
+        # Booking status
+        if booking_order.booking_status == BookingStatus.APPROVED:
             status_distribution["approved"] += 1
-            total_revenue += float(booking.total_price)
-        elif booking.booking_status == BookingStatus.PROCESSING:
+            total_revenue += float(booking_order.total_amount)
+        elif booking_order.booking_status == BookingStatus.PROCESSING:
             status_distribution["pending"] += 1
-            pending_revenue += float(booking.total_price)
-        elif booking.booking_status == BookingStatus.CANCELLED:
+            pending_revenue += float(booking_order.total_amount)
+        elif booking_order.booking_status == BookingStatus.CANCELLED:
             status_distribution["cancelled"] += 1
-        elif booking.booking_status == BookingStatus.FAILED:
+        elif booking_order.booking_status == BookingStatus.FAILED:
             status_distribution["failed"] += 1
 
         # Customer booking patterns
-        user_id_key = booking.user_id
+        user_id_key = booking_order.user_ref_id
         if user_id_key not in customer_bookings:
             customer_bookings[user_id_key] = {
                 "user_id": user_id_key,
                 "total_bookings": 0,
                 "total_spent": 0.0,
-                "last_booking": booking.booking_date,
+                "last_booking": booking_order.created_at,
             }
 
         customer_bookings[user_id_key]["total_bookings"] += 1
-        if booking.booking_status == BookingStatus.APPROVED:
+        if booking_order.booking_status == BookingStatus.APPROVED:
             customer_bookings[user_id_key]["total_spent"] += float(
-                booking.total_price
+                booking_order.total_amount
             )
 
         if (
-            booking.booking_date
+            booking_order.created_at
             > customer_bookings[user_id_key]["last_booking"]
         ):
             customer_bookings[user_id_key][
                 "last_booking"
-            ] = booking.booking_date
+            ] = booking_order.created_at
 
         # Daily booking trends
-        booking_date_str = booking.booking_date.strftime("%Y-%m-%d")
+        booking_date_str = booking_order.created_at.strftime("%Y-%m-%d")
         if booking_date_str not in daily_bookings:
             daily_bookings[booking_date_str] = {
-                "date": booking.booking_date,
+                "date": booking_order.created_at.date(),
                 "bookings": 0,
                 "revenue": 0.0,
             }
 
         daily_bookings[booking_date_str]["bookings"] += 1
-        if booking.booking_status == BookingStatus.APPROVED:
+        if booking_order.booking_status == BookingStatus.APPROVED:
             daily_bookings[booking_date_str]["revenue"] += float(
-                booking.total_price
+                booking_order.total_amount
             )
 
-    # Get top customers
+    # -------------------- Aggregates -------------------- #
     top_customers = sorted(
         list(customer_bookings.values()),
         key=lambda x: x["total_spent"],
         reverse=True,
     )[:10]
 
-    # Convert daily bookings to sorted list
     booking_trends = sorted(
         list(daily_bookings.values()), key=lambda x: x["date"]
     )
 
-    # Calculate metrics
     average_booking_value = round(
         (
             (total_revenue / status_distribution["approved"])
@@ -864,22 +883,22 @@ async def get_booking_analytics(
         2,
     )
 
-    # Get recent bookings
+    # -------------------- Recent Bookings -------------------- #
     recent_bookings = []
-    for booking, event_title, category_id in bookings_data[:10]:
+    for booking_order, event_title, category_id in bookings_data[:10]:
         recent_bookings.append(
             {
-                "booking_id": booking.booking_id,
+                "order_id": booking_order.order_id,
                 "event_title": event_title,
-                "user_id": booking.user_id,
-                "num_seats": booking.num_seats,
-                "total_price": float(booking.total_price),
-                "booking_status": booking.booking_status.value,
-                "booking_date": booking.booking_date,
-                "created_at": booking.created_at,
+                "user_id": booking_order.user_ref_id,
+                "total_amount": float(booking_order.total_amount),
+                "booking_status": booking_order.booking_status.value,
+                "payment_status": booking_order.payment_status.value,
+                "created_at": booking_order.created_at,
             }
         )
 
+    # -------------------- Response -------------------- #
     analytics_data = {
         "period": period,
         "date_range": {"start_date": start_date, "end_date": end_date},
@@ -1064,7 +1083,7 @@ async def get_query_analytics(
 )
 @exception_handler
 async def get_performance_metrics(
-    current_user: Annotated[AdminUser, Depends(get_current_active_user)],
+    current_user: AdminUser = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -1079,98 +1098,88 @@ async def get_performance_metrics(
 
     user_id = current_user.user_id
 
-    # Define periods for comparison
+    # -------------------- Period definitions -------------------- #
     today = date.today()
     current_month_start = today.replace(day=1)
     last_month_start = (current_month_start - timedelta(days=1)).replace(day=1)
     last_month_end = current_month_start - timedelta(days=1)
 
-    current_quarter_start = date(
-        today.year, ((today.month - 1) // 3) * 3 + 1, 1
-    )
-    last_quarter_end = current_quarter_start - timedelta(days=1)
-    last_quarter_start = date(
-        last_quarter_end.year, ((last_quarter_end.month - 1) // 3) * 3 + 1, 1
-    )
-
-    # Get current month metrics
-    current_month_events_stmt = select(func.count(Event.event_id)).where(
+    # -------------------- Current month events -------------------- #
+    current_month_events_stmt = select(func.count(NewEvent.event_id)).where(
         and_(
-            Event.organizer_id == user_id,
-            Event.created_at
+            NewEvent.organizer_id == user_id,
+            NewEvent.created_at
             >= datetime.combine(current_month_start, datetime.min.time()),
-            Event.created_at <= datetime.combine(today, datetime.max.time()),
+            NewEvent.created_at <= datetime.combine(today, datetime.max.time()),
         )
     )
     current_month_events = (
-        await db.execute(current_month_events_stmt)
-    ).scalar() or 0
+        (await db.execute(current_month_events_stmt)).scalar()
+    ) or 0
 
-    # Get last month metrics
-    last_month_events_stmt = select(func.count(Event.event_id)).where(
+    # -------------------- Last month events -------------------- #
+    last_month_events_stmt = select(func.count(NewEvent.event_id)).where(
         and_(
-            Event.organizer_id == user_id,
-            Event.created_at
+            NewEvent.organizer_id == user_id,
+            NewEvent.created_at
             >= datetime.combine(last_month_start, datetime.min.time()),
-            Event.created_at
+            NewEvent.created_at
             <= datetime.combine(last_month_end, datetime.max.time()),
         )
     )
     last_month_events = (await db.execute(last_month_events_stmt)).scalar() or 0
 
-    # Get current month bookings and revenue
+    # -------------------- Current month bookings + revenue -------------------- #
     current_month_bookings_stmt = (
         select(
-            func.count(EventBooking.booking_id),
-            func.sum(EventBooking.total_price),
+            func.count(NewEventBookingOrder.order_id),
+            func.sum(NewEventBookingOrder.total_amount),
         )
-        .join(Event, EventBooking.event_id == Event.event_id)
         .where(
             and_(
-                Event.organizer_id == user_id,
-                EventBooking.booking_date >= current_month_start,
-                EventBooking.booking_date <= today,
-                EventBooking.booking_status == BookingStatus.APPROVED,
+                NewEventBookingOrder.event_ref_id == NewEvent.event_id,
+                NewEventBookingOrder.booking_status == BookingStatus.APPROVED,
+                NewEventBookingOrder.payment_status == PaymentStatus.COMPLETED,
+                NewEventBookingOrder.created_at >= current_month_start,
+                NewEventBookingOrder.created_at <= today,
+                NewEvent.organizer_id == user_id,
             )
         )
+        .join(NewEvent, NewEventBookingOrder.event_ref_id == NewEvent.event_id)
     )
-    current_bookings_result = await db.execute(current_month_bookings_stmt)
-    result = current_bookings_result.first()
-    if result:
-        current_bookings, current_revenue = result
-        current_bookings = current_bookings or 0
-        current_revenue = float(current_revenue) if current_revenue else 0.0
-    else:
-        current_bookings = 0
-        current_revenue = 0.0
 
-    # Get last month bookings and revenue
+    current_bookings, current_revenue = (
+        await db.execute(current_month_bookings_stmt)
+    ).first() or (0, 0)
+    current_bookings = current_bookings or 0
+    current_revenue = float(current_revenue or 0.0)
+
+    # -------------------- Last month bookings + revenue -------------------- #
     last_month_bookings_stmt = (
         select(
-            func.count(EventBooking.booking_id),
-            func.sum(EventBooking.total_price),
+            func.count(NewEventBookingOrder.order_id),
+            func.sum(NewEventBookingOrder.total_amount),
         )
-        .join(Event, EventBooking.event_id == Event.event_id)
         .where(
             and_(
-                Event.organizer_id == user_id,
-                EventBooking.booking_date >= last_month_start,
-                EventBooking.booking_date <= last_month_end,
-                EventBooking.booking_status == BookingStatus.APPROVED,
+                NewEventBookingOrder.event_ref_id == NewEvent.event_id,
+                NewEventBookingOrder.booking_status == BookingStatus.APPROVED,
+                NewEventBookingOrder.payment_status == PaymentStatus.COMPLETED,
+                NewEventBookingOrder.created_at >= last_month_start,
+                NewEventBookingOrder.created_at <= last_month_end,
+                NewEvent.organizer_id == user_id,
             )
         )
+        .join(NewEvent, NewEventBookingOrder.event_ref_id == NewEvent.event_id)
     )
-    last_bookings_result = await db.execute(last_month_bookings_stmt)
-    result = last_bookings_result.first()
-    if result:
-        last_bookings, last_revenue = result
-        last_bookings = last_bookings or 0
-        last_revenue = float(last_revenue) if last_revenue else 0.0
-    else:
-        last_bookings = 0
-        last_revenue = 0.0
 
-    # Calculate growth rates
+    last_bookings, last_revenue = (
+        await db.execute(last_month_bookings_stmt)
+    ).first() or (0, 0)
+    last_bookings = last_bookings or 0
+    last_revenue = float(last_revenue or 0.0)
+
+    # -------------------- Growth rates -------------------- #
     events_growth = round(
         (
             (
@@ -1200,38 +1209,40 @@ async def get_performance_metrics(
         2,
     )
 
-    # Get overall statistics
-    total_events_stmt = select(func.count(Event.event_id)).where(
-        Event.organizer_id == user_id
+    # -------------------- Overall statistics -------------------- #
+    total_events_stmt = select(func.count(NewEvent.event_id)).where(
+        NewEvent.organizer_id == user_id
     )
     total_events = (await db.execute(total_events_stmt)).scalar() or 0
 
     total_bookings_stmt = (
-        select(func.count(EventBooking.booking_id))
-        .join(Event, EventBooking.event_id == Event.event_id)
+        select(func.count(NewEventBookingOrder.order_id))
+        .join(NewEvent, NewEventBookingOrder.event_ref_id == NewEvent.event_id)
         .where(
             and_(
-                Event.organizer_id == user_id,
-                EventBooking.booking_status == BookingStatus.APPROVED,
+                NewEvent.organizer_id == user_id,
+                NewEventBookingOrder.booking_status == BookingStatus.APPROVED,
+                NewEventBookingOrder.payment_status == PaymentStatus.COMPLETED,
             )
         )
     )
     total_bookings = (await db.execute(total_bookings_stmt)).scalar() or 0
 
     total_revenue_stmt = (
-        select(func.sum(EventBooking.total_price))
-        .join(Event, EventBooking.event_id == Event.event_id)
+        select(func.sum(NewEventBookingOrder.total_amount))
+        .join(NewEvent, NewEventBookingOrder.event_ref_id == NewEvent.event_id)
         .where(
             and_(
-                Event.organizer_id == user_id,
-                EventBooking.booking_status == BookingStatus.APPROVED,
+                NewEvent.organizer_id == user_id,
+                NewEventBookingOrder.booking_status == BookingStatus.APPROVED,
+                NewEventBookingOrder.payment_status == PaymentStatus.COMPLETED,
             )
         )
     )
-    total_revenue = (await db.execute(total_revenue_stmt)).scalar() or 0
-    total_revenue = float(total_revenue) if total_revenue else 0.0
+    total_revenue = (await db.execute(total_revenue_stmt)).scalar() or 0.0
+    total_revenue = float(total_revenue)
 
-    # Calculate KPIs
+    # -------------------- KPIs -------------------- #
     average_bookings_per_event = round(
         (total_bookings / total_events) if total_events > 0 else 0, 2
     )
