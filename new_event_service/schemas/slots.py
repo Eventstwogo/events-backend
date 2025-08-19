@@ -1,18 +1,13 @@
 import re
 from datetime import date, datetime
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from pydantic import (
     BaseModel,
     Field,
-    ValidationError,
     computed_field,
     field_validator,
 )
-
-from shared.db.models import EventStatus
-from shared.utils.security_validators import contains_xss
-from shared.utils.validators import validate_length_range
 
 TIME_REGEX = re.compile(r"^(0?[1-9]|1[0-2]):[0-5][0-9] (AM|PM)$", re.IGNORECASE)
 DURATION_REGEX = re.compile(r"^(\d+ (hour|hours))?( ?\d+ (minute|minutes))?$")
@@ -37,7 +32,7 @@ class ReferenceInput(BaseModel):
                 "duration": "2 hours",
                 "seatCategories": [
                 {
-                    "id": "platinum",
+                    "seat_category_id": "platinum",
                     "label": "Platinum",
                     "price": 150,
                     "totalTickets": 50,
@@ -45,7 +40,7 @@ class ReferenceInput(BaseModel):
                     "held": 0
                 },
                 {
-                    "id": "diamond",
+                    "seat_category_id": "diamond",
                     "label": "Diamond",
                     "price": 120,
                     "totalTickets": 10050,
@@ -53,7 +48,7 @@ class ReferenceInput(BaseModel):
                     "held": 0
                 },
                 {
-                    "id": "gold",
+                    "seat_category_id": "gold",
                     "label": "Gold",
                     "price": 80,
                     "totalTickets": 20050,
@@ -61,7 +56,7 @@ class ReferenceInput(BaseModel):
                     "held": 0
                 },
                 {
-                    "id": "silver",
+                    "seat_category_id": "silver",
                     "label": "Silver",
                     "price": 50,
                     "totalTickets": 30050,
@@ -78,24 +73,30 @@ class ReferenceInput(BaseModel):
 
 
 class SeatCategory(BaseModel):
-    id: str
-    label: str
-    price: float
-    totalTickets: int
+    """Schema for creating seat categories when creating slots"""
+
+    id: Optional[str]
+    label: str = Field(..., description="Category name e.g. Platinum, Gold")
+    price: float = Field(..., ge=0, description="Ticket price")
+    totalTickets: int = Field(
+        ..., ge=0, description="Total seats in this category"
+    )
     booked: Optional[int] = 0
     held: Optional[int] = 0
 
     @field_validator("booked", "held", mode="before")
     @classmethod
-    def default_booked_held(cls, v):
-        if v is None:
-            return 0
-        return v
+    def set_default_zero(cls, v):
+        return v or 0
 
 
 class EventSlot(BaseModel):
-    time: str
-    duration: str
+    """Schema for creating slots"""
+
+    time: str = Field(..., description="Slot start time e.g. 10:00 AM")
+    duration: str = Field(
+        ..., description="Duration e.g. 2 hours or 1 hour 30 minutes"
+    )
     seatCategories: List[SeatCategory]
 
     @field_validator("time")
@@ -112,7 +113,7 @@ class EventSlot(BaseModel):
     def validate_duration(cls, v: str) -> str:
         if not DURATION_REGEX.match(v.strip()):
             raise ValueError(
-                "duration must be a string like '1 hour', '20 minutes', or '1 hour 20 minutes'"
+                "duration must be like '1 hour', '20 minutes', or '1 hour 20 minutes'"
             )
         return v.strip()
 
@@ -154,7 +155,11 @@ class EventSlotCreateRequest(BaseModel):
 
 
 class SeatCategoryUpdate(BaseModel):
-    id: Optional[str]
+    """Schema for updating seat categories"""
+
+    seat_category_id: Optional[str] = Field(
+        None, description="Seat category ID (preferred over label for updates)"
+    )
     label: Optional[str]
     price: Optional[float]
     totalTickets: Optional[int]
@@ -163,10 +168,8 @@ class SeatCategoryUpdate(BaseModel):
 
     @field_validator("booked", "held", mode="before")
     @classmethod
-    def default_booked_held(cls, v):
-        if v is None:
-            return 0
-        return v
+    def set_default_zero(cls, v):
+        return v or 0
 
 
 class EventSlotUpdate(BaseModel):
@@ -219,6 +222,8 @@ class EventSlotUpdateRequest(BaseModel):
 
 
 class SeatCategoryResponse(BaseModel):
+    """Response schema for seat categories"""
+
     seat_category_id: str
     label: str
     price: float
@@ -299,151 +304,3 @@ class EventSlotResponseWrapper(BaseModel):
             event_dates=event_dates_parsed,
             slot_data=slot_data_response,
         )
-
-
-# class EventSlotResponse(BaseModel):
-#     """Schema for event slot response"""
-
-#     id: int = Field(..., description="Auto-generated slot ID")
-#     slot_id: str = Field(..., description="Event slot ID reference")
-#     slot_data: Dict[str, Any] = Field(
-#         ..., description="Slot data with nested slots per date"
-#     )
-#     slot_status: bool = Field(..., description="Slot status")
-#     created_at: datetime = Field(..., description="Creation timestamp")
-#     updated_at: datetime = Field(..., description="Last update timestamp")
-
-#     class Config:
-#         from_attributes = True
-
-
-# class EventSlotCreateResponse(BaseModel):
-#     """Schema for successful slot creation response"""
-
-#     slot: EventSlotResponse = Field(..., description="Created slot details")
-#     message: str = Field(default="Event slot created successfully")
-
-
-# class EventSlotListRequest(BaseModel):
-#     """Schema for slot list request with pagination and filtering"""
-
-#     page: int = Field(default=1, ge=1, description="Page number (1-based)")
-#     limit: int = Field(
-#         default=10, ge=1, le=100, description="Number of items per page"
-#     )
-#     status: Optional[bool] = Field(
-#         default=None, description="Filter by slot status (active/inactive)"
-#     )
-#     event_id: Optional[str] = Field(
-#         default=None, description="Filter by event ID"
-#     )
-
-
-# class EventSlotListResponse(BaseModel):
-#     """Schema for slot list response with pagination"""
-
-#     slots: list[EventSlotResponse] = Field(..., description="List of slots")
-#     pagination: dict = Field(..., description="Pagination information")
-#     total_count: int = Field(..., description="Total number of slots")
-
-
-# class SlotStatisticsResponse(BaseModel):
-#     """Schema for slot statistics response"""
-
-#     total_slots: int = Field(..., description="Total number of slots")
-#     active_slots: int = Field(..., description="Number of active slots")
-#     inactive_slots: int = Field(..., description="Number of inactive slots")
-#     total_dates: int = Field(
-#         ..., description="Total number of dates across all slots"
-#     )
-#     total_individual_slots: int = Field(
-#         ..., description="Total number of individual time slots"
-#     )
-#     total_capacity: int = Field(
-#         ..., description="Total capacity across all slots"
-#     )
-#     total_revenue_potential: float = Field(
-#         ..., description="Total potential revenue"
-#     )
-#     average_capacity_per_slot: float = Field(
-#         ..., description="Average capacity per individual slot"
-#     )
-#     average_price_per_slot: float = Field(
-#         ..., description="Average price per slot"
-#     )
-
-
-# class SlotAvailabilityResponse(BaseModel):
-#     """Schema for slot availability response"""
-
-#     available: bool = Field(..., description="Whether the slot is available")
-#     reason: Optional[str] = Field(
-#         default=None, description="Reason if not available"
-#     )
-#     slot_status: Optional[bool] = Field(
-#         default=None, description="Current slot status"
-#     )
-#     total_dates: Optional[int] = Field(
-#         default=None, description="Total number of dates"
-#     )
-#     total_capacity: Optional[int] = Field(
-#         default=None, description="Total capacity"
-#     )
-#     total_individual_slots: Optional[int] = Field(
-#         default=None, description="Total individual slots"
-#     )
-#     dates_info: Optional[Dict[str, Any]] = Field(
-#         default=None, description="Detailed date information"
-#     )
-
-
-# class SlotAnalyticsResponse(BaseModel):
-#     """Schema for detailed slot analytics response"""
-
-#     slot_id: str = Field(..., description="Slot ID")
-#     slot_status: bool = Field(..., description="Slot status")
-#     created_at: datetime = Field(..., description="Creation timestamp")
-#     updated_at: datetime = Field(..., description="Last update timestamp")
-#     dates_analysis: Dict[str, Any] = Field(..., description="Analysis by date")
-#     summary: Dict[str, Any] = Field(..., description="Summary statistics")
-
-
-# class SlotStatusToggleResponse(BaseModel):
-#     """Schema for slot status toggle response"""
-
-#     slot: EventSlotResponse = Field(..., description="Updated slot details")
-#     message: str = Field(..., description="Success message")
-#     previous_status: bool = Field(
-#         ..., description="Previous status before toggle"
-#     )
-
-
-# class SlotDateDetailsResponse(BaseModel):
-#     """Schema for slot date details response"""
-
-#     slot_id: str = Field(..., description="Event slot ID")
-#     event_date: str = Field(..., description="Date in YYYY-MM-DD format")
-#     event_title: str = Field(..., description="Event title")
-#     event_id: str = Field(..., description="Event ID")
-#     slots_count: int = Field(..., description="Number of slots for this date")
-#     slots_data: Dict[str, Any] = Field(
-#         ..., description="Detailed slot data for the date"
-#     )
-#     event_status: EventStatus = Field(
-#         default=EventStatus.INACTIVE,  # Use a valid enum member as default
-#         description="The status of the event.",
-#     )
-#     slot_status: bool = Field(..., description="Slot status")
-#     total_capacity: int = Field(
-#         ..., description="Total capacity for all slots on this date"
-#     )
-#     total_revenue_potential: float = Field(
-#         ..., description="Total potential revenue for this date"
-#     )
-#     event_location: Optional[str] = Field(None, description="Event location")
-#     is_online: bool = Field(..., description="Whether the event is online")
-#     start_date: date = Field(..., description="Event start date")
-#     end_date: date = Field(..., description="Event end date")
-
-#     class Config:
-#         from_attributes = True

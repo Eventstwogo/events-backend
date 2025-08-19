@@ -33,12 +33,14 @@ class Category(EventsBase):
         String, nullable=True
     )
     featured_category: Mapped[bool | None] = mapped_column(
-        Boolean, nullable=True
+        Boolean, nullable=True, default=False
     )
     promotion_category: Mapped[bool | None] = mapped_column(
-        Boolean, nullable=True
+        Boolean, nullable=True, default=False
     )
-    show_in_menu: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    show_in_menu: Mapped[bool | None] = mapped_column(
+        Boolean, nullable=True, default=False
+    )
     category_status: Mapped[bool] = mapped_column(Boolean, default=False)
     category_tstamp: Mapped[DateTime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, server_default=func.now()
@@ -86,12 +88,14 @@ class SubCategory(EventsBase):
         String, nullable=True
     )
     featured_subcategory: Mapped[bool | None] = mapped_column(
-        Boolean, nullable=True
+        Boolean, nullable=True, default=False
     )
     promotion_subcategory: Mapped[bool | None] = mapped_column(
-        Boolean, nullable=True
+        Boolean, nullable=True, default=False
     )
-    show_in_menu: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    show_in_menu: Mapped[bool | None] = mapped_column(
+        Boolean, nullable=True, default=False
+    )
     subcategory_status: Mapped[bool] = mapped_column(Boolean, default=False)
     subcategory_tstamp: Mapped[DateTime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, server_default=func.now()
