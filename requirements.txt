@@ -96,6 +96,7 @@ python-dotenv==1.1.0
 python-json-logger==3.3.0
 python-multipart==0.0.20
 python-slugify==8.0.4
+python-barcode[images]==0.15.1
 PyYAML==6.0.2
 requests==2.32.4
 rich==14.0.0
