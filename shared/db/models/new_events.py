@@ -104,6 +104,7 @@ class NewEvent(EventsBase):
     event_dates: Mapped[List[date]] = mapped_column(
         PG_ARRAY(Date), nullable=False, default=list
     )
+    event_type: Mapped[str] = mapped_column(String(100), nullable=True)
 
     location: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     is_online: Mapped[bool] = mapped_column(

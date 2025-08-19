@@ -73,6 +73,7 @@ async def create_event_with_images(
     event_slug: str = Form(..., description="Event slug"),
     category_id: str = Form(..., description="Category ID"),
     subcategory_id: Optional[str] = Form(None, description="Subcategory ID"),
+    event_type: Optional[str] = Form(None, description="Event type (optional)"),
     location: Optional[str] = Form(
         None, description="Event location (optional)"
     ),
@@ -249,6 +250,7 @@ async def create_event_with_images(
         event_slug=event_slug.lower(),
         category_id=category_id,
         subcategory_id=subcategory_id,
+        event_type=event_type if event_type else None,
         location=cleaned_location if location else None,
         is_online=is_online,
         organizer_id=user_id,
@@ -327,6 +329,7 @@ async def update_event_with_images(
     event_slug: Optional[str] = Form(None, description="Event slug"),
     category_id: Optional[str] = Form(None, description="Category ID"),
     subcategory_id: Optional[str] = Form(None, description="Subcategory ID"),
+    event_type: Optional[str] = Form(None, description="Event type (optional)"),
     location: Optional[str] = Form(
         None, description="Event location (optional)"
     ),
@@ -420,6 +423,16 @@ async def update_event_with_images(
 
     # Prepare update data
     update_data = {}
+
+    if event_type is not None:
+        # Validate event type if provided
+        if not event_type.strip():
+            return api_response(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                message="Event type cannot be empty",
+                log_error=True,
+            )
+        update_data["event_type"] = event_type.strip()
 
     # Validate location
     if location is not None:

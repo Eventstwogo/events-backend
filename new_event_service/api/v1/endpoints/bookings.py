@@ -603,12 +603,23 @@ async def get_all_bookings(
                 else None
             ),
             "location": booked_event.location,
-            "address": event_address or "",
+            "address": event_address or "",  # fallback if address is optional
             "event_date": (
                 order.new_slot.slot_date.strftime("%Y-%m-%d")
                 if order.new_slot
                 else None
             ),
+            "event_time": (
+                order.new_slot.start_time
+                if order.new_slot and order.new_slot.start_time
+                else "TBA"
+            ),
+            "event_duration": (
+                f"{order.new_slot.duration_minutes} mins"
+                if order.new_slot and order.new_slot.duration_minutes
+                else "N/A"
+            ),
+            "booking_date": order.created_at.strftime("%Y-%m-%d"),
             "card_image": get_media_url(booked_event.card_image),
         }
 
@@ -768,12 +779,23 @@ async def get_bookings_by_user(
                 else None
             ),
             "location": booked_event.location,
-            "address": event_address or "",
+            "address": event_address or "",  # fallback if address is optional
             "event_date": (
                 order.new_slot.slot_date.strftime("%Y-%m-%d")
                 if order.new_slot
                 else None
             ),
+            "event_time": (
+                order.new_slot.start_time
+                if order.new_slot and order.new_slot.start_time
+                else "TBA"
+            ),
+            "event_duration": (
+                f"{order.new_slot.duration_minutes} mins"
+                if order.new_slot and order.new_slot.duration_minutes
+                else "N/A"
+            ),
+            "booking_date": order.created_at.strftime("%Y-%m-%d"),
             "card_image": get_media_url(booked_event.card_image),
         }
 
@@ -945,12 +967,23 @@ async def get_bookings_by_organizer(
                 else None
             ),
             "location": booked_event.location,
-            "address": event_address or "",
+            "address": event_address or "",  # fallback if address is optional
             "event_date": (
                 order.new_slot.slot_date.strftime("%Y-%m-%d")
                 if order.new_slot
                 else None
             ),
+            "event_time": (
+                order.new_slot.start_time
+                if order.new_slot and order.new_slot.start_time
+                else "TBA"
+            ),
+            "event_duration": (
+                f"{order.new_slot.duration_minutes} mins"
+                if order.new_slot and order.new_slot.duration_minutes
+                else "N/A"
+            ),
+            "booking_date": order.created_at.strftime("%Y-%m-%d"),
             "card_image": get_media_url(booked_event.card_image),
         }
 
@@ -1087,6 +1120,8 @@ async def get_booking_order_details(
         "booking_status": order.booking_status.value,
         "payment_status": order.payment_status.value,
         "payment_reference": order.payment_reference,
+        "created_at": order.created_at.isoformat(),
+        "updated_at": order.updated_at.isoformat(),
         "total_amount": float(order.total_amount),
         "event": event_info,
         "user": user_info,
