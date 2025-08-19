@@ -115,6 +115,6 @@ async def validate_coupon(
     result = await validate_coupon_service(db, payload)
     return api_response(
         status_code=status.HTTP_200_OK,
-        message="Coupon is avaialble.",
+        message="Coupon is available.",
         data=result,
     )

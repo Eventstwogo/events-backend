@@ -34,8 +34,8 @@ class ValidateCouponRequest(BaseModel):
         ..., description="Event ID for which coupon is applied"
     )
     coupon_code: str = Field(..., description="Coupon code to validate")
-    number_of_coupons: int = Field(
-        ..., gt=0, description="Total Number of coupons"
+    number_of_tickets: int = Field(
+        ..., gt=0, description="Total Number of tickets/seats"
     )
 
 
@@ -43,4 +43,4 @@ class ValidateCouponResponse(BaseModel):
     event_id: str
     coupon_code: str
     discount: float
-    remaining_coupons: int
+    # remaining_coupons: int
