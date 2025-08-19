@@ -91,6 +91,12 @@ class FeaturedEventResponse(BaseModel):
     event_slug: Optional[str] = None
     event_title: Optional[str] = None
     organizer_name: Optional[str] = None
+    card_image: Optional[str] = None
+
+    @field_serializer("card_image")
+    def serialize_card_image(self, value: Optional[str]) -> Optional[str]:
+        """Convert relative path to full media URL"""
+        return get_media_url(value)
 
     class Config:
         from_attributes = True

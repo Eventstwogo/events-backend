@@ -76,7 +76,6 @@ class BookingCreateRequest(BaseModel):
     )
     total_price: float = Field(
         ...,
-        gt=0,
         description="Total booking amount (must be greater than 0)",
     )
     coupon_status: Optional[bool] = Field(

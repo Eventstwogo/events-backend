@@ -130,6 +130,7 @@ async def list_featured_events(db: AsyncSession) -> list[FeaturedEventResponse]:
                 feature_status=fe.feature_status,
                 event_slug=fe.new_event.event_slug if fe.new_event else None,
                 event_title=fe.new_event.event_title if fe.new_event else None,
+                card_image=fe.new_event.card_image if fe.new_event else None,
                 organizer_name=(
                     fe.new_event.new_organizer.username
                     if fe.new_event and fe.new_event.new_organizer
