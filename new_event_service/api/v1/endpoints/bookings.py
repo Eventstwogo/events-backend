@@ -253,6 +253,7 @@ async def create_event_booking_order(
         booking_status=BookingStatus.PROCESSING,
         payment_status=PaymentStatus.PENDING,
         line_items=line_items,
+        coupon_status=booking_req.coupon_status,
     )
 
     db.add(order)
