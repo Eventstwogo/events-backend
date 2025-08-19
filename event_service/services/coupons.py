@@ -128,7 +128,7 @@ async def validate_coupon_service(
         )
 
     # Check if coupon has enough quota
-    if payload.number_of_tickets > coupon.sold_coupons:
+    if payload.number_of_tickets > coupon.number_of_coupons - coupon.sold_coupons :
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Coupon expired or insufficient coupons available",
