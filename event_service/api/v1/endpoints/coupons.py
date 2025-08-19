@@ -12,10 +12,13 @@ from event_service.services.coupons import (
     get_coupons_by_event_service,
     get_coupons_by_user_service,
     delete_coupon_service,
+    validate_coupon_service,
 )
 from event_service.schemas.coupons import (
     CouponCreateRequest,
     CouponResponse,
+    ValidateCouponRequest,
+    ValidateCouponResponse,
 )
 
 router = APIRouter(
@@ -99,3 +102,21 @@ async def delete_coupon(
             status_code=status.HTTP_404_NOT_FOUND,
             message="Coupon not found",
         )
+
+
+@router.post(
+    "/validate",
+    status_code=status.HTTP_200_OK,
+    response_model=ValidateCouponResponse,
+    summary="Validate a coupon for tickets",
+)
+async def validate_coupon(
+    payload: ValidateCouponRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    result = await validate_coupon_service(db, payload)
+    return api_response(
+        status_code=status.HTTP_200_OK,
+        message="Coupon is avaialble.",
+        data=result,
+    )

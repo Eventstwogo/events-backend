@@ -34,6 +34,7 @@ from shared.db.models import (
     NewEventSeatCategory,
     NewEventSlot,
 )
+from shared.db.models.coupons import Coupon
 from shared.db.models.new_events import (
     BookingStatus,
     NewEventBookingOrder,
@@ -348,6 +349,19 @@ async def confirm_booking(
                 seat_cat.held -= li.num_seats
                 seat_cat.booked += li.num_seats
 
+            # Increment sold_coupons if the order has coupon_status=True
+            if order.coupon_status:
+                # Find all coupons for this event that are active
+                result = await db.execute(
+                    select(Coupon).where(
+                        Coupon.event_id == order.event_ref_id,
+                        Coupon.coupon_status == False
+                    )
+                )
+                coupons: list[Coupon] = result.scalars().all()
+                for coupon in coupons:
+                    coupon.sold_coupons += 1    
+
             await db.commit()
 
             # 5. Send confirmation email
@@ -395,6 +409,9 @@ async def confirm_booking(
                     total_amount=float(order.total_amount),
                     seat_categories=seat_categories,
                 )
+
+
+                
             except Exception as email_error:
                 logger.warning(
                     "Failed to send booking confirmation email for order %s: %s",

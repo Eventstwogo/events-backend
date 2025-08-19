@@ -1,10 +1,11 @@
+from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime
 
 from shared.db.models.coupons import Coupon
-from event_service.schemas.coupons import CouponCreateRequest, CouponResponse
+from event_service.schemas.coupons import CouponCreateRequest, CouponResponse, ValidateCouponRequest, ValidateCouponResponse
 from shared.utils.id_generators import generate_lower_uppercase
 
 
@@ -98,3 +99,37 @@ async def delete_coupon_service(db: AsyncSession, coupon_id: str) -> bool:
     except SQLAlchemyError as e:
         await db.rollback()
         raise e
+
+
+async def validate_coupon_service(
+    db: AsyncSession, payload: ValidateCouponRequest
+) -> ValidateCouponResponse:
+    """
+    Validate a coupon for an event.
+    """
+    query = select(Coupon).where(
+        Coupon.event_id == payload.event_id,
+        Coupon.coupon_code == payload.coupon_code,
+    )
+    result = await db.execute(query)
+    coupon = result.scalars().first()
+
+    if not coupon:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Coupon not found for this event",
+        )
+
+    # Check if coupon has enough quota
+    if coupon.sold_coupons >= payload.number_of_coupons:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Coupon expired or insufficient coupons available",
+        )
+
+    return ValidateCouponResponse(
+        event_id=coupon.event_id,
+        coupon_code=coupon.coupon_code,
+        discount=coupon.coupon_percentage,
+        remaining_coupons=coupon.number_of_coupons - coupon.sold_coupons,
+    )

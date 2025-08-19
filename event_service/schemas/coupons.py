@@ -30,3 +30,16 @@ class CouponResponse(BaseModel):
     model_config = {
         "from_attributes": True
     }
+
+
+
+class ValidateCouponRequest(BaseModel):
+    event_id: str = Field(..., description="Event ID for which coupon is applied")
+    coupon_code: str = Field(..., description="Coupon code to validate")
+    number_of_coupons: int = Field(..., gt=0, description="Total Number of coupons")
+
+class ValidateCouponResponse(BaseModel):
+    event_id: str
+    coupon_code: str
+    discount: float
+    remaining_coupons: int

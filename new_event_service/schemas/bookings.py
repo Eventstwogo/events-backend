@@ -74,6 +74,10 @@ class BookingCreateRequest(BaseModel):
     seatCategories: List[SeatCategoryBooking] = Field(
         ..., description="List of seat category bookings"
     )
+    coupon_status: Optional[bool] = Field(
+        False,
+        description="Indicates if a coupon was applied (default is False)",
+    )
 
     @field_validator("user_ref_id", "event_ref_id", "slot_ref_id")
     @classmethod

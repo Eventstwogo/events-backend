@@ -42,6 +42,7 @@ class Coupon(EventsBase):
     coupon_code: Mapped[str] = mapped_column(String(100), nullable=False)
     coupon_percentage: Mapped[float] = mapped_column(Float, nullable=False)
     number_of_coupons: Mapped[int] = mapped_column(Integer, nullable=False)
+    applied_coupons: Mapped[int] = mapped_column(Integer, nullable=False)
     sold_coupons: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     coupon_status: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
