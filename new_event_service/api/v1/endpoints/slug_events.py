@@ -52,16 +52,19 @@ async def get_event_by_id(
     event_slug: str,
     db: AsyncSession = Depends(get_db),
 ):
-    """Retrieve full event details by event_slug"""
+    """Retrieve full event details by event_slug, including only present & future slots"""
 
     # 1. Fetch event with relations
     event = await fetch_event_by_slug_with_relations(db, event_slug)
     if not event:
         return event_not_found_response()
 
-    # 2. Fetch slots for this event
-    query_slots = select(NewEventSlot).where(
-        NewEventSlot.event_ref_id == event.event_id
+    today = date.today()
+    # 2. Fetch ONLY present and future slots for this event
+    query_slots = (
+        select(NewEventSlot)
+        .where(NewEventSlot.event_ref_id == event.event_id)
+        .where(NewEventSlot.slot_date >= today)
     )
     slots = (await db.execute(query_slots)).scalars().all()
 

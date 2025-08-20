@@ -1157,6 +1157,9 @@ async def get_booking_order_details(
             if booked_event.new_organizer
             else None
         ),
+        "business_logo": get_media_url(
+            booked_event.new_organizer.profile_picture
+        ),
         "location": booked_event.location,
         "address": event_address or "",  # fallback if address is optional
         "event_date": (
