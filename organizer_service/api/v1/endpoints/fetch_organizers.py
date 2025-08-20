@@ -11,6 +11,7 @@ from shared.utils.data_utils import (
     process_business_profile_data,
     validate_organizer_with_business_profile,
 )
+from shared.utils.file_uploads import get_media_url
 
 router = APIRouter()
 
@@ -156,6 +157,11 @@ async def get_organizer_details(
             "user_id": user.user_id,
             "username": user.username,
             "email": user.email,
+            "profile_picture": (
+                get_media_url(user.profile_picture)
+                if user.profile_picture
+                else None
+            ),
             "role": validation_result["role_name"],
             "is_verified": user.is_verified,
             "is_active": user.is_verified,

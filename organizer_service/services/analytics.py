@@ -1,5 +1,5 @@
 from datetime import date, datetime, timedelta
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, List, Tuple
 
 from sqlalchemy import and_, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -212,27 +212,26 @@ async def get_query_statistics(
     }
 
 
-async def get_recent_events(db: AsyncSession, user_id: str) -> list:
-    events = (
-        (
-            await db.execute(
-                select(Event)
-                .options(selectinload(Event.category))
-                .where(Event.organizer_id == user_id)
-                .order_by(desc(Event.created_at))
-                .limit(5)
-            )
-        )
-        .scalars()
-        .all()
+async def get_recent_events(
+    db: AsyncSession, user_id: str
+) -> List[Dict[str, Any]]:
+    result = await db.execute(
+        select(NewEvent)
+        .options(selectinload(NewEvent.new_category))
+        .where(NewEvent.organizer_id == user_id)
+        .order_by(desc(NewEvent.created_at))
+        .limit(5)
     )
+    events = result.scalars().all()
 
     return [
         {
             "event_id": e.event_id,
             "event_title": e.event_title,
-            "category_name": e.category.category_name if e.category else None,
-            "start_date": e.start_date,
+            "category_name": (
+                e.new_category.category_name if e.new_category else None
+            ),
+            "start_date": min(e.event_dates) if e.event_dates else None,
             "event_status": e.event_status,
             "created_at": e.created_at,
             "card_image": get_media_url(e.card_image),
