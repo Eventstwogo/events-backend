@@ -260,6 +260,39 @@ async def create_event_booking_order(
     await db.commit()
     await db.refresh(order)
 
+    # 6.1 Handle free booking (skip PayPal)
+    if total_amount == 0:
+        order.booking_status = BookingStatus.APPROVED
+        order.payment_status = PaymentStatus.COMPLETED
+
+        # Increment sold_coupons if the order has coupon_status=True
+        if order.coupon_status:
+            # Find all coupons for this event that are active
+            result = await db.execute(
+                select(Coupon).where(
+                    Coupon.event_id == order.event_ref_id,
+                    Coupon.coupon_status == False,
+                )
+            )
+            coupons: list[Coupon] = list(result.scalars().all())
+            for coupon in coupons:
+                coupon.sold_coupons += 1
+
+        await db.commit()
+        await db.refresh(order)
+
+        return api_response(
+            status.HTTP_200_OK,
+            message="Booking confirmed with 100% discount (no payment required).",
+            data={
+                "order_id": order.order_id,
+                "total_amount": order.total_amount,
+                "redirect_url": f"{settings.USERS_APPLICATION_FRONTEND_URL}/booking-success?order_id={order.order_id}",
+                "status": order.booking_status.value,
+                "payment_status": order.payment_status.value,
+            },
+        )
+
     # 7. Create PayPal order
     try:
         approval_url = await create_paypal_order(
