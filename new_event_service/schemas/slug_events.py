@@ -13,6 +13,7 @@ class EventMinimalResponse(BaseModel):
     event_id: str = Field(..., description="Event ID")
     event_title: str = Field(..., description="Event title")
     event_slug: str = Field(..., description="Event slug")
+    event_type: Optional[str] = Field(None, description="Event type")
     event_dates: List[date] = Field(..., description="Event dates")
     location: Optional[str] = Field(
         None, description="Event location (if applicable)"
@@ -83,6 +84,7 @@ class CategoryEventResponse(BaseModel):
 
     event_id: str = Field(..., description="Event ID")
     event_slug: str = Field(..., description="Event slug")
+    event_type: Optional[str] = Field(None, description="Event type")
     event_title: str = Field(..., description="Event title")
     card_image: Optional[str] = Field(..., description="Card image URL")
     banner_image: Optional[str] = Field(None, description="Banner image URL")

@@ -83,6 +83,7 @@ async def fetch_categories_with_all_events(
                     "event_id": event.event_id,
                     "event_title": event.event_title,
                     "event_slug": event.event_slug,
+                    "event_type": event.event_type,
                     "event_dates": event.event_dates,
                     "location": event.location,
                     "is_online": event.is_online,

@@ -26,6 +26,7 @@ class EventResponse(BaseModel):
     event_id: str
     event_title: str
     event_slug: str
+    event_type: Optional[str]
     card_image: Optional[str]
     location: Optional[str]
     extra_data: Optional[dict]
@@ -268,6 +269,7 @@ class NewEventSlotResponse(BaseModel):
     event_id: str = Field(..., description="Event ID")
     event_title: str = Field(..., description="Event title")
     event_slug: str = Field(..., description="Event slug")
+    event_type: Optional[str] = Field(None, description="Event type")
     event_dates: List[date] = Field(..., description="Event dates")
     location: Optional[str] = Field(
         None, description="Event location (if applicable)"

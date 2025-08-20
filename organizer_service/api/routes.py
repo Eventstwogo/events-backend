@@ -8,6 +8,7 @@ from organizer_service.api.v1.endpoints import (
     fetch_organizers,
     onboarding,
     organizer_card_analytics,
+    password,
     queries,
     registration,
     store,
@@ -20,6 +21,9 @@ organizer_router = APIRouter(prefix="/api/v1/organizers")
 # Add all endpoint routers
 organizer_router.include_router(
     registration.router, prefix="/auth", tags=["Organizer Registration"]
+)
+organizer_router.include_router(
+    password.router, tags=["Organizer Password Management"]
 )
 organizer_router.include_router(
     approval.router, prefix="/approval", tags=["Organizer Approval"]

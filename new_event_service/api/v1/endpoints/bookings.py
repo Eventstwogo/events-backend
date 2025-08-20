@@ -624,6 +624,7 @@ async def get_all_bookings(
             "event_id": booked_event.event_id,
             "title": booked_event.event_title,
             "slug": booked_event.event_slug,
+            "event_type": booked_event.event_type or "General",
             "organizer_name": (
                 booked_event.new_organizer.username
                 if booked_event.new_organizer
@@ -800,6 +801,7 @@ async def get_bookings_by_user(
             "event_id": booked_event.event_id,
             "title": booked_event.event_title,
             "slug": booked_event.event_slug,
+            "event_type": booked_event.event_type or "General",
             "organizer_name": (
                 booked_event.new_organizer.username
                 if booked_event.new_organizer
@@ -988,6 +990,7 @@ async def get_bookings_by_organizer(
             "event_id": booked_event.event_id,
             "title": booked_event.event_title,
             "slug": booked_event.event_slug,
+            "event_type": booked_event.event_type or "General",
             "organizer_name": (
                 booked_event.new_organizer.username
                 if booked_event.new_organizer
@@ -1115,6 +1118,7 @@ async def get_booking_order_details(
         "event_id": booked_event.event_id,
         "title": booked_event.event_title,
         "slug": booked_event.event_slug,
+        "event_type": booked_event.event_type or "General",
         "organizer_name": (
             booked_event.new_organizer.username
             if booked_event.new_organizer

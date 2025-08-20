@@ -66,6 +66,7 @@ async def get_featured_eventss(
             "event_title": event.event_title,
             "card_image": event.card_image,
             "event_slug": event.event_slug,
+            "event_type": event.event_type,
             "category_title": (
                 event.new_category.category_name if event.new_category else ""
             ),

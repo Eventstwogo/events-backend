@@ -144,7 +144,7 @@ async def get_admin_user_by_id(
     )
 
 
-@router.put("/{user_id}", summary="Update username and role by user ID")
+@router.put("/{user_id}", summary="Update username and/or role by user ID")
 @exception_handler
 async def update_username_and_role(
     user_id: str,
@@ -160,32 +160,23 @@ async def update_username_and_role(
     ),
     db: AsyncSession = Depends(get_db),
 ) -> JSONResponse:
-    # Validate and sanitize form inputs
-    # Skip validation if username is None or empty string
-    if new_username is not None:
-        new_username = UsernameValidator(
-            min_length=4, max_length=32, max_spaces=2
-        ).validate(new_username)
-
-    # Skip validation if role_id is None or empty string
-    if new_role_id is not None:
-        new_role_id = normalize_whitespace(new_role_id)
-        if not new_role_id:  # If empty after normalization, set to None to skip
-            new_role_id = None
-        else:
-            # Validate only if not empty
-            if not validate_length_range(new_role_id, 6, 6):
-                return api_response(
-                    status.HTTP_400_BAD_REQUEST,
-                    "Role ID must be exactly 6 characters long.",
-                    log_error=True,
-                )
-
-    # Fetch user
+    # === 1. Fetch user ===
     result = await db.execute(
         select(AdminUser).where(AdminUser.user_id == user_id)
     )
     user = result.scalar_one_or_none()
+
+    print(
+        "Existing user found:",
+        user is not None,
+        "Username:",
+        user.username if user else "N/A",
+        "role ID:",
+        user.role_id if user else "N/A",
+    )
+    print(
+        f"Updating user: {user_id}, New Username: {new_username}, New Role ID: {new_role_id}"
+    )
 
     if not user:
         return api_response(
@@ -199,81 +190,91 @@ async def update_username_and_role(
             log_error=True,
         )
 
-    # Detect no changes
-    if (not new_username or new_username.lower() == user.username) and (
-        not new_role_id or new_role_id == user.role_id
-    ):
+    # === 2. Track changes ===
+    changes_made = False
+
+    # --- Username update ---
+    if new_username is not None:
+        validated_username = UsernameValidator(
+            min_length=4, max_length=32, max_spaces=2
+        ).validate(new_username)
+        validated_username = validated_username.lower()
+
+        if validated_username != user.username:
+            # Check uniqueness
+            existing_user_result = await db.execute(
+                AdminUser.by_username_query(validated_username)
+            )
+            existing_user = existing_user_result.scalar_one_or_none()
+            if existing_user and existing_user.user_id != user.user_id:
+                return api_response(
+                    status.HTTP_409_CONFLICT,
+                    "Username already exists.",
+                    log_error=True,
+                )
+
+            user.username = validated_username
+            changes_made = True
+
+    # --- Role update ---
+    if new_role_id is not None:
+        new_role_id = normalize_whitespace(new_role_id)
+
+        if not validate_length_range(new_role_id, 6, 6):
+            return api_response(
+                status.HTTP_400_BAD_REQUEST,
+                "Role ID must be exactly 6 characters long.",
+                log_error=True,
+            )
+
+        if new_role_id != user.role_id:
+            role_result = await db.execute(
+                select(Role).where(Role.role_id == new_role_id)
+            )
+            role = role_result.scalar_one_or_none()
+            if not role:
+                return api_response(
+                    status.HTTP_404_NOT_FOUND, "Role not found.", log_error=True
+                )
+
+            if role.role_status:  # True means inactive
+                return api_response(
+                    status.HTTP_400_BAD_REQUEST,
+                    "Cannot assign an inactive role.",
+                    log_error=True,
+                )
+
+            # Prevent assigning superadmin role
+            if role.role_name.lower() == "superadmin":
+                return api_response(
+                    status.HTTP_400_BAD_REQUEST,
+                    "Cannot assign superadmin role.",
+                    log_error=True,
+                )
+
+            user.role_id = new_role_id
+            changes_made = True
+
+    # === 3. No changes case ===
+    if not changes_made:
         return api_response(
             status.HTTP_400_BAD_REQUEST,
             "No changes detected.",
             log_error=False,
         )
 
-    role_name = None
-
-    # === Update username ===
-    if new_username and new_username.lower() != user.username:
-        # Check for existing username using hash-based query (case-insensitive)
-        query = AdminUser.by_username_query(new_username.lower())
-        existing_user = await db.execute(query)
-        existing_user = existing_user.scalar_one_or_none()
-        if existing_user and existing_user.user_id != user_id:
-            return api_response(
-                status.HTTP_409_CONFLICT,
-                "Username already exists.",
-                log_error=True,
-            )
-        user.username = new_username.lower()
-
-    # === Update role ===
-    if new_role_id and new_role_id != user.role_id:
-        role_result = await db.execute(
-            select(Role).where(Role.role_id == new_role_id)
-        )
-        role = role_result.scalar_one_or_none()
-        if not role:
-            return api_response(
-                status.HTTP_404_NOT_FOUND, "Role not found.", log_error=True
-            )
-
-        if role.role_status:
-            return api_response(
-                status.HTTP_400_BAD_REQUEST,
-                "Cannot assign an inactive role.",
-                log_error=True,
-            )
-
-        # Enforce only one superadmin from DB role name
-        role_name = role.role_name
-        if role_name.lower() == "superadmin":
-            superadmin_check = await db.execute(
-                select(AdminUser)
-                .join(Role, AdminUser.role_id == Role.role_id)
-                .where(
-                    Role.role_name.ilike("superadmin"),
-                    AdminUser.user_id != user.user_id,
-                )
-            )
-            if superadmin_check.scalar_one_or_none():
-                return api_response(
-                    status.HTTP_400_BAD_REQUEST,
-                    "A Superadmin already exists.Only one Superadmin is allowed in the system.",
-                    log_error=True,
-                )
-
-        user.role_id = new_role_id
-
+    # === 4. Commit changes ===
     await db.commit()
     await db.refresh(user)
 
-    # Fetch role name if not updated
-    if not role_name:
-        role_result = await db.execute(
-            select(Role).where(Role.role_id == user.role_id)
-        )
-        role = role_result.scalar_one_or_none()
-        role_name = role.role_name if role else None
+    # === 5. Fetch role name explicitly ===
+    role_result = await db.execute(
+        select(Role).where(Role.role_id == user.role_id)
+    )
+    role = role_result.scalar_one_or_none()
+    role_name = role.role_name if role else None
 
+    # === 6. Return success ===
     return api_response(
         status.HTTP_200_OK,
         "User updated successfully.",

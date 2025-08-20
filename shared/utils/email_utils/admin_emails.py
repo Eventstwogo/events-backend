@@ -79,6 +79,41 @@ def send_admin_welcome_email(
     return success
 
 
+def send_organizer_password_reset_email(
+    email: EmailStr,
+    username: str,
+    reset_token: str,
+    ip_address: Optional[str] = None,
+    request_time: Optional[str] = None,
+    expiry_minutes: int = 60,  # Default to 1 hour
+) -> bool:
+    """Send admin password reset email."""
+    encoded_email = quote(email, safe="")
+    reset_link = f"{settings.ORGANIZER_FRONTEND_URL}/reset-password?email={encoded_email}&token={reset_token}"
+    context = {
+        "username": username,
+        "email": email,
+        "reset_link": reset_link,
+        "ip_address": ip_address,
+        "request_time": request_time
+        or datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
+        "expiry_minutes": expiry_minutes,
+        "year": str(datetime.now(tz=timezone.utc).year),
+    }
+
+    success = email_sender.send_email(
+        to=email,
+        subject="Admin Password Reset - Events2Go",
+        template_file="admin/password_reset.html",
+        context=context,
+    )
+
+    if not success:
+        logger.warning("Failed to send admin password reset email to %s", email)
+
+    return success
+
+
 def send_organizer_verification_email(
     email: EmailStr,
     username: str,

@@ -111,7 +111,8 @@ async def get_event_by_id(
         event_id=event.event_id,
         event_title=event.event_title,
         event_slug=event.event_slug,
-        event_dates=[s.slot_date for s in slots],
+        event_type=event.event_type,
+        event_dates=sorted({s.slot_date for s in slots}),
         location=event.location,
         is_online=event.is_online,
         event_status=event.event_status,
@@ -329,6 +330,7 @@ async def get_latest_events_from_each_category(
         event_response = CategoryEventResponse(
             event_id=event.event_id,
             event_slug=event.event_slug,
+            event_type=event.event_type,
             event_title=event.event_title,
             card_image=event.card_image,
             banner_image=event.banner_image,

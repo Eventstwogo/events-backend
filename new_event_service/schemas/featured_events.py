@@ -20,6 +20,7 @@ class OldFeaturedEventResponse(BaseModel):
     event_title: str = Field(..., description="Event title")
     card_image: Optional[str] = Field(None, description="Card image URL")
     event_slug: str = Field(..., description="Event slug")
+    event_type: Optional[str] = Field(None, description="Event type")
     category_title: str = Field(..., description="Category title")
     sub_category_title: Optional[str] = Field(
         None, description="Sub category title"
@@ -89,6 +90,7 @@ class FeaturedEventResponse(BaseModel):
     event_ref_id: Optional[str] = None  # keep if you want to show FK
     user_ref_id: Optional[str] = None
     event_slug: Optional[str] = None
+    event_type: Optional[str] = None
     event_title: Optional[str] = None
     organizer_name: Optional[str] = None
     card_image: Optional[str] = None
