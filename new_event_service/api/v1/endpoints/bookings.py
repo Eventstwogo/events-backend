@@ -225,7 +225,7 @@ async def create_event_booking_order(
         total_amount += total_price
 
         line_item = NewEventBooking(
-            booking_id=generate_digits_letters(12),
+            booking_id=generate_digits_letters(6),
             seat_category_ref_id=seat_req.seat_category_ref_id,
             num_seats=seat_req.num_seats,
             price_per_seat=seat_req.price_per_seat,
@@ -245,7 +245,7 @@ async def create_event_booking_order(
 
     # 6. Create booking order
     order = NewEventBookingOrder(
-        order_id=generate_digits_letters(12),
+        order_id=generate_digits_letters(6),
         user_ref_id=booking_req.user_ref_id,
         event_ref_id=booking_req.event_ref_id,
         slot_ref_id=booking_req.slot_ref_id,
