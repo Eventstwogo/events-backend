@@ -340,9 +340,16 @@ class NewEventSlotResponse(BaseModel):
 
 
 class EventSearchResponse(BaseModel):
+    event_id: str
     event_title: str
     event_slug: str
     card_image: Optional[str]
+    location: Optional[str]
     category_title: str
     subcategory_title: Optional[str] = None
     next_event_date: Optional[date] = None
+
+    @field_serializer("card_image")
+    def serialize_card_image(self, value: Optional[str]) -> Optional[str]:
+        """Convert relative path to full media URL"""
+        return get_media_url(value)

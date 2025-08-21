@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from typing import List, Optional, cast
 
 from fastapi import (
@@ -12,13 +12,13 @@ from fastapi import (
     status,
 )
 from slugify import slugify
-from sqlalchemy import case, func
+from sqlalchemy import and_, any_, case, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 from starlette.responses import JSONResponse
 
-from category_service.schemas.categories import CategoryOut
+from category_service.schemas.categories import CategoryOut, CategoryOutDropDown
 from category_service.services.category_service import (
     CategoryData,
     ConflictCheckData,
@@ -29,6 +29,7 @@ from category_service.services.category_service import (
 )
 from shared.core.api_response import api_response
 from shared.db.models import Category, SubCategory
+from shared.db.models.new_events import EventStatus, NewEvent
 from shared.db.sessions.database import get_db
 from shared.utils.exception_handlers import exception_handler
 from shared.utils.file_uploads import get_media_url, save_uploaded_file
@@ -581,4 +582,61 @@ async def total_categories_count(
                 "category_distribution": category_distribution,
             },
         },
+    )
+
+
+@router.get(
+    "/list/event-categories",
+    response_model=List[CategoryOut],
+    summary=(
+        "Integrated in Application ZunstanStore/Categories Store frontend"
+    ),
+    description=(
+        "Returns all categories and their subcategories, "
+        "optionally filtered by category status. "
+        "Also ensures categories have at least one active event with valid upcoming event_dates."
+    ),
+)
+@exception_handler
+async def get_categories_and_subcategories_by_status_event_categories(
+    status_value: Optional[bool] = Query(
+        None, description="Filter by category status: true / false / none"
+    ),
+    db: AsyncSession = Depends(get_db),
+) -> JSONResponse:
+
+    current_date = date.today()
+
+    # Base query: categories joined with events
+    stmt = (
+        select(Category)
+        .options(selectinload(Category.subcategories))
+        .join(NewEvent, NewEvent.category_id == Category.category_id)
+        .where(
+            and_(
+                NewEvent.event_status == EventStatus.ACTIVE,
+                any_(NewEvent.event_dates) > current_date,
+            )
+        )
+        .distinct()
+    )
+
+    # Apply category status filter if provided
+    if status_value is not None:
+        stmt = stmt.where(Category.category_status.is_(status_value))
+
+    result = await db.execute(stmt)
+    categories = result.scalars().unique().all()
+
+    # Process categories for response
+    for category in categories:
+        category.category_name = category.category_name.title()
+        category.category_img_thumbnail = get_media_url(
+            category.category_img_thumbnail
+        )
+
+    return api_response(
+        status_code=status.HTTP_200_OK,
+        message="Categories with upcoming active events fetched successfully",
+        data=[CategoryOutDropDown.model_validate(cat) for cat in categories],
     )

@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Any, List, Optional, Sequence, Tuple, TypedDict
 
-from sqlalchemy import and_, any_, asc, desc, exists, func, or_, select
+from sqlalchemy import and_, any_, asc, case, desc, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -1317,102 +1317,74 @@ class EventWithDate(TypedDict):
 
 
 async def search_events_for_global(
-    db: AsyncSession, query: Optional[str] = None
+    db: AsyncSession, query: Optional[str] = None, limit: int = 10
 ) -> list[EventWithDate]:
     current_date = date.today()
 
-    # 🔹 Base conditions (status + at least one future date in event_dates)
-    base_conditions = [
-        NewEvent.event_status == EventStatus.ACTIVE,
-        any_(NewEvent.event_dates)
-        >= current_date,  # Any of the event_dates is today or in the future
-    ]
-
-    # Helper to execute query with base conditions and compute next_event_date
-    async def fetch_events(extra_condition=None) -> list[EventWithDate]:
+    # If no query → latest active upcoming events
+    if not query:
         stmt = (
             select(NewEvent)
             .options(
                 selectinload(NewEvent.new_category),
                 selectinload(NewEvent.new_subcategory),
             )
-            .where(*base_conditions)
+            .where(NewEvent.event_status == EventStatus.ACTIVE)
             .order_by(desc(NewEvent.created_at))
-            .limit(5)
+            .limit(limit)
         )
-        if extra_condition is not None:
-            stmt = stmt.where(extra_condition)
-
         result = await db.execute(stmt)
         events = result.scalars().all()
 
-        # Inline replacement of get_upcoming_events_for_global_search
-        upcoming: list[EventWithDate] = []
-        for e in events:
-            upcoming_dates = [d for d in e.event_dates if d >= current_date]
-            if upcoming_dates:
-                upcoming.append(
-                    {"event": e, "next_event_date": min(upcoming_dates)}
-                )
-        return upcoming
+    else:
+        q = f"%{query.lower()}%"
 
-    # 1️⃣ No input → latest 5 active upcoming events
-    if not query:
-        return await fetch_events()
-
-    # 2️⃣ Query provided → search flow
-    q = f"%{query.lower()}%"
-
-    # -- (a) Search events directly
-    events = await fetch_events(
-        or_(
-            NewEvent.event_slug.ilike(q),
-            NewEvent.event_title.ilike(q),
+        # Weighted scoring: Title > Location > Subcategory > Category
+        rank = case(
+            (NewEvent.event_title.ilike(q), 4),
+            (NewEvent.location.ilike(q), 3),
+            (SubCategory.subcategory_name.ilike(q), 2),
+            (Category.category_name.ilike(q), 1),
+            else_=0,
         )
-    )
-    if events:
-        return events
 
-    # -- (b) Search subcategories
-    subcat = (
-        (
-            await db.execute(
-                select(SubCategory).where(
-                    or_(
-                        SubCategory.subcategory_slug.ilike(q),
-                        SubCategory.subcategory_name.ilike(q),
-                    )
-                )
+        stmt = (
+            select(NewEvent, rank.label("rank"))
+            .options(
+                selectinload(NewEvent.new_category),
+                selectinload(NewEvent.new_subcategory),
             )
-        )
-        .scalars()
-        .first()
-    )
-    if subcat:
-        events = await fetch_events(
-            NewEvent.subcategory_id == subcat.subcategory_id
-        )
-        if events:
-            return events
-
-    # -- (c) Search categories
-    cat = (
-        (
-            await db.execute(
-                select(Category).where(
-                    or_(
-                        Category.category_slug.ilike(q),
-                        Category.category_name.ilike(q),
-                    )
-                )
+            .join(
+                Category,
+                NewEvent.category_id == Category.category_id,
+                isouter=True,
             )
+            .join(
+                SubCategory,
+                NewEvent.subcategory_id == SubCategory.subcategory_id,
+                isouter=True,
+            )
+            .where(NewEvent.event_status == EventStatus.ACTIVE)
+            .order_by(desc("rank"), desc(NewEvent.created_at))
         )
-        .scalars()
-        .first()
-    )
-    if cat:
-        events = await fetch_events(NewEvent.category_id == cat.category_id)
-        if events:
-            return events
 
-    return []
+        result = await db.execute(stmt)
+        rows = result.all()
+
+        # Keep only matched rows (rank > 0)
+        events = [row[0] for row in rows if row.rank > 0]
+
+        # Apply your rule: if <5 matches → just return those (don’t pad with unmatched)
+        if len(events) > limit:
+            events = events[:limit]
+
+    # Compute next_event_date only for upcoming dates
+    upcoming: list[EventWithDate] = []
+    for e in events:
+        upcoming_dates = [d for d in e.event_dates if d >= current_date]
+        if upcoming_dates:
+            upcoming.append(
+                {"event": e, "next_event_date": min(upcoming_dates)}
+            )
+
+    return upcoming

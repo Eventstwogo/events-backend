@@ -112,11 +112,20 @@ async def search_endpoint(
 ):
     events = await search_events_for_global(db, q)
 
+    if not events:
+        return api_response(
+            status_code=status.HTTP_404_NOT_FOUND,
+            message="No events found matching your search query.",
+            log_error=True,
+        )
+
     return [
         EventSearchResponse(
+            event_id=item["event"].event_id,
             event_title=item["event"].event_title,
             event_slug=item["event"].event_slug,
             card_image=item["event"].card_image,
+            location=item["event"].location,
             category_title=item["event"].new_category.category_name,
             subcategory_title=(
                 item["event"].new_subcategory.subcategory_name
