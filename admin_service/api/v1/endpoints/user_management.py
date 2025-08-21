@@ -43,7 +43,12 @@ async def get_admin_users(
         JSONResponse: List of admin users with their details
     """
     # Create a select statement with the columns we want
-    stmt = select(AdminUser, Role.role_name).select_from(AdminUser).join(Role)
+    stmt = (
+        select(AdminUser, Role.role_name)
+        .select_from(AdminUser)
+        .join(Role)
+        .where(Role.role_name != "ORGANIZER")  # Exclude organizers
+    )
 
     if is_deleted is False:
         stmt = stmt.where(AdminUser.is_deleted.is_(False))  # fetch active users

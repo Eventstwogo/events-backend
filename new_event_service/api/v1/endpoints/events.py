@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends, Form, Query, status
 from sqlalchemy import func, select
@@ -9,6 +9,7 @@ from new_event_service.schemas.events import (
     CategoryInfo,
     EventListResponse,
     EventResponse,
+    EventSearchResponse,
     EventSlotResponseWrapper,
     NewEventSlotResponse,
     OrganizerInfo,
@@ -17,6 +18,7 @@ from new_event_service.schemas.events import (
 from new_event_service.services.events import (
     fetch_event_by_id,
     fetch_event_by_id_with_relations,
+    search_events_for_global,
 )
 from new_event_service.services.response_builder import event_not_found_response
 from new_event_service.utils.utils import minutes_to_duration_string
@@ -98,6 +100,33 @@ async def list_new_events(
             events=items, page=page, limit=limit, total=total_count
         ),
     )
+
+
+@router.get("/search", response_model=list[EventSearchResponse])
+async def search_endpoint(
+    q: Optional[str] = Query(
+        None,
+        description="Search term: category, subcategory, or event. If empty, latest 5 events are returned.",
+    ),
+    db: AsyncSession = Depends(get_db),
+):
+    events = await search_events_for_global(db, q)
+
+    return [
+        EventSearchResponse(
+            event_title=item["event"].event_title,
+            event_slug=item["event"].event_slug,
+            card_image=item["event"].card_image,
+            category_title=item["event"].new_category.category_name,
+            subcategory_title=(
+                item["event"].new_subcategory.subcategory_name
+                if item["event"].new_subcategory
+                else None
+            ),
+            next_event_date=item["next_event_date"],
+        )
+        for item in events
+    ]
 
 
 @router.get(

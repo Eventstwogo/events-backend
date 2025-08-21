@@ -337,3 +337,12 @@ class NewEventSlotResponse(BaseModel):
             date: lambda v: v.isoformat(),
         },
     )
+
+
+class EventSearchResponse(BaseModel):
+    event_title: str
+    event_slug: str
+    card_image: Optional[str]
+    category_title: str
+    subcategory_title: Optional[str] = None
+    next_event_date: Optional[date] = None
