@@ -1,10 +1,11 @@
 import os
 from typing import Awaitable, Callable
 
+import httpx
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
@@ -65,6 +66,13 @@ def create_app() -> FastAPI:
     )
     async def favicon():
         return RedirectResponse(url="/media/favicon.ico")
+
+    @fastapi_app.get("/logo.png", tags=["System"], summary="Serve logo image")
+    async def logo():
+        url = "https://events2go.syd1.cdn.digitaloceanspaces.com/events2go.png"
+        async with httpx.AsyncClient() as client:
+            r = await client.get(url)
+            return StreamingResponse(r.iter_bytes(), media_type="image/png")
 
     fastapi_app.include_router(router=api_router)
 
