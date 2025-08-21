@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from new_event_service.schemas.event_type import EventTypeCreateRequest
@@ -11,7 +11,9 @@ async def create_event_type_service(
 ) -> EventType:
     """Create a new event type if event_type is unique."""
     existing = await db.execute(
-        select(EventType).where(EventType.event_type == request.event_type)
+        select(EventType).where(
+            func.upper(EventType.event_type) == request.event_type
+        )
     )
     if existing.scalar_one_or_none():
         raise ValueError(

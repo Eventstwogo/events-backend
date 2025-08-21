@@ -3,8 +3,11 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from shared.core.logging_config import get_logger
 from shared.db.models.coupons import Coupon
 from shared.db.sessions.database import AsyncSessionLocal
+
+logger = get_logger(__name__)
 
 # Configurable hold duration for coupons
 COUPON_HOLD_MINUTES = 15
@@ -48,6 +51,6 @@ async def cleanup_expired_coupons():
     async with AsyncSessionLocal() as db:
         released = await release_expired_coupons(db)
         if released:
-            print(
+            logger.info(
                 f"[Coupon Cleanup] Released {released} expired applied coupons."
             )

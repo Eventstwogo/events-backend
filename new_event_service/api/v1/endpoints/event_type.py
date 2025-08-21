@@ -5,6 +5,7 @@ from starlette.responses import JSONResponse
 from new_event_service.schemas.event_type import (
     EventTypeCreateRequest,
     EventTypeResponse,
+    EventTypeUpdateRequest,
     UpdateStatusRequest,
 )
 from new_event_service.services.event_type import (
@@ -101,11 +102,13 @@ async def get_active_event_types(
 @exception_handler
 async def update_event_type(
     type_id: str,
-    new_name: str = Body(..., embed=True),
+    update_data: EventTypeUpdateRequest,
     db: AsyncSession = Depends(get_db),
 ) -> JSONResponse:
     try:
-        updated_type = await update_event_type_service(db, type_id, new_name)
+        updated_type = await update_event_type_service(
+            db, type_id, update_data.new_name
+        )
     except ValueError as e:
         return api_response(
             status_code=status.HTTP_400_BAD_REQUEST,

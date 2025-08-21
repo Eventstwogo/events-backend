@@ -4,8 +4,8 @@ from schedulers.booking_status_updater import cleanup_job
 from schedulers.coupon_cleanup import cleanup_expired_coupons
 from schedulers.expired_event_updater import cleanup_expired_events
 
-BOOKING_SEATS_CLEANUP_INTERVAL_MINUTES = 10
-EXPIRED_EVENTS_CHECK_INTERVAL_HOURS = 1
+BOOKING_SEATS_CLEANUP_INTERVAL_MINUTES = 15
+EXPIRED_EVENTS_CHECK_INTERVAL_HOURS = 24
 COUPON_CLEANUP_INTERVAL_MINUTES = 15
 
 scheduler = AsyncIOScheduler()
