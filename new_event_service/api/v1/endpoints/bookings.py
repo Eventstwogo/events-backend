@@ -648,6 +648,7 @@ async def get_all_bookings(
             "username": order.new_user.username,
             "first_name": order.new_user.first_name,
             "last_name": order.new_user.last_name,
+            "profile_picture": get_media_url(order.new_user.profile_picture),
         }
 
         # Build event info
@@ -662,6 +663,9 @@ async def get_all_bookings(
                 booked_event.new_organizer.username
                 if booked_event.new_organizer
                 else None
+            ),
+            "business_logo": get_media_url(
+                booked_event.new_organizer.profile_picture
             ),
             "location": booked_event.location,
             "address": event_address or "",  # fallback if address is optional
@@ -840,6 +844,9 @@ async def get_bookings_by_user(
                 if booked_event.new_organizer
                 else None
             ),
+            "business_logo": get_media_url(
+                booked_event.new_organizer.profile_picture
+            ),
             "location": booked_event.location,
             "address": event_address or "",  # fallback if address is optional
             "event_date": (
@@ -1014,6 +1021,7 @@ async def get_bookings_by_organizer(
             "username": order.new_user.username,
             "first_name": order.new_user.first_name,
             "last_name": order.new_user.last_name,
+            "profile_picture": get_media_url(order.new_user.profile_picture),
         }
 
         # Build event info
@@ -1028,6 +1036,9 @@ async def get_bookings_by_organizer(
                 booked_event.new_organizer.username
                 if booked_event.new_organizer
                 else None
+            ),
+            "business_logo": get_media_url(
+                booked_event.new_organizer.profile_picture
             ),
             "location": booked_event.location,
             "address": event_address or "",  # fallback if address is optional
