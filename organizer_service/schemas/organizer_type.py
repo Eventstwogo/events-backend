@@ -7,15 +7,15 @@ from pydantic import BaseModel, Field, field_validator
 class OrganizerTypeCreateRequest(BaseModel):
     organizer_type: str = Field(
         ...,
-        description="Organizer type name, only letters, spaces, hyphens, and slashes allowed",
+        description="Organizer type name, only letters, spaces, hyphens, slashes, and ampersands allowed",
     )
 
     @field_validator("organizer_type")
     def validate_organizer_type(cls, value: str) -> str:
         value = re.sub(r"\s+", " ", value.strip())
-        if not re.fullmatch(r"[A-Za-z\s\-\/]+", value):
+        if not re.fullmatch(r"[A-Za-z\s\-\/&]+", value):
             raise ValueError(
-                "organizer_type can only contain letters, spaces, hyphens, and forward slashes"
+                "organizer_type can only contain letters, spaces, hyphens, forward slashes, and ampersands"
             )
         return value.upper()
 
@@ -23,15 +23,15 @@ class OrganizerTypeCreateRequest(BaseModel):
 class OrganizerTypeUpdateRequest(BaseModel):
     new_name: str = Field(
         ...,
-        description="New name for the organizer type, only letters, spaces, hyphens, and slashes allowed",
+        description="New name for the organizer type, only letters, spaces, hyphens, slashes and ampersands allowed",
     )
 
     @field_validator("new_name")
     def validate_new_name(cls, value: str) -> str:
         value = re.sub(r"\s+", " ", value.strip())
-        if not re.fullmatch(r"[A-Za-z\s\-\/]+", value):
+        if not re.fullmatch(r"[A-Za-z\s\-\/&]+", value):
             raise ValueError(
-                "new_name can only contain letters, spaces, hyphens, and forward slashes"
+                "new_name can only contain letters, spaces, hyphens, forward slashes, and ampersands"
             )
         return value.upper()
 
@@ -41,7 +41,6 @@ class OrganizerTypeResponse(BaseModel):
     organizer_type: str
     type_status: bool
     created_at: datetime
-    updated_at: datetime
 
     class Config:
         from_attributes = True

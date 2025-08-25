@@ -42,7 +42,7 @@ async def list_organizer_types_service(db: AsyncSession):
 
 async def list_active_organizer_types_service(db: AsyncSession):
     result = await db.execute(
-        select(OrganizerType).where(OrganizerType.type_status == True)
+        select(OrganizerType).where(OrganizerType.type_status == False)
     )
     return result.scalars().all()
 
