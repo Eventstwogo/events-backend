@@ -552,7 +552,7 @@ def send_booking_success_email(
         "event_url": event_url
         or f"{settings.USERS_APPLICATION_FRONTEND_URL}/event/{event_slug}",
         "my_bookings_url": my_bookings_url
-        or f"{settings.USERS_APPLICATION_FRONTEND_URL}/Profile",
+        or f"{settings.USERS_APPLICATION_FRONTEND_URL}/Profile/Bookings",
         "support_url": support_url
         or f"{settings.USERS_APPLICATION_FRONTEND_URL}/support",
         "help_center_url": help_center_url
@@ -654,7 +654,7 @@ def send_new_booking_success_email(
         "event_url": event_url
         or f"{settings.USERS_APPLICATION_FRONTEND_URL}/event/{event_slug}",
         "my_bookings_url": my_bookings_url
-        or f"{settings.USERS_APPLICATION_FRONTEND_URL}/Profile",
+        or f"{settings.USERS_APPLICATION_FRONTEND_URL}/Profile/Bookings",
         "support_url": support_url
         or f"{settings.USERS_APPLICATION_FRONTEND_URL}/support",
         "help_center_url": help_center_url
