@@ -51,7 +51,7 @@ class BusinessProfile(EventsBase):
     abn_id: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     abn_hash: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     profile_details: Mapped[dict] = mapped_column(JSONB, nullable=False)
-    business_logo: Mapped[str] = mapped_column(String, nullable=True)
+    business_logo: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     store_name: Mapped[str] = mapped_column(String, nullable=True)
     store_url: Mapped[str] = mapped_column(String, nullable=True)
     location: Mapped[str] = mapped_column(String, nullable=True)

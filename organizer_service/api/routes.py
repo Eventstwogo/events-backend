@@ -4,6 +4,7 @@ from organizer_service.api.v1.endpoints import (
     abn_check,
     analytics,
     approval,
+    business_logo,
     business_profile,
     fetch_organizers,
     onboarding,
@@ -39,11 +40,12 @@ organizer_router.include_router(
     onboarding.router, prefix="/onboarding", tags=["Organizer Onboarding"]
 )
 organizer_router.include_router(store.router, tags=["Organizer Store"])
-organizer_router.include_router(
-    business_profile.router,
-    prefix="/business",
-    tags=["Organizer Business Profile"],
-)
+organizer_router.include_router(business_logo.router, prefix="/business", tags=["Organizer Business Profile"])
+# organizer_router.include_router(
+#     business_profile.router,
+#     prefix="/business",
+#     tags=["Organizer Business Profile"],
+# )
 organizer_router.include_router(fetch_organizers.router, tags=["Organizers"])
 organizer_router.include_router(
     organizer_type.router, prefix="/types", tags=["Organizer Types"]

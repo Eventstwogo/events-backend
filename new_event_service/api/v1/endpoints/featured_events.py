@@ -16,6 +16,7 @@ from new_event_service.services.featured_events import (
     create_featured_event,
     fetch_featured_events,
     get_featured_events_count,
+    list_active_featured_events,
     list_featured_events,
     update_event_featured_status,
 )
@@ -31,6 +32,7 @@ router = APIRouter()
     status_code=status.HTTP_200_OK,
     response_model=OldFeaturedEventListResponse,
     summary="Get Featured Events",
+    deprecated=True,
 )
 @exception_handler
 async def get_featured_eventss(
@@ -67,13 +69,9 @@ async def get_featured_eventss(
             "card_image": event.card_image,
             "event_slug": event.event_slug,
             "event_type": event.event_type,
-            "category_title": (
-                event.new_category.category_name if event.new_category else ""
-            ),
+            "category_title": (event.new_category.category_name if event.new_category else ""),
             "sub_category_title": (
-                event.new_subcategory.subcategory_name
-                if event.new_subcategory
-                else None
+                event.new_subcategory.subcategory_name if event.new_subcategory else None
             ),
             "event_dates": event.event_dates,
             "featured_event": event.featured_event,
@@ -111,9 +109,7 @@ async def update_event_featured(
         Success message with updated event data
     """
     # Update the event's featured status
-    updated_event = await update_event_featured_status(
-        db, event_id, request.featured_event
-    )
+    updated_event = await update_event_featured_status(db, event_id, request.featured_event)
 
     if not updated_event:
         return event_not_found_response()
@@ -168,5 +164,25 @@ async def get_featured_events(
     return api_response(
         status_code=status.HTTP_200_OK,
         message="Fetched featured events successfully",
+        data=response_data,
+    )
+
+
+# GET: fetch active featured events
+@router.get(
+    "/active",
+    response_model=list[FeaturedEventResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Get active featured events",
+)
+@exception_handler
+async def get_active_featured_events(
+    db: AsyncSession = Depends(get_db),
+):
+    events = await list_active_featured_events(db)
+    response_data = [FeaturedEventResponse.model_validate(e) for e in events]
+    return api_response(
+        status_code=status.HTTP_200_OK,
+        message="Fetched active featured events successfully",
         data=response_data,
     )

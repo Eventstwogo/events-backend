@@ -1,10 +1,14 @@
+from datetime import date
 from typing import List, Optional
 
+from fastapi import status
+from fastapi.responses import JSONResponse
 from sqlalchemy import desc, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
 from new_event_service.schemas.featured_events import FeaturedEventResponse
+from shared.core.api_response import api_response
 from shared.db.models import NewEvent
 from shared.db.models.featured_events import FeaturedEvents
 from shared.utils.id_generators import generate_lower_uppercase
@@ -87,7 +91,52 @@ async def get_featured_events_count(db: AsyncSession) -> int:
     return len(list(events))
 
 
-async def create_featured_event(db: AsyncSession, event_data) -> FeaturedEvents:
+async def create_featured_event(db: AsyncSession, event_data) -> FeaturedEvents | JSONResponse:
+    # Fetch the referenced event
+    result = await db.execute(
+        select(NewEvent).where(NewEvent.event_id == event_data.event_ref_id)
+    )
+    event = result.scalar_one_or_none()
+
+    if not event:
+        return api_response(
+            status_code=status.HTTP_404_NOT_FOUND,
+            message="Event not found",
+            log_error=True,
+        )
+
+    # Derive start & end dates from event.event_dates
+    if not event.event_dates:
+        return api_response(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message="Event has no dates",
+            log_error=True,
+        )
+
+    event_start = min(event.event_dates)
+    event_end = max(event.event_dates)
+
+    # Validate featured event dates
+    if event_data.start_date < event_start:
+        return api_response(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message="Featured event start_date cannot be before the event's first date",
+            log_error=True,
+        )
+
+    if event_data.end_date > event_end:
+        return api_response(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message="Featured event end_date cannot be after the event's last date",
+            log_error=True,
+        )
+
+    if event_data.start_date > event_data.end_date:
+        return api_response(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message="Featured event start_date cannot be after end_date",
+        )
+        
     feature_id = generate_lower_uppercase()
 
     new_event = FeaturedEvents(feature_id=feature_id, **event_data.dict())
@@ -139,6 +188,55 @@ async def list_featured_events(db: AsyncSession) -> list[FeaturedEventResponse]:
                 ),
                 # if you want to also include the user_ref name:
                 # user_ref_name=fe.user_ref.username_encrypted if fe.user_ref else None
+            )
+        )
+    return response
+
+
+async def list_active_featured_events(db: AsyncSession) -> list[FeaturedEventResponse]:
+    query = (
+        select(FeaturedEvents)
+        .where(FeaturedEvents.feature_status == False)  # only active
+        .options(
+            joinedload(FeaturedEvents.new_event).joinedload(NewEvent.new_organizer),
+            joinedload(FeaturedEvents.user_ref),
+        )
+    )
+    result = await db.execute(query)
+    featured_events = result.scalars().all()
+
+    today = date.today()
+    response: list[FeaturedEventResponse] = []
+
+    for fe in featured_events:
+        # Ensure event exists & has dates
+        if not fe.new_event or not fe.new_event.event_dates:
+            continue
+
+        # Skip if all dates are in the past
+        if max(fe.new_event.event_dates) < today:
+            continue
+
+        response.append(
+            FeaturedEventResponse(
+                feature_id=fe.feature_id,
+                id=fe.id,
+                user_ref_id=fe.user_ref_id,
+                event_ref_id=fe.event_ref_id,
+                start_date=fe.start_date,
+                end_date=fe.end_date,
+                total_weeks=fe.total_weeks,
+                price=float(fe.price),
+                feature_status=fe.feature_status,
+                event_slug=fe.new_event.event_slug if fe.new_event else None,
+                event_type=fe.new_event.event_type if fe.new_event else None,
+                event_title=fe.new_event.event_title if fe.new_event else None,
+                card_image=fe.new_event.card_image if fe.new_event else None,
+                organizer_name=(
+                    fe.new_event.new_organizer.username
+                    if fe.new_event and fe.new_event.new_organizer
+                    else None
+                ),
             )
         )
     return response

@@ -387,10 +387,12 @@ async def confirm_booking(
             order.payment_reference = extract_capture_id(response)
 
             # 4. Update held → booked for all line items
+            total_seats = 0
             for li in order.line_items:
                 seat_cat: NewEventSeatCategory = li.new_seat_category
                 seat_cat.held -= li.num_seats
                 seat_cat.booked += li.num_seats
+                total_seats += li.num_seats
 
             # Increment sold_coupons if the order has coupon_status=True
             if order.coupon_status:

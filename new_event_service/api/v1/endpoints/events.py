@@ -1,7 +1,8 @@
-from typing import Dict, List, Optional
+from datetime import date
+from typing import Annotated, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, Depends, Form, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import and_, any_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -41,22 +42,47 @@ router = APIRouter()
 async def list_new_events(
     page: int = Query(1, ge=1, description="Page number"),
     limit: int = Query(10, ge=1, le=100, description="Items per page"),
+    event_type: Annotated[
+        Literal["past", "active"],
+        Query(
+            description="Filter events by type: past or active (present + upcoming)",
+            example="active",
+        ),
+    ] = "active",
     db: AsyncSession = Depends(get_db),
 ):
     offset = (page - 1) * limit
+    current_date = date.today()
 
-    # Proper total count
-    result = await db.scalar(select(func.count()).select_from(NewEvent))
-    total_count: int = result if result is not None else 0
+    # Base filter: events tied to the current user
+    base_conditions = []
 
-    # Proper relationship loading
+    # Event type filters
+    if event_type == "past":
+        # Events whose latest date < today
+        base_conditions.append(any_(NewEvent.event_dates) < current_date)
+
+    elif event_type == "active":
+        # Events still happening or yet to happen
+        base_conditions.append(any_(NewEvent.event_dates) >= current_date)
+
+    # Proper total count with filters
+    total_count = await db.scalar(
+        select(func.count()).select_from(NewEvent).where(and_(*base_conditions))
+    ) or 0
+
+    # Query with filters + pagination
     query = (
         select(NewEvent)
         .options(
             selectinload(NewEvent.new_category),
             selectinload(NewEvent.new_subcategory),
             selectinload(NewEvent.new_organizer),
+            selectinload(NewEvent.new_slots).selectinload(
+                NewEventSlot.new_seat_categories
+            ),
         )
+        .where(and_(*base_conditions))
         .order_by(NewEvent.created_at.desc())
         .offset(offset)
         .limit(limit)
@@ -83,9 +109,7 @@ async def list_new_events(
                 if e.new_subcategory
                 else None
             ),
-            organizer_name=(
-                e.new_organizer.username if e.new_organizer else None
-            ),
+            organizer_name=(e.new_organizer.username if e.new_organizer else None),
             event_status=e.event_status,
             created_at=e.created_at,
             featured=e.featured_event,
