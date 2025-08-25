@@ -3,7 +3,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from sqlalchemy import (
-    ARRAY,
+    Boolean,
     DateTime,
 )
 from sqlalchemy import Enum as SQLAlchemyEnum
@@ -107,4 +107,35 @@ class OrganizerQuery(EventsBase):
         DateTime(timezone=True),
         default=datetime.now(timezone.utc),
         onupdate=datetime.now(timezone.utc),
+    )
+
+
+class OrganizerType(EventsBase):
+    __tablename__ = "e2gorganizertype"
+
+    type_id: Mapped[str] = mapped_column(
+        String(6),
+        primary_key=True,
+        unique=True,
+        nullable=False,
+    )
+    organizer_type: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        index=True,
+    )
+
+    type_status: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
     )

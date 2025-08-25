@@ -61,7 +61,7 @@ async def custom_subcategories_summary(
     top_limit: int = Query(
         10, ge=1, le=50, description="Top N results for organizers/names"
     ),
-) -> Dict[str, Any] | JSONResponse:
+) -> JSONResponse:
     """
     Unified analytics for custom subcategories:
     - Total rows
