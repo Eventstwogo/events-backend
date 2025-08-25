@@ -604,6 +604,7 @@ async def fetch_events_by_slug_comprehensive(
     category_result = await db.execute(category_query)
     category = category_result.scalars().first()
 
+    today = date.today()
     if category:
         matched_category_id = category.category_id
 
@@ -623,6 +624,7 @@ async def fetch_events_by_slug_comprehensive(
             .filter(
                 NewEvent.event_status == EventStatus.ACTIVE
             )  # Only active events
+            .filter(any_(NewEvent.event_dates) >= today)
             .order_by(desc(NewEvent.created_at))
             .offset(offset)
             .limit(per_page)
@@ -639,6 +641,7 @@ async def fetch_events_by_slug_comprehensive(
                 NewEvent.subcategory_id.is_(None)
             )  # Only events without subcategory
             .filter(NewEvent.event_status == EventStatus.ACTIVE)
+            .filter(any_(NewEvent.event_dates) >= today)
         )
         category_count_result = await db.execute(category_count_query)
         total_category_events = category_count_result.scalar() or 0
@@ -659,6 +662,7 @@ async def fetch_events_by_slug_comprehensive(
             .filter(
                 NewEvent.event_status == EventStatus.ACTIVE
             )  # Only active events
+            .filter(any_(NewEvent.event_dates) >= today)
             .order_by(desc(NewEvent.created_at))
         )
 
@@ -693,6 +697,7 @@ async def fetch_events_by_slug_comprehensive(
                 select(func.count(NewEvent.event_id))
                 .filter(NewEvent.subcategory_id == subcategory_id)
                 .filter(NewEvent.event_status == EventStatus.ACTIVE)
+                .filter(any_(NewEvent.event_dates) >= today)
             )
             subcategory_count_result = await db.execute(subcategory_count_query)
             count = subcategory_count_result.scalar() or 0
@@ -723,6 +728,7 @@ async def fetch_events_by_slug_comprehensive(
                 NewEvent.event_status == EventStatus.ACTIVE
             )  # Only active events
             .order_by(desc(NewEvent.created_at))
+            .filter(any_(NewEvent.event_dates) >= today)
             .offset(offset)
             .limit(per_page)
         )
@@ -735,6 +741,7 @@ async def fetch_events_by_slug_comprehensive(
             select(func.count(NewEvent.event_id))
             .filter(NewEvent.subcategory_id == subcategory.subcategory_id)
             .filter(NewEvent.event_status == EventStatus.ACTIVE)
+            .filter(any_(NewEvent.event_dates) >= today)
         )
         subcategory_count_result = await db.execute(subcategory_count_query)
         total_subcategory_events = subcategory_count_result.scalar() or 0
