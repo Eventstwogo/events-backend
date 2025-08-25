@@ -5,6 +5,7 @@ from category_service.api.v1.endpoints import (
     categories_by_id,
     categories_by_slug,
     category_items,
+    custom_sub_category,
     sub_categories_by_id,
     sub_categories_by_slug,
     subcategories,
@@ -42,4 +43,9 @@ category_router.include_router(
     category_items.router,
     prefix="/category-items",
     tags=["categories or subcategories by id"],
+)
+category_router.include_router(
+    custom_sub_category.router,
+    prefix="/custom-subcategories",
+    tags=["Custom SubCategories"],
 )

@@ -42,7 +42,9 @@ def extra_images_media_urls(value: Optional[List[str]]) -> Optional[List[str]]:
     return result if result else None
 
 
-async def get_organizer_full_details(user_id: str, db: AsyncSession) -> Dict:
+async def get_organizer_full_details(
+    user_id: str, db: AsyncSession, event_type: str
+) -> Dict:
     """
     Fetch full details of an organizer including associated events and event slots.
 
@@ -121,6 +123,22 @@ async def get_organizer_full_details(user_id: str, db: AsyncSession) -> Dict:
                 }
 
     # Step 3: Fetch new events associated with the user
+    current_date = date.today()
+
+    # Step 3: Build event filter conditions
+    base_conditions = [NewEvent.organizer_id == user_id]
+
+    if event_type == "past":
+        # Past → event already finished
+        # means the latest event date < today
+        base_conditions.append(any_(NewEvent.event_dates) < current_date)
+
+    elif event_type == "active":
+        # Present + Future → event still happening or yet to happen
+        # means at least one event_date >= today
+        base_conditions.append(any_(NewEvent.event_dates) >= current_date)
+
+    # Step 4: Fetch new events with filters
     events_stmt = (
         select(NewEvent)
         .options(
@@ -130,7 +148,7 @@ async def get_organizer_full_details(user_id: str, db: AsyncSession) -> Dict:
                 NewEventSlot.new_seat_categories
             ),
         )
-        .where(NewEvent.organizer_id == user_id)
+        .where(and_(*base_conditions))
         .order_by(NewEvent.created_at.desc())
     )
 

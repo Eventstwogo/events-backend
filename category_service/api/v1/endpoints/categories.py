@@ -220,10 +220,28 @@ async def _create_category(
     await db.commit()
     await db.refresh(new_category)
 
+    # Create default "Others" subcategory for this category
+    others_subcategory = SubCategory(
+        id=generate_lower_uppercase(6),
+        subcategory_id=generate_digits_lowercase(6),
+        subcategory_name="OTHERS",
+        subcategory_slug=f"{new_category.category_slug}-others",
+        category_id=new_category.category_id,
+        subcategory_description="Auto-generated subcategory for uncategorized items",
+        subcategory_img_thumbnail=uploaded_url,  # f"categories/{new_category.category_slug}-others/others-thumbnail.png",
+    )
+
+    db.add(others_subcategory)
+    await db.commit()
+    await db.refresh(others_subcategory)
+
     return api_response(
         status_code=status.HTTP_201_CREATED,
-        message="Category created successfully",
-        data={"category_id": new_category.category_id},
+        message="Category created successfully (with Others subcategory)",
+        data={
+            "category_id": new_category.category_id,
+            "others_subcategory_id": others_subcategory.subcategory_id,
+        },
     )
 
 

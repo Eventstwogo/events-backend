@@ -19,6 +19,10 @@ from admin_service.services.user_service import (
     get_user_by_id,
     get_user_role_name,
 )
+from category_service.schemas.custom_sub_category import CustomSubCategoryCreate
+from category_service.services.custom_sub_category import (
+    create_custom_subcategory,
+)
 from new_event_service.services.events import (
     check_category_and_subcategory_exists_using_joins,
     check_category_exists,
@@ -73,6 +77,9 @@ async def create_event_with_images(
     event_slug: str = Form(..., description="Event slug"),
     category_id: str = Form(..., description="Category ID"),
     subcategory_id: Optional[str] = Form(None, description="Subcategory ID"),
+    custom_subcategory_name: Optional[str] = Form(
+        None, description="Custom subcategory name (optional)"
+    ),
     event_type: Optional[str] = Form(None, description="Event type (optional)"),
     location: Optional[str] = Form(
         None, description="Event location (optional)"
@@ -118,6 +125,10 @@ async def create_event_with_images(
 
     if not event_slug or not event_slug.strip():
         return event_slug_cannot_be_empty_response()
+
+    custom_subcategory_name = (
+        custom_subcategory_name.strip() if custom_subcategory_name else None
+    )
 
     # Validate location
     cleaned_location = process_location_input(location)
@@ -193,6 +204,17 @@ async def create_event_with_images(
         if not existing_category_subcategory:
             return category_and_subcategory_not_found_response()
 
+        # If custom_subcategory_name provided → enforce subcategory name must be "Others"
+        if (
+            custom_subcategory_name
+            and subcategory.subcategory_name.lower() != "others"
+        ):
+            return api_response(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                message="Custom subcategory can only be added when subcategory is 'Others'",
+                log_error=True,
+            )
+
     # Generate a new event ID
     new_event_id = generate_digits_upper_lower_case(length=6)
 
@@ -267,6 +289,27 @@ async def create_event_with_images(
     await db.commit()
     await db.refresh(new_event)
 
+    if custom_subcategory_name and not subcategory_id:
+        return api_response(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message="Subcategory ID must be provided when custom subcategory name is given.",
+            log_error=True,
+        )
+
+    if subcategory_id and custom_subcategory_name:
+        custom_data = CustomSubCategoryCreate(
+            category_ref_id=category_id,
+            subcategory_ref_id=subcategory_id,
+            event_ref_id=new_event.event_id,
+            custom_subcategory_name=(
+                custom_subcategory_name.upper()
+                if custom_subcategory_name
+                else f"Custom-{new_event.event_id}"
+            ),
+        )
+
+        custom_sub_category = await create_custom_subcategory(db, custom_data)
+
     # Get user role to determine if admin or organizer
     user_role_name = await get_user_role_name(db, user_id)
     created_by_role = (
@@ -330,6 +373,9 @@ async def update_event_with_images(
     category_id: Optional[str] = Form(None, description="Category ID"),
     subcategory_id: Optional[str] = Form(None, description="Subcategory ID"),
     event_type: Optional[str] = Form(None, description="Event type (optional)"),
+    custom_subcategory_name: Optional[str] = Form(
+        None, description="Custom subcategory name (optional)"
+    ),
     location: Optional[str] = Form(
         None, description="Event location (optional)"
     ),
@@ -356,6 +402,9 @@ async def update_event_with_images(
     # current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ) -> JSONResponse:
+    custom_subcategory_name = (
+        custom_subcategory_name.strip() if custom_subcategory_name else None
+    )
     # Fetch the event and verify ownership
     event = await fetch_event_by_id(db, event_id)
     if not event:
@@ -481,6 +530,17 @@ async def update_event_with_images(
             if not subcategory:
                 return subcategory_not_found_response()
 
+            # If custom_subcategory_name provided → enforce subcategory name must be "Others"
+            if (
+                custom_subcategory_name
+                and subcategory.subcategory_name.lower() != "others"
+            ):
+                return api_response(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    message="Custom subcategory can only be added when subcategory is 'Others'",
+                    log_error=True,
+                )
+
         update_data["subcategory_id"] = subcategory_id
 
     # Validate category-subcategory relationship if both are being updated
@@ -596,6 +656,27 @@ async def update_event_with_images(
             )
     else:
         updated_event = event
+
+    if custom_subcategory_name and not subcategory_id:
+        return api_response(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message="Subcategory ID must be provided when custom subcategory name is given.",
+            log_error=True,
+        )
+
+    if subcategory_id and custom_subcategory_name:
+        custom_data = CustomSubCategoryCreate(
+            category_ref_id=updated_event.category_id,
+            subcategory_ref_id=subcategory_id,
+            event_ref_id=updated_event.event_id,
+            custom_subcategory_name=(
+                custom_subcategory_name.upper()
+                if custom_subcategory_name
+                else f"Custom-{updated_event.event_id}"
+            ),
+        )
+
+        custom_sub_category = await create_custom_subcategory(db, custom_data)
 
     # Prepare response data
     response_data = {

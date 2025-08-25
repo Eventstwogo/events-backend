@@ -23,12 +23,13 @@ from sqlalchemy.sql import func
 from sqlalchemy.types import Enum as SQLAlchemyEnum
 
 from shared.db.models.base import EventsBase
-from shared.db.models.coupons import Coupon
-from shared.db.models.featured_events import FeaturedEvents
 
 if TYPE_CHECKING:
     from shared.db.models.admin_users import AdminUser
     from shared.db.models.categories import Category, SubCategory
+    from shared.db.models.coupons import Coupon
+    from shared.db.models.custom_sub_category import CustomSubCategory
+    from shared.db.models.featured_events import FeaturedEvents
     from shared.db.models.users import User
 
 
@@ -179,6 +180,9 @@ class NewEvent(EventsBase):
         "FeaturedEvents",
         back_populates="new_event",
         cascade="all, delete-orphan",
+    )
+    custom_subcategories: Mapped[List["CustomSubCategory"]] = relationship(
+        "CustomSubCategory", back_populates="custom_event"
     )
 
     __table_args__ = (

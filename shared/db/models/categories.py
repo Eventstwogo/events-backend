@@ -4,10 +4,11 @@ from sqlalchemy import Boolean, DateTime, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from shared.db.models.base import EventsBase
-from shared.db.models.new_events import NewEvent
 
 if TYPE_CHECKING:
+    from shared.db.models.custom_sub_category import CustomSubCategory
     from shared.db.models.events import Event
+    from shared.db.models.new_events import NewEvent
 
 
 class Category(EventsBase):
@@ -61,6 +62,9 @@ class Category(EventsBase):
         cascade="all, delete-orphan",
         lazy="selectin",
     )
+    custom_subcategories: Mapped[List["CustomSubCategory"]] = relationship(
+        "CustomSubCategory", back_populates="custom_category"
+    )
 
 
 class SubCategory(EventsBase):
@@ -113,4 +117,7 @@ class SubCategory(EventsBase):
         back_populates="new_subcategory",
         cascade="all, delete-orphan",
         lazy="selectin",
+    )
+    custom_subcategories: Mapped[List["CustomSubCategory"]] = relationship(
+        "CustomSubCategory", back_populates="custom_subcategory"
     )

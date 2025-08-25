@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, Path, status
+from fastapi.params import Query
 from sqlalchemy.ext.asyncio import AsyncSession
+from typing_extensions import Annotated, Literal
 
 from new_event_service.schemas.analytics import (
     AdminAnalyticsResponse,
@@ -38,10 +40,18 @@ async def get_new_event_organizer_full_details(
     user_id: str = Path(
         ..., min_length=6, max_length=12, description="User ID of the organizer"
     ),
+    event_type: Annotated[
+        Literal["past", "active"],
+        Query(
+            description="Filter events by type: past or active (present + upcoming)",
+            example="active",
+        ),
+    ] = "active",
     db: AsyncSession = Depends(get_db),
 ):
     """
     Fetch full details of an organizer including associated new events and event slots.
+    Supports filters for past and present+future events.
 
     This endpoint:
     1. Fetches user from AdminUser table
@@ -49,7 +59,7 @@ async def get_new_event_organizer_full_details(
     3. Fetches any new events associated with the user and their event slots
     """
 
-    result = await get_organizer_full_details(user_id, db)
+    result = await get_organizer_full_details(user_id, db, event_type)
 
     return api_response(
         status_code=result["status_code"],
