@@ -23,7 +23,7 @@ from shared.db.models.new_events import (
 from shared.utils.file_uploads import get_media_url
 
 
-async def validate_user_access(user: AdminUser, db: AsyncSession):
+async def validate_user_access(user: AdminUser, db: AsyncSession) -> Any:
     role_name = (
         await db.execute(
             select(Role.role_name)

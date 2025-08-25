@@ -43,6 +43,11 @@ class BusinessProfile(EventsBase):
     business_id: Mapped[str] = mapped_column(
         String(length=6), ForeignKey("e2gadminusers.business_id"), unique=True
     )
+    type_ref_id: Mapped[str] = mapped_column(
+        String(6),
+        ForeignKey("e2gorganizertype.type_id", ondelete="SET NULL"),
+        nullable=True,
+    )
     abn_id: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     abn_hash: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     profile_details: Mapped[dict] = mapped_column(JSONB, nullable=False)
@@ -68,6 +73,11 @@ class BusinessProfile(EventsBase):
         "AdminUser",
         back_populates="business_profile",
         uselist=False,
+        lazy="joined",
+    )
+    organizer_type: Mapped["OrganizerType"] = relationship(
+        "OrganizerType",
+        back_populates="business_profiles",
         lazy="joined",
     )
 
@@ -138,4 +148,11 @@ class OrganizerType(EventsBase):
         nullable=False,
         server_default=func.now(),
         onupdate=func.now(),
+    )
+
+    # Back relationship to BusinessProfile
+    business_profiles: Mapped[list["BusinessProfile"]] = relationship(
+        "BusinessProfile",
+        back_populates="organizer_type",
+        cascade="all, delete-orphan",
     )

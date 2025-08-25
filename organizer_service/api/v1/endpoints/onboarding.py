@@ -4,6 +4,7 @@ from fastapi import (
     APIRouter,
     BackgroundTasks,
     Depends,
+    status,
 )
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,6 +16,7 @@ from organizer_service.services.business_profile import (
     validate_abn_id,
 )
 from shared.constants import ONBOARDING_SUBMITTED
+from shared.core.api_response import api_response
 from shared.core.security import (
     decrypt_data,
     encrypt_data,
@@ -22,12 +24,28 @@ from shared.core.security import (
     hash_data,
 )
 from shared.db.models import AdminUser, BusinessProfile
+from shared.db.models.organizer import OrganizerType
 from shared.db.sessions.database import get_db
 from shared.utils.email_utils import send_organizer_onboarding_email
 from shared.utils.exception_handlers import exception_handler
 from shared.utils.id_generators import generate_digits_letters
 
 router = APIRouter()
+
+
+async def validate_type_ref_id(db: AsyncSession, type_ref_id: str):
+    result = await db.execute(
+        select(OrganizerType).where(OrganizerType.type_id == type_ref_id)
+    )
+    organizer_type = result.scalar_one_or_none()
+
+    if not organizer_type:
+        return api_response(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            message=f"OrganizerType with type_id '{type_ref_id}' does not exist.",
+            log_error=True,
+        )
+    return organizer_type
 
 
 @router.post("")
@@ -52,6 +70,9 @@ async def organizer_onboarding(
                 "message": "Invalid profile reference ID. Profile not found."
             },
         )
+
+    # check organizer type
+    organizer_type = await validate_type_ref_id(db, data.type_ref_id)
 
     # Clean and normalize store name
     store_name_cleaned = " ".join(
@@ -176,6 +197,7 @@ async def organizer_onboarding(
         is_approved=ONBOARDING_SUBMITTED,
         purpose=json.dumps([p.value for p in data.purpose]),
         ref_number=ref_number,
+        type_ref_id=data.type_ref_id,
     )
 
     db.add(new_profile)

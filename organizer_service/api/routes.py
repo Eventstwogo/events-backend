@@ -45,7 +45,9 @@ organizer_router.include_router(
     tags=["Organizer Business Profile"],
 )
 organizer_router.include_router(fetch_organizers.router, tags=["Organizers"])
-organizer_router.include_router(organizer_type.router, tags=["Organizer Types"])
+organizer_router.include_router(
+    organizer_type.router, prefix="/types", tags=["Organizer Types"]
+)
 organizer_router.include_router(
     analytics.router, prefix="/new-analytics", tags=["Organizer Analytics"]
 )

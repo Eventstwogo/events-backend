@@ -85,6 +85,16 @@ async def get_all_organizers(db: AsyncSession = Depends(get_db)):
                         "business_profile_approved"
                     ],
                     "profile_details": decrypted_profile_details,
+                    "type_ref_id": (
+                        business_profile.type_ref_id
+                        if business_profile
+                        else None
+                    ),
+                    "organizer_type": (
+                        business_profile.organizer_type.organizer_type
+                        if business_profile and business_profile.organizer_type
+                        else None
+                    ),
                     "purpose": purpose_data,
                     "ref_number": (
                         business_profile.ref_number
@@ -179,6 +189,14 @@ async def get_organizer_details(
             "location": business_profile.location if business_profile else None,
             "is_approved": validation_result["business_profile_approved"],
             "profile_details": decrypted_profile_details,
+            "type_ref_id": (
+                business_profile.type_ref_id if business_profile else None
+            ),
+            "organizer_type": (
+                business_profile.organizer_type.organizer_type
+                if business_profile and business_profile.organizer_type
+                else None
+            ),
             "purpose": purpose_data,
             "ref_number": (
                 business_profile.ref_number if business_profile else None

@@ -21,6 +21,7 @@ class OnboardingRequest(BaseModel):
     store_name: str = Field(..., min_length=3, max_length=100)
     store_url: HttpUrl
     location: str = Field(..., min_length=2, max_length=100)
+    type_ref_id: str = Field(..., min_length=1, max_length=6)
 
     @field_validator("purpose")
     @classmethod

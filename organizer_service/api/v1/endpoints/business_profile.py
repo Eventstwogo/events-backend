@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 from shared.db.models import AdminUser, BusinessProfile
 from shared.db.sessions.database import get_db
@@ -13,7 +14,7 @@ from shared.utils.exception_handlers import exception_handler
 router = APIRouter()
 
 
-@router.get("/{user_id}", status_code=200)
+@router.get("/{user_id}", status_code=200, deprecated=True)
 @exception_handler
 async def get_business_profile(
     user_id: str = Path(..., min_length=6, max_length=12),
@@ -46,10 +47,11 @@ async def get_business_profile(
             )
 
     # Now fetch the business profile
+
     result = await db.execute(
-        select(BusinessProfile).where(
-            BusinessProfile.business_id == user_result.business_id
-        )
+        select(BusinessProfile)
+        .options(joinedload(BusinessProfile.organizer_type))
+        .where(BusinessProfile.business_id == user_result.business_id)
     )
     business = result.scalar_one_or_none()
 
@@ -75,6 +77,12 @@ async def get_business_profile(
         "username": user_result.username,
         "role_name": user_result.role.role_name.lower(),
         "business_id": business.business_id,
+        "type_ref_id": business.type_ref_id,
+        "organizer_type": (
+            business.organizer_type.organizer_type
+            if business and business.organizer_type
+            else None
+        ),
         "profile_details": decrypted_profile,
         "business_logo": business.business_logo,
         "location": business.location,

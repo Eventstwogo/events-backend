@@ -37,7 +37,6 @@ class OrganizerTypeUpdateRequest(BaseModel):
 
 
 class OrganizerTypeResponse(BaseModel):
-    id: int
     type_id: str
     organizer_type: str
     type_status: bool
