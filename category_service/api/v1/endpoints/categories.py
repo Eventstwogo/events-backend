@@ -12,7 +12,7 @@ from fastapi import (
     status,
 )
 from slugify import slugify
-from sqlalchemy import and_, any_, case, func
+from sqlalchemy import and_, case, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
@@ -27,6 +27,7 @@ from category_service.services.category_service import (
     validate_category_data,
     validate_subcategory_conflicts,
 )
+from new_event_service.services.event_fetcher import EventTypeStatus, get_event_conditions
 from shared.core.api_response import api_response
 from shared.db.models import Category, SubCategory
 from shared.db.models.new_events import EventStatus, NewEvent
@@ -626,6 +627,8 @@ async def get_categories_and_subcategories_by_status_event_categories(
     current_date = date.today()
 
     # Base query: categories joined with events
+    # Get conditions for upcoming events (present + future dates)
+    event_conditions = get_event_conditions(EventTypeStatus.UPCOMING)
     stmt = (
         select(Category)
         .options(selectinload(Category.subcategories))
@@ -633,7 +636,7 @@ async def get_categories_and_subcategories_by_status_event_categories(
         .where(
             and_(
                 NewEvent.event_status == EventStatus.ACTIVE,
-                any_(NewEvent.event_dates) > current_date,
+                *event_conditions  # unpack list of conditions
             )
         )
         .distinct()

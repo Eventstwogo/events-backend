@@ -1,8 +1,7 @@
-from datetime import date
 from typing import Annotated, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, Depends, Form, Query, status
-from sqlalchemy import and_, any_, func, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -16,6 +15,7 @@ from new_event_service.schemas.events import (
     OrganizerInfo,
     SubCategoryInfo,
 )
+from new_event_service.services.event_fetcher import EventTypeStatus, get_event_conditions
 from new_event_service.services.events import (
     fetch_event_by_id,
     fetch_event_by_id_with_relations,
@@ -43,32 +43,27 @@ async def list_new_events(
     page: int = Query(1, ge=1, description="Page number"),
     limit: int = Query(10, ge=1, le=100, description="Items per page"),
     event_type: Annotated[
-        Literal["past", "active"],
+        Literal[EventTypeStatus.COMPLETED, EventTypeStatus.UPCOMING],
         Query(
             description="Filter events by type: past or active (present + upcoming)",
-            example="active",
+            example=EventTypeStatus.UPCOMING,
         ),
-    ] = "active",
+    ] = EventTypeStatus.UPCOMING,
     db: AsyncSession = Depends(get_db),
 ):
     offset = (page - 1) * limit
-    current_date = date.today()
-
+    
     # Base filter: events tied to the current user
     base_conditions = []
 
-    # Event type filters
-    if event_type == "past":
-        # Events whose latest date < today
-        base_conditions.append(any_(NewEvent.event_dates) < current_date)
-
-    elif event_type == "active":
-        # Events still happening or yet to happen
-        base_conditions.append(any_(NewEvent.event_dates) >= current_date)
+    # Unpack conditions + alias from helper
+    base_conditions.extend(get_event_conditions(event_type))
 
     # Proper total count with filters
     total_count = await db.scalar(
-        select(func.count()).select_from(NewEvent).where(and_(*base_conditions))
+        select(func.count())
+        .select_from(NewEvent)
+        .where(and_(*base_conditions))
     ) or 0
 
     # Query with filters + pagination

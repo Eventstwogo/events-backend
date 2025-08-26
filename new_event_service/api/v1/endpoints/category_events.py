@@ -15,6 +15,7 @@ from new_event_service.services.category_events import (
     fetch_categories_with_all_events,
     fetch_events_by_category_slug_unified,
 )
+from new_event_service.services.event_fetcher import EventTypeStatus
 from shared.core.api_response import api_response
 from shared.db.sessions.database import get_db
 from shared.utils.exception_handlers import exception_handler
@@ -30,8 +31,8 @@ router = APIRouter()
 )
 @exception_handler
 async def get_categories_with_latest_events(
-    event_type: Literal["all", "ongoing", "upcoming"] = Query(
-        "upcoming",
+    event_type: Literal[EventTypeStatus.ALL, EventTypeStatus.LIVE, EventTypeStatus.UPCOMING] = Query(
+        EventTypeStatus.UPCOMING,
         description="Filter events by type: 'all' for all events, 'ongoing' for current events (current date between start_date and end_date), 'upcoming' for future events (end_date >= current date)",
     ),
     db: AsyncSession = Depends(get_db),
@@ -72,7 +73,7 @@ async def get_categories_with_latest_events(
     "/events-by-slug/{slug}",
     status_code=status.HTTP_200_OK,
     response_model=SimplifiedSlugEventsResponse,
-    summary="Integrated in APplication frontend",
+    summary="Integrated in Application frontend",
 )
 @exception_handler
 async def get_events_by_category_or_subcategory_slug(
@@ -81,8 +82,8 @@ async def get_events_by_category_or_subcategory_slug(
     limit: int = Query(
         10, ge=1, le=100, description="Number of events per page (max 100)"
     ),
-    event_type: Literal["all", "ongoing", "upcoming"] = Query(
-        "upcoming",
+    event_type: Literal[EventTypeStatus.ALL, EventTypeStatus.LIVE, EventTypeStatus.UPCOMING] = Query(
+        EventTypeStatus.UPCOMING,
         description="Filter events by type: 'all' for all events, 'ongoing' for current events (current date between start_date and end_date), 'upcoming' for future events (end_date >= current date)",
     ),
     db: AsyncSession = Depends(get_db),

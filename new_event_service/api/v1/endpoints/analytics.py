@@ -21,6 +21,7 @@ from new_event_service.services.analytics import (
     get_organizer_full_details,
     get_organizer_summary,
 )
+from new_event_service.services.event_fetcher import EventTypeStatus
 from shared.core.api_response import api_response
 from shared.db.sessions.database import get_db
 from shared.utils.exception_handlers import exception_handler
@@ -41,12 +42,12 @@ async def get_new_event_organizer_full_details(
         ..., min_length=6, max_length=12, description="User ID of the organizer"
     ),
     event_type: Annotated[
-        Literal["past", "active"],
+        Literal[EventTypeStatus.COMPLETED, EventTypeStatus.UPCOMING],
         Query(
             description="Filter events by type: past or active (present + upcoming)",
-            example="active",
+            example=EventTypeStatus.UPCOMING,
         ),
-    ] = "active",
+    ] = EventTypeStatus.UPCOMING,
     db: AsyncSession = Depends(get_db),
 ):
     """

@@ -22,6 +22,7 @@ from new_event_service.schemas.slug_events import (
     EventMinimalResponse,
     SubcategoryEventGroup,
 )
+from new_event_service.services.event_fetcher import EventTypeStatus
 from new_event_service.services.events import (
     fetch_event_by_id,
     fetch_event_by_id_with_relations,
@@ -298,8 +299,8 @@ async def get_events_by_category_or_subcategory_slug(
 )
 @exception_handler
 async def get_latest_events_from_each_category(
-    event_type: Literal["all", "ongoing", "upcoming"] = Query(
-        "upcoming",
+    event_type: Literal[EventTypeStatus.ALL, EventTypeStatus.LIVE, EventTypeStatus.UPCOMING] = Query(
+        EventTypeStatus.UPCOMING,
         description="Filter events by type: 'all' for all events, 'ongoing' for current events (current date between start_date and end_date), 'upcoming' for future events (end_date >= current date)",
     ),
     db: AsyncSession = Depends(get_db),
@@ -364,8 +365,8 @@ async def get_latest_events_from_each_category(
 @exception_handler
 async def get_latest_5_events_by_category_or_subcategory_slug(
     slug: str,
-    event_type: Literal["all", "ongoing", "upcoming"] = Query(
-        "upcoming",
+    event_type: Literal[EventTypeStatus.ALL, EventTypeStatus.LIVE, EventTypeStatus.UPCOMING] = Query(
+        EventTypeStatus.UPCOMING,
         description="Filter events by type: 'all' for all events, 'ongoing' for current events (current date between start_date and end_date), 'upcoming' for future events (end_date >= current date)",
     ),
     db: AsyncSession = Depends(get_db),

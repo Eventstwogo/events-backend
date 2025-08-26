@@ -5,6 +5,7 @@ from sqlalchemy import and_, any_, asc, case, desc, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from new_event_service.services.event_fetcher import EventTypeStatus, get_event_conditions
 from shared.core.logging_config import get_logger
 from shared.db.models import (
     AdminUser,
@@ -782,7 +783,7 @@ async def fetch_events_by_category_or_subcategory_slug(
     slug: str,
     page: int = 1,
     per_page: int = 10,
-    event_type: str = "all",
+    event_type: EventTypeStatus = EventTypeStatus.ALL,
 ) -> Tuple[List[NewEvent], int, Optional[str], bool]:
     """Fetch events by category slug or subcategory slug with all related entities loaded
 
@@ -800,22 +801,11 @@ async def fetch_events_by_category_or_subcategory_slug(
     # Calculate offset for pagination
     offset = (page - 1) * per_page
 
-    # Get current date for filtering
-    current_date = date.today()
+    # Base filter: only ACTIVE events
+    base_conditions = [NewEvent.event_status == EventStatus.ACTIVE]
 
-    # Build base event filter conditions
-    base_conditions: List[Any] = [
-        NewEvent.event_status == EventStatus.ACTIVE
-    ]  # Only published events
-
-    # Add array-based date filters
-    if event_type == "ongoing":
-        # current_date is present in event_dates
-        base_conditions.append(current_date == any_(NewEvent.event_dates))  # type: ignore
-    elif event_type == "upcoming":
-        # any date in event_dates > current_date
-        base_conditions.append(any_(NewEvent.event_dates) > current_date)
-    # For 'all', no additional date filtering is needed
+    # Unpack conditions + alias from helper
+    base_conditions.extend(get_event_conditions(event_type))
 
     # First try to find events by category slug (active events only)
     category_conditions = [
@@ -1231,7 +1221,7 @@ async def get_events_by_hashtag(
 
 async def fetch_latest_event_from_each_category(
     db: AsyncSession,
-    event_type: str = "all",
+    event_type: EventTypeStatus = EventTypeStatus.ALL,
 ) -> Tuple[List[NewEvent], int]:
     """Fetch the latest event from each category.
 
@@ -1244,19 +1234,11 @@ async def fetch_latest_event_from_each_category(
     Returns:
         Tuple[List[NewEvent], int]: List of events and total count
     """
-
-    current_date = date.today()
-
     # Base filter: only ACTIVE events
     base_conditions = [NewEvent.event_status == EventStatus.ACTIVE]
 
-    # Add array-based date filters
-    if event_type == "ongoing":
-        # current_date is present in event_dates
-        base_conditions.append(current_date == any_(NewEvent.event_dates))  # type: ignore
-    elif event_type == "upcoming":
-        # any date in event_dates > current_date
-        base_conditions.append(any_(NewEvent.event_dates) > current_date)
+    # Unpack conditions + alias from helper
+    base_conditions.extend(get_event_conditions(event_type))
 
     # 'all' doesn't need extra filtering
 

@@ -1,16 +1,17 @@
 from datetime import date
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
-from sqlalchemy import and_, any_, desc, func, select
+from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from new_event_service.services.event_fetcher import EventTypeStatus, get_event_conditions
 from shared.db.models import Category, EventStatus, NewEvent, SubCategory
 
 
 async def fetch_categories_with_all_events(
     db: AsyncSession,
-    event_type: str = "all",
+    event_type: EventTypeStatus = EventTypeStatus.ALL,
 ) -> List[Dict]:
     """Fetch all categories with their latest 5 events each, including events from subcategories
 
@@ -29,19 +30,11 @@ async def fetch_categories_with_all_events(
     # Get current date for filtering
     current_date = date.today()
 
-    # Build base event filter conditions
-    base_conditions: List[Any] = [
-        NewEvent.event_status == EventStatus.ACTIVE
-    ]  # Only published events
+    # Base filter: only ACTIVE events
+    base_conditions = [NewEvent.event_status == EventStatus.ACTIVE]
 
-    # Add array-based date filters
-    if event_type == "ongoing":
-        # current_date is present in event_dates
-        base_conditions.append(current_date == any_(NewEvent.event_dates))  # type: ignore
-    elif event_type == "upcoming":
-        # any date in event_dates > current_date
-        base_conditions.append(any_(NewEvent.event_dates) > current_date)
-    # For 'all', no additional date filtering is needed
+    # Unpack conditions + alias from helper
+    base_conditions.extend(get_event_conditions(event_type))
 
     # Get all categories that have events (either directly or through subcategories)
     categories_query = (
@@ -112,7 +105,7 @@ async def fetch_events_by_category_slug_unified(
     slug: str,
     page: int = 1,
     limit: int = 10,
-    event_type: str = "all",
+    event_type: EventTypeStatus = EventTypeStatus.ALL,
 ) -> Tuple[List[Dict], Optional[int], Optional[Dict]]:
     """Fetch paginated events by category slug or subcategory slug,
     always returning under category context
@@ -142,23 +135,11 @@ async def fetch_events_by_category_slug_unified(
 
     offset = (page - 1) * limit
 
-    # Get current date for filtering
-    current_date = date.today()
+    # Base filter: only ACTIVE events
+    base_conditions = [NewEvent.event_status == EventStatus.ACTIVE]
 
-    # Build base event filter conditions
-    base_conditions: List[Any] = [
-        NewEvent.event_status == EventStatus.ACTIVE
-    ]  # Only published events
-
-    # Add array-based date filters
-    if event_type == "ongoing":
-        # current_date is present in event_dates
-        base_conditions.append(current_date == any_(NewEvent.event_dates))  # type: ignore
-    elif event_type == "upcoming":
-        # any date in event_dates > current_date
-        base_conditions.append(any_(NewEvent.event_dates) > current_date)
-
-    # For 'all', no additional date filtering is needed
+    # Unpack conditions + alias from helper
+    base_conditions.extend(get_event_conditions(event_type))
 
     # First, try to find by category slug
     category_query = select(Category).where(Category.category_slug == slug)

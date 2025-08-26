@@ -1,10 +1,11 @@
 from datetime import date, timedelta
 from typing import Dict, List, Optional
 
-from sqlalchemy import and_, any_, desc, func, select
+from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from new_event_service.services.event_fetcher import EventTypeStatus, get_event_conditions
 from shared.constants import ONBOARDING_UNDER_REVIEW
 from shared.core.logging_config import get_logger
 from shared.core.security import decrypt_data
@@ -43,7 +44,7 @@ def extra_images_media_urls(value: Optional[List[str]]) -> Optional[List[str]]:
 
 
 async def get_organizer_full_details(
-    user_id: str, db: AsyncSession, event_type: str
+    user_id: str, db: AsyncSession, event_type: EventTypeStatus
 ) -> Dict:
     """
     Fetch full details of an organizer including associated events and event slots.
@@ -128,15 +129,8 @@ async def get_organizer_full_details(
     # Step 3: Build event filter conditions
     base_conditions = [NewEvent.organizer_id == user_id]
 
-    if event_type == "past":
-        # Past → event already finished
-        # means the latest event date < today
-        base_conditions.append(any_(NewEvent.event_dates) < current_date)
-
-    elif event_type == "active":
-        # Present + Future → event still happening or yet to happen
-        # means at least one event_date >= today
-        base_conditions.append(any_(NewEvent.event_dates) >= current_date)
+    # Unpack conditions + alias from helper
+    base_conditions.extend(get_event_conditions(event_type))
 
     # Step 4: Fetch new events with filters
     events_stmt = (
@@ -700,10 +694,12 @@ async def fetch_event_statistics(db: AsyncSession) -> Dict:
     active_events_count = active_events_result.scalar() or 0
 
     # -------------------- Upcoming events -------------------- #
+    # Get conditions for upcoming events (present + future dates)
+    event_conditions = get_event_conditions(EventTypeStatus.UPCOMING)
     upcoming_events_query = select(func.count(NewEvent.event_id)).filter(
         and_(
             NewEvent.event_status == EventStatus.ACTIVE,
-            any_(NewEvent.event_dates) >= today,  # ✅ array-based check
+            *event_conditions  # unpack list of conditions
         )
     )
     upcoming_events_result = await db.execute(upcoming_events_query)
