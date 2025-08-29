@@ -7,6 +7,8 @@ from new_event_service.api.routes import new_event_router
 from organizer_service.api.routes import organizer_router
 from rbac_service.api.routes import rbac_api_router
 from user_service.api.routes import user_router
+from notifications_service.api.routes import notifications_router
+from notifications_service.websocket import router as ws_router
 
 api_router = APIRouter()
 
@@ -17,3 +19,5 @@ api_router.include_router(user_router)
 api_router.include_router(event_router)
 api_router.include_router(new_event_router)
 api_router.include_router(organizer_router)
+api_router.include_router(notifications_router)
+api_router.include_router(ws_router)

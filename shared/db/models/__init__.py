@@ -46,6 +46,7 @@ from .new_events import (
     NewEventSeatCategory,
     NewEventSlot,
 )
+from .notifications import Notification
 
 # Models that depend on Organization Profile
 from .organizer import BusinessProfile, OrganizerQuery, QueryStatus
@@ -104,6 +105,8 @@ __all__ = [
     "QueryStatus",
     # coupon
     "Coupon",
+    # Notifications
+    "Notification",
 ]
 
 # Model relationships overview:
