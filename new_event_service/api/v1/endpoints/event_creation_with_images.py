@@ -361,6 +361,18 @@ async def create_event_with_images(
     )
 
 
+# Helper function to check if user has permission to edit the event
+def can_edit_event(user, event) -> bool:
+    # Admins can edit any event
+    if getattr(user, "role", None) == "admin":
+        return True
+    # Organizers can edit only their own events
+    if getattr(user, "role", None) == "organizer" and event.organizer_id == user.user_id:
+        return True
+    # Otherwise no access
+    return False
+
+
 @router.put(
     "/update-with-images/{event_id}", summary="Update event with images"
 )
@@ -411,7 +423,8 @@ async def update_event_with_images(
         return event_not_found_response()
 
     # Check if current user is the organizer
-    if event.organizer_id != user_id:
+    organizer = await check_organizer_exists(db, user_id)
+    if not can_edit_event(organizer, event):
         return unauthorized_to_update_event_response()
 
     # Parse JSON fields if provided

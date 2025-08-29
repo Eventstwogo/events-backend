@@ -189,11 +189,14 @@ async def update_event_slot_endpoint(
                 f"Missing slot_data for newly added dates: {missing_dates}"
             )
 
-    if not slot_update_request.slot_data:
+    if slot_update_request.slot_data is None:
         return invalid_slot_data_response(
             "Invalid request: 'slot_data' is missing or empty. "
             "Please provide slot details for each event date."
         )
+
+    updated_slots = []
+    created_slots = []
 
     # 4. Loop through dates and slots
     for date_key, slots in slot_update_request.slot_data.items():
@@ -205,16 +208,27 @@ async def update_event_slot_endpoint(
                 f"Slot date '{date_key}' must be one of event dates: {event.event_dates}"
             )
 
-        for slot in slots:
-            # ---- Lookup existing slot ----
-            query = select(NewEventSlot).where(
-                NewEventSlot.event_ref_id == event_ref_id,
-                NewEventSlot.slot_date == slot_date_obj,
-            )
-            if slot.time:  # If provided, match time
-                query = query.where(NewEventSlot.start_time == slot.time)
+        # Skip if no slots provided for this date
+        if not slots:
+            continue
 
-            existing_slot = (await db.execute(query)).scalars().first()
+        for slot in slots:
+            existing_slot = None
+
+            # ---- Lookup existing slot ----
+            if slot.slot_id:  # preferred lookup
+                query = select(NewEventSlot).where(
+                    NewEventSlot.slot_id == slot.slot_id,
+                    NewEventSlot.event_ref_id == event_ref_id,
+                )
+                existing_slot = (await db.execute(query)).scalars().first()
+            elif slot.time:  # fallback lookup by date + time
+                query = select(NewEventSlot).where(
+                    NewEventSlot.event_ref_id == event_ref_id,
+                    NewEventSlot.slot_date == slot_date_obj,
+                    NewEventSlot.start_time == slot.time,
+                )
+                existing_slot = (await db.execute(query)).scalars().first()
 
             if existing_slot:
                 # Update existing slot
@@ -225,6 +239,8 @@ async def update_event_slot_endpoint(
                         slot.duration
                     )
 
+                updated_slots.append(existing_slot.slot_id)
+
                 # ---- Update or create seat categories ----
                 if slot.seatCategories:
                     for seat in slot.seatCategories:
@@ -233,26 +249,18 @@ async def update_event_slot_endpoint(
                         # 1. If id is given, check by id
                         if seat.seat_category_id:
                             query_seat = select(NewEventSeatCategory).where(
-                                NewEventSeatCategory.seat_category_id
-                                == seat.seat_category_id,
-                                NewEventSeatCategory.slot_ref_id
-                                == existing_slot.slot_id,
+                                NewEventSeatCategory.seat_category_id == seat.seat_category_id,
+                                NewEventSeatCategory.slot_ref_id == existing_slot.slot_id,
                             )
-                            existing_seat = (
-                                (await db.execute(query_seat)).scalars().first()
-                            )
+                            existing_seat = (await db.execute(query_seat)).scalars().first()
 
                         # 2. Else check by label within same slot
                         if not existing_seat and seat.label:
                             query_seat = select(NewEventSeatCategory).where(
-                                NewEventSeatCategory.slot_ref_id
-                                == existing_slot.slot_id,
-                                func.lower(NewEventSeatCategory.category_label)
-                                == seat.label.lower(),
+                                NewEventSeatCategory.slot_ref_id == existing_slot.slot_id,
+                                func.lower(NewEventSeatCategory.category_label) == seat.label.lower(),
                             )
-                            existing_seat = (
-                                (await db.execute(query_seat)).scalars().first()
-                            )
+                            existing_seat = (await db.execute(query_seat)).scalars().first()
 
                         # 3. Update or create
                         if existing_seat:
@@ -269,9 +277,7 @@ async def update_event_slot_endpoint(
                         else:
                             # Create new seat category
                             new_seat = NewEventSeatCategory(
-                                seat_category_id=generate_digits_upper_lower_case(
-                                    8
-                                ),
+                                seat_category_id=generate_digits_upper_lower_case(8),
                                 slot_ref_id=existing_slot.slot_id,
                                 category_label=seat.label,
                                 price=seat.price or 0.0,
@@ -300,6 +306,8 @@ async def update_event_slot_endpoint(
                 db.add(new_slot)
                 await db.flush()
 
+                created_slots.append(slot_id)
+
                 # Create seat categories
                 if slot.seatCategories:
                     for seat in slot.seatCategories:
@@ -321,6 +329,10 @@ async def update_event_slot_endpoint(
     return api_response(
         status_code=status.HTTP_200_OK,
         message="Event slots updated successfully",
+        data={
+            "updated_slots": updated_slots,
+            "created_slots": created_slots,
+        },
     )
 
 

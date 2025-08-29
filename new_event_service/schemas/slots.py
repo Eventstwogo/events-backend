@@ -7,6 +7,7 @@ from pydantic import (
     Field,
     computed_field,
     field_validator,
+    model_validator,
 )
 
 TIME_REGEX = re.compile(r"^(0?[1-9]|1[0-2]):[0-5][0-9] (AM|PM)$", re.IGNORECASE)
@@ -160,30 +161,39 @@ class SeatCategoryUpdate(BaseModel):
     seat_category_id: Optional[str] = Field(
         None, description="Seat category ID (preferred over label for updates)"
     )
-    label: Optional[str]
-    price: Optional[float]
-    totalTickets: Optional[int]
-    booked: Optional[int] = 0
-    held: Optional[int] = 0
-
-    @field_validator("booked", "held", mode="before")
-    @classmethod
-    def set_default_zero(cls, v):
-        return v or 0
+    label: Optional[str] = Field(None, description="Category name (e.g. Gold)")
+    price: Optional[float] = Field(None, ge=0, description="Ticket price")
+    totalTickets: Optional[int] = Field(
+        None, ge=0, description="Total seats in this category"
+    )
+    booked: Optional[int] = Field(
+        None, ge=0, description="Number of tickets booked (only update if needed)"
+    )
+    held: Optional[int] = Field(
+        None, ge=0, description="Number of tickets held (only update if needed)"
+    )
 
 
 class EventSlotUpdate(BaseModel):
-    time: Optional[str]
-    duration: Optional[str]
-    seatCategories: Optional[List[SeatCategoryUpdate]]
+    """Schema for updating an event slot"""
+
+    slot_id: Optional[str] = Field(
+        None, description="Unique slot ID (preferred for updates)"
+    )
+    time: Optional[str] = Field(None, description="Slot start time e.g. 10:00 AM")
+    duration: Optional[str] = Field(
+        None,
+        description="Duration e.g. '2 hours' or '1 hour 30 minutes'",
+    )
+    seatCategories: Optional[List[SeatCategoryUpdate]] = Field(
+        None, description="Updated seat categories for the slot"
+    )
 
     @field_validator("time")
     @classmethod
     def validate_time(cls, v: Optional[str]) -> Optional[str]:
         if v is not None and not TIME_REGEX.match(v.strip()):
-            raise ValueError(
-                "time must be in HH:MM AM/PM format, e.g., 10:00 AM"
-            )
+            raise ValueError("time must be in HH:MM AM/PM format, e.g., 10:00 AM")
         return v.strip() if v else v
 
     @field_validator("duration")
@@ -191,14 +201,23 @@ class EventSlotUpdate(BaseModel):
     def validate_duration(cls, v: Optional[str]) -> Optional[str]:
         if v is not None and not DURATION_REGEX.match(v.strip()):
             raise ValueError(
-                "duration must be a string like '1 hour', '20 minutes', or '1 hour 20 minutes'"
+                "duration must be like '1 hour', '20 minutes', or '1 hour 20 minutes'"
             )
         return v.strip() if v else v
 
+    @model_validator(mode="after")
+    def check_slot_identifier(self):
+        """Ensure at least slot_id or time is provided for identification"""
+        if not self.slot_id and not self.time:
+            raise ValueError("Either slot_id or time must be provided to identify a slot")
+        return self
+
 
 class EventSlotUpdateRequest(BaseModel):
+    """Schema for updating event slots"""
+
     event_dates: Optional[List[date]] = Field(
-        None, description="List of dates when the event will take place"
+        None, description="Updated list of event dates"
     )
     slot_data: Optional[Dict[str, List[EventSlotUpdate]]] = Field(
         None, description="Mapping of date string to list of slot entries"
@@ -214,10 +233,11 @@ class EventSlotUpdateRequest(BaseModel):
         if not isinstance(v, dict) or not v:
             raise ValueError("slot_data must be a non-empty dictionary")
         for date_key, slots in v.items():
-            if not isinstance(slots, list) or not slots:
+            if not isinstance(slots, list):
                 raise ValueError(
-                    f"slot_data for date '{date_key}' must be a non-empty list"
+                    f"slot_data for date '{date_key}' must be a list"
                 )
+            # Allow empty list → means date is valid but no slots yet
         return v
 
 
