@@ -361,14 +361,16 @@ async def create_event_with_images(
     )
 
 
-# Helper function to check if user has permission to edit the event
-def can_edit_event(user, event) -> bool:
-    # Admins can edit any event
-    if getattr(user, "role", None) == "admin":
-        return True
-    # Organizers can edit only their own events
-    if getattr(user, "role", None) == "organizer" and event.organizer_id == user.user_id:
-        return True
+# Helper function updated to accept role_name separately
+def can_edit_event(user, event, role_name: Optional[str]) -> bool:
+    if role_name:
+        normalized_role = role_name.lower().strip()
+        # Admins can edit any event
+        if role_name == "admin":
+            return True
+        # Organizers can edit only their own events
+        if normalized_role == "organizer" and event.organizer_id == user.user_id:
+            return True
     # Otherwise no access
     return False
 
@@ -422,9 +424,13 @@ async def update_event_with_images(
     if not event:
         return event_not_found_response()
 
-    # Check if current user is the organizer
+    # Get organizer and their role
     organizer = await check_organizer_exists(db, user_id)
-    if not can_edit_event(organizer, event):
+    role_name = await get_user_role_name(db, user_id)
+    
+    # Check if current user is the organizer
+    output = can_edit_event(organizer, event, role_name)
+    if not output:
         return unauthorized_to_update_event_response()
 
     # Parse JSON fields if provided

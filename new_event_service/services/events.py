@@ -15,6 +15,7 @@ from shared.db.models import (
     NewEventSlot,
     SubCategory,
 )
+from shared.db.models.rbac import Role
 
 logger = get_logger(__name__)
 
@@ -76,6 +77,26 @@ async def check_organizer_exists(
     query = select(AdminUser).filter(AdminUser.user_id == organizer_id)
     result = await db.execute(query)
     return result.scalars().first()
+
+
+async def get_user_role_name(db: AsyncSession, user_id: str) -> Optional[str]:
+    """
+    Get a user's role name without triggering lazy loading.
+
+    Args:
+        db: Database session
+        user_id: The user ID to check
+
+    Returns:
+        Optional[str]: The role name if found, None otherwise
+    """
+    result = await db.execute(
+        select(Role.role_name)
+        .join(AdminUser, AdminUser.role_id == Role.role_id)
+        .where(AdminUser.user_id == user_id)
+    )
+    role_name = result.scalar_one_or_none()
+    return role_name
 
 
 async def fetch_organizer_by_id(
