@@ -69,6 +69,7 @@ class EventStatus(str, Enum):
     ACTIVE = "ACTIVE"
     INACTIVE = "INACTIVE"
     PENDING = "PENDING"
+    DRAFT = "DRAFT"
 
     def __str__(self) -> str:
         return self.value.lower()
@@ -136,6 +137,7 @@ class NewEvent(EventsBase):
     featured_event: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False
     )
+    progress_step: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
