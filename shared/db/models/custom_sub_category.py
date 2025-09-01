@@ -33,7 +33,7 @@ class CustomSubCategory(EventsBase):
 
     # Data fields
     custom_subcategory_name: Mapped[str] = mapped_column(
-        String, nullable=False, unique=True
+        String, nullable=False
     )
     custom_subcategory_status: Mapped[bool] = mapped_column(
         Boolean, default=False

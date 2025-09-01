@@ -363,14 +363,23 @@ async def create_event_with_images(
 
 # Helper function updated to accept role_name separately
 def can_edit_event(user, event, role_name: Optional[str]) -> bool:
-    if role_name:
-        normalized_role = role_name.lower().strip()
-        # Admins can edit any event
-        if role_name == "admin":
-            return True
-        # Organizers can edit only their own events
-        if normalized_role == "organizer" and event.organizer_id == user.user_id:
-            return True
+    # If user is the organizer of the event, always allow
+    if event.organizer_id == user.user_id:
+        return True
+
+    if not role_name:
+        return False
+
+    normalized_role = role_name.upper().strip()
+    
+    # Admins can edit any event
+    if normalized_role == "ADMIN":
+        return True
+    
+    # Organizers can edit only their own events
+    if normalized_role == "ORGANIZER" and event.organizer_id == user.user_id:
+        return True
+    
     # Otherwise no access
     return False
 

@@ -77,9 +77,14 @@ async def create_event_slot_endpoint(
     # 5. Validate slot dates strictly match event.event_dates
     for date_key in slot_request.slot_data.keys():
         slot_date = datetime.strptime(date_key, "%Y-%m-%d").date()
-        if slot_date not in event.event_dates:
+        # if slot_date not in event.event_dates:
+        #     return invalid_slot_data_response(
+        #         f"Slot date '{date_key}' must be one of event dates: {event.event_dates}"
+        #     )  
+        min_date, max_date = min(event.event_dates), max(event.event_dates)
+        if not (min_date <= slot_date <= max_date):
             return invalid_slot_data_response(
-                f"Slot date '{date_key}' must be one of event dates: {event.event_dates}"
+                f"Slot date '{date_key}' must fall within event date range {min_date} to {max_date}"
             )
 
     created_slot_ids = {}  # map date_key -> list of slot_ids for response
@@ -203,9 +208,15 @@ async def update_event_slot_endpoint(
         slot_date_obj = datetime.strptime(date_key, "%Y-%m-%d").date()
 
         # Ensure slot_date is part of event.event_dates
-        if slot_date_obj not in (event.event_dates or []):
+        # if slot_date_obj not in (event.event_dates or []):
+        #     return invalid_slot_data_response(
+        #         f"Slot date '{date_key}' must be one of event dates: {event.event_dates}"
+        #     )
+        
+        min_date, max_date = min(event.event_dates), max(event.event_dates)
+        if not (min_date <= slot_date_obj <= max_date):
             return invalid_slot_data_response(
-                f"Slot date '{date_key}' must be one of event dates: {event.event_dates}"
+                f"Slot date '{date_key}' must fall within event date range {min_date} to {max_date}"
             )
 
         # Skip if no slots provided for this date
@@ -332,6 +343,174 @@ async def update_event_slot_endpoint(
         data={
             "updated_slots": updated_slots,
             "created_slots": created_slots,
+        },
+    )
+
+
+@router.put(
+    "/replace",
+    status_code=status.HTTP_200_OK,
+    summary="Replace event dates, slots, and seat categories",
+)
+@exception_handler
+async def replace_event_slots_endpoint(
+    event_ref_id: str,
+    slot_update_request: EventSlotUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+) -> JSONResponse:
+    """
+    Replaces event dates, slots, and seat categories with the provided data.
+
+    Rules:
+    1. Event must exist
+    2. Event must already have slots created
+    3. Event dates are replaced (missing ones are deleted)
+    4. Slot dates must belong to event.event_dates (strict check)
+    5. Existing slots not present in request are deleted
+    6. Existing seat categories not present in request are deleted
+    """
+
+    # 1. Validate event exists
+    event = await check_event_exists(db, event_ref_id)
+    if not event:
+        return event_not_found_response()
+
+    # 2. Ensure event has slots created
+    slot_created_event = await check_event_status_created_or_not_by_event_id(
+        db, event.event_id
+    )
+    if not slot_created_event:
+        return event_not_created_response()
+
+    # 3. Replace event dates
+    new_event_dates = slot_update_request.event_dates or []
+    event.event_dates = sorted(new_event_dates)
+
+    if not slot_update_request.slot_data:
+        return invalid_slot_data_response(
+            "Invalid request: 'slot_data' is missing or empty. "
+            "Please provide slot details for each event date."
+        )
+
+    # Load existing slots for this event
+    query_slots = select(NewEventSlot).where(NewEventSlot.event_ref_id == event_ref_id)
+    existing_slots = (await db.execute(query_slots)).scalars().all()
+    existing_slots_map = {s.slot_id: s for s in existing_slots}
+
+    updated_slots = []
+    created_slots = []
+    kept_slot_ids = set()
+
+    # 4. Process incoming slot_data
+    for date_key, slots in slot_update_request.slot_data.items():
+        slot_date_obj = datetime.strptime(date_key, "%Y-%m-%d").date()
+
+        # Strict: slot_date must belong to event.event_dates
+        if slot_date_obj not in new_event_dates:
+            return invalid_slot_data_response(
+                f"Slot date '{date_key}' must be one of event dates: {new_event_dates}"
+            )
+
+        for slot in slots:
+            existing_slot = None
+
+            if slot.slot_id and slot.slot_id in existing_slots_map:
+                existing_slot = existing_slots_map[slot.slot_id]
+
+            if existing_slot:
+                # Update existing slot
+                if slot.time:
+                    existing_slot.start_time = slot.time
+                if slot.duration:
+                    existing_slot.duration_minutes = parse_duration_to_minutes(slot.duration)
+                kept_slot_ids.add(existing_slot.slot_id)
+                updated_slots.append(existing_slot.slot_id)
+
+                # --- Replace seat categories for this slot ---
+                query_seats = select(NewEventSeatCategory).where(
+                    NewEventSeatCategory.slot_ref_id == existing_slot.slot_id
+                )
+                existing_seats = (await db.execute(query_seats)).scalars().all()
+                existing_seat_map = {s.seat_category_id: s for s in existing_seats}
+                kept_seat_ids = set()
+
+                for seat in slot.seatCategories or []:
+                    existing_seat = None
+                    if seat.seat_category_id and seat.seat_category_id in existing_seat_map:
+                        existing_seat = existing_seat_map[seat.seat_category_id]
+
+                    if existing_seat:
+                        existing_seat.category_label = seat.label or existing_seat.category_label
+                        existing_seat.price = seat.price or existing_seat.price
+                        existing_seat.total_tickets = seat.totalTickets or existing_seat.total_tickets
+                        existing_seat.booked = seat.booked or existing_seat.booked
+                        existing_seat.held = seat.held or existing_seat.held
+                        kept_seat_ids.add(existing_seat.seat_category_id)
+                    else:
+                        # Create new seat category
+                        new_seat = NewEventSeatCategory(
+                            seat_category_id=generate_digits_upper_lower_case(8),
+                            slot_ref_id=existing_slot.slot_id,
+                            category_label=seat.label,
+                            price=seat.price or 0.0,
+                            total_tickets=seat.totalTickets or 0,
+                            booked=seat.booked or 0,
+                            held=seat.held or 0,
+                        )
+                        db.add(new_seat)
+
+                # Delete seat categories not kept
+                for seat in existing_seats:
+                    if seat.seat_category_id not in kept_seat_ids:
+                        await db.delete(seat)
+
+            else:
+                # Create new slot
+                slot_id = generate_digits_upper_lower_case(8)
+                duration_minutes = (
+                    parse_duration_to_minutes(slot.duration)
+                    if slot.duration else None
+                )
+                new_slot = NewEventSlot(
+                    slot_id=slot_id,
+                    event_ref_id=event_ref_id,
+                    slot_date=slot_date_obj,
+                    start_time=slot.time,
+                    duration_minutes=duration_minutes,
+                )
+                db.add(new_slot)
+                await db.flush()
+                kept_slot_ids.add(slot_id)
+                created_slots.append(slot_id)
+
+                # Create seat categories
+                for seat in slot.seatCategories or []:
+                    new_seat = NewEventSeatCategory(
+                        seat_category_id=generate_digits_upper_lower_case(8),
+                        slot_ref_id=slot_id,
+                        category_label=seat.label,
+                        price=seat.price or 0.0,
+                        total_tickets=seat.totalTickets or 0,
+                        booked=seat.booked or 0,
+                        held=seat.held or 0,
+                    )
+                    db.add(new_seat)
+
+    # 5. Delete slots not in request
+    for slot in existing_slots:
+        if slot.slot_id not in kept_slot_ids:
+            await db.delete(slot)
+
+    # Commit everything
+    await db.commit()
+
+    return api_response(
+        status_code=status.HTTP_200_OK,
+        message="Event dates, slots, and seat categories replaced successfully",
+        data={
+            "updated_slots": updated_slots,
+            "created_slots": created_slots,
+            "deleted_slots": [s.slot_id for s in existing_slots if s.slot_id not in kept_slot_ids],
         },
     )
 

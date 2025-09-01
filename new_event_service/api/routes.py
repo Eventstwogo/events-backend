@@ -12,6 +12,7 @@ from new_event_service.api.v1.endpoints import (
     slots,
     slug_events,
 )
+from new_event_service.api.v1.endpoints.invoice import invoice_events
 
 new_event_router = APIRouter(prefix="/api/v1")
 
@@ -50,4 +51,8 @@ new_event_router.include_router(
 )
 new_event_router.include_router(
     coupons.router, prefix="/coupons", tags=["Coupons"]
+)
+new_event_router.include_router(
+    invoice_events.router,
+    prefix="/new-events", tags=["Event Reports"]
 )
