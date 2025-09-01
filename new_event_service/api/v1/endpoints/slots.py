@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends, Path, status
 from sqlalchemy import func, select
@@ -512,6 +512,116 @@ async def replace_event_slots_endpoint(
             "created_slots": created_slots,
             "deleted_slots": [s.slot_id for s in existing_slots if s.slot_id not in kept_slot_ids],
         },
+    )
+
+
+@router.delete(
+    "/delete",
+    status_code=status.HTTP_200_OK,
+    summary="Delete event date, slot, or seat category",
+)
+@exception_handler
+async def delete_event_slot_or_date(
+    event_ref_id: str,
+    slot_ref_id: Optional[str] = None,
+    slot_date: Optional[str] = None,
+    seat_category_id: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+) -> JSONResponse:
+    """
+    Delete event date (and all slots under it), 
+    or a specific slot, 
+    or a specific seat category.
+
+    Priority:
+    1. If seat_category_id is given → delete that seat category
+    2. Else if slot_ref_id is given → delete that slot + seat categories
+    3. Else if slot_date is given → delete all slots + seat categories for that date
+    """
+
+    # 1. Validate event exists
+    event = await check_event_exists(db, event_ref_id)
+    if not event:
+        return event_not_found_response()
+
+    deleted = {"event_dates": [], "slots": [], "seat_categories": []}
+
+    # 2. Delete seat category
+    if seat_category_id:
+        query = select(NewEventSeatCategory).where(
+            NewEventSeatCategory.seat_category_id == seat_category_id
+        )
+        seat = (await db.execute(query)).scalars().first()
+        if not seat:
+            return invalid_slot_data_response(f"Seat category {seat_category_id} not found")
+        await db.delete(seat)
+        deleted["seat_categories"].append(seat_category_id)
+
+    # 3. Delete slot
+    elif slot_ref_id:
+        query = select(NewEventSlot).where(
+            NewEventSlot.slot_id == slot_ref_id,
+            NewEventSlot.event_ref_id == event_ref_id,
+        )
+        slot = (await db.execute(query)).scalars().first()
+        if not slot:
+            return invalid_slot_data_response(f"Slot {slot_ref_id} not found")
+
+        # Delete all seat categories first
+        query_seats = select(NewEventSeatCategory).where(
+            NewEventSeatCategory.slot_ref_id == slot_ref_id
+        )
+        seats = (await db.execute(query_seats)).scalars().all()
+        for seat in seats:
+            await db.delete(seat)
+            deleted["seat_categories"].append(seat.seat_category_id)
+
+        await db.delete(slot)
+        deleted["slots"].append(slot_ref_id)
+
+    # 4. Delete event date (and its slots + seats)
+    elif slot_date:
+        try:
+            date_obj = datetime.strptime(slot_date, "%Y-%m-%d").date()
+        except ValueError:
+            return invalid_slot_data_response("Invalid date format, must be YYYY-MM-DD")
+
+        if date_obj not in (event.event_dates or []):
+            return invalid_slot_data_response(f"Event does not contain date {slot_date}")
+
+        # Delete all slots under this date
+        query_slots = select(NewEventSlot).where(
+            NewEventSlot.event_ref_id == event_ref_id,
+            NewEventSlot.slot_date == date_obj,
+        )
+        slots = (await db.execute(query_slots)).scalars().all()
+        for slot in slots:
+            query_seats = select(NewEventSeatCategory).where(
+                NewEventSeatCategory.slot_ref_id == slot.slot_id
+            )
+            seats = (await db.execute(query_seats)).scalars().all()
+            for seat in seats:
+                await db.delete(seat)
+                deleted["seat_categories"].append(seat.seat_category_id)
+
+            await db.delete(slot)
+            deleted["slots"].append(slot.slot_id)
+
+        # Remove date from event.event_dates
+        event.event_dates = [d for d in event.event_dates if d != date_obj]
+        deleted["event_dates"].append(slot_date)
+
+    else:
+        return invalid_slot_data_response(
+            "Please provide either seat_category_id, slot_ref_id, or slot_date"
+        )
+
+    await db.commit()
+
+    return api_response(
+        status_code=status.HTTP_200_OK,
+        message="Deletion completed successfully",
+        data=deleted,
     )
 
 
