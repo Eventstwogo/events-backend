@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 from sqlalchemy import (
     Boolean,
@@ -17,6 +17,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
 from shared.db.models.base import EventsBase
+from shared.db.models.new_events import NewEventBooking
 
 if TYPE_CHECKING:
     from shared.db.models.admin_users import AdminUser
@@ -28,7 +29,7 @@ class CouponStatus(str, Enum):
     ACTIVE = "ACTIVE"
 
     def __str__(self):
-        return self.name.lower()
+        return self.value.lower()
 
 
 class Coupon(EventsBase):
@@ -77,6 +78,12 @@ class Coupon(EventsBase):
         "NewEvent", back_populates="coupons", lazy="selectin"
     )
     organizer: Mapped["AdminUser"] = relationship("AdminUser", lazy="selectin")
+    # One coupon can be applied to many bookings (across categories/orders)
+    bookings: Mapped[List["NewEventBooking"]] = relationship(
+        "NewEventBooking",
+        back_populates="coupon",   # <- must match the name in NewEventBooking
+        lazy="selectin"
+    )
 
     __table_args__ = (
         CheckConstraint(

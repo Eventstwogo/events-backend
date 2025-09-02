@@ -127,19 +127,28 @@ async def validate_coupon_service(
             detail="Coupon not found for this event",
         )
 
+    # Calculate available coupons
+    available_coupons = coupon.number_of_coupons - (
+        (coupon.applied_coupons or 0) + (coupon.sold_coupons or 0)
+    )
+
     # Check if coupon has enough quota
-    if (
-        payload.number_of_tickets
-        > coupon.number_of_coupons - coupon.sold_coupons
-    ):
+    if payload.number_of_tickets > available_coupons:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Coupon expired or insufficient coupons available",
         )
 
+    # Increase applied_coupons count
+    coupon.applied_coupons = (coupon.applied_coupons or 0) + payload.number_of_tickets
+    db.add(coupon)
+    await db.commit()
+    await db.refresh(coupon)
+
     return ValidateCouponResponse(
         event_id=coupon.event_id,
+        coupon_id=coupon.coupon_id,
         coupon_code=coupon.coupon_code,
         discount=coupon.coupon_percentage,
-        # remaining_coupons=coupon.number_of_coupons - coupon.sold_coupons,
+        # remaining_coupons=available_coupons - payload.number_of_tickets,
     )

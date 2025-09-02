@@ -591,6 +591,7 @@ def send_new_booking_success_email(
     event_category: str,
     booking_date: str,
     total_amount: float,
+    total_discount: float,
     seat_categories: List[
         Dict[str, str]
     ],  # list of {label, num_seats, price_per_seat, total_price}

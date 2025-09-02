@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, status
@@ -170,7 +171,8 @@ async def create_event_booking_order(
 
     # 5. Build line items with duplicate-check logic
     line_items: list[NewEventBooking] = []
-    total_amount = 0
+    total_amount = 0.0
+    total_discount = 0.0
 
     for seat_req in booking_req.seatCategories:
         db_seat = db_seat_categories[seat_req.seat_category_ref_id]
@@ -184,7 +186,7 @@ async def create_event_booking_order(
                 NewEventBookingOrder.event_ref_id == booking_req.event_ref_id,
                 NewEventBookingOrder.slot_ref_id == booking_req.slot_ref_id,
                 NewEventBookingOrder.booking_status.in_(
-                    [BookingStatus.PROCESSING, BookingStatus.APPROVED]
+                    [BookingStatus.PROCESSING] # ,  BookingStatus.APPROVED
                 ),
                 NewEventBooking.seat_category_ref_id
                 == seat_req.seat_category_ref_id,
@@ -196,7 +198,7 @@ async def create_event_booking_order(
         if existing_order:
             return api_response(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                message="You already have a pending/approved booking for this seat category",
+                message="You already have a pending booking for this seat category",
                 data={
                     "order_id": existing_order.order_id,
                     "status": existing_order.booking_status.value,
@@ -221,27 +223,48 @@ async def create_event_booking_order(
             )
 
         # 5.4 Build line item
-        total_price = seat_req.num_seats * seat_req.price_per_seat
-        total_amount += total_price
+        discount_amount = 0.0
+        if seat_req.coupon_id:
+            coupon_obj = await db.get(Coupon, seat_req.coupon_id)
+            if not coupon_obj:
+                return api_response(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    message=f"Invalid coupon {seat_req.coupon_id}",
+                )
+            if coupon_obj.sold_coupons + seat_req.num_seats > coupon_obj.number_of_coupons:
+                return api_response(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    message=f"Coupon {coupon_obj.coupon_name} exceeded max usage",
+                )
+            discount_amount = round(seat_req.price_per_seat * seat_req.num_seats * (coupon_obj.coupon_percentage / 100), 2)
+            # Temporarily increment applied coupons count
+            # coupon_obj.applied_coupons += seat_req.num_seats
+            
+        subtotal = round(seat_req.price_per_seat * seat_req.num_seats, 2)
+        total_line = round(subtotal - discount_amount, 2)
+        total_amount += total_line
+        total_discount += discount_amount
 
         line_item = NewEventBooking(
             booking_id=generate_digits_letters(6),
             seat_category_ref_id=seat_req.seat_category_ref_id,
             num_seats=seat_req.num_seats,
             price_per_seat=seat_req.price_per_seat,
-            total_price=total_price,
+            subtotal=subtotal,
+            discount_amount=discount_amount,
+            total_amount=total_line,
+            coupon_id=seat_req.coupon_id,
+            total_price=subtotal,
         )
+        # Mark coupon usage at booking time
+        if seat_req.coupon_id:
+            line_item.applied_at = datetime.now(timezone.utc)
+            line_item.redeemed = False
+    
         line_items.append(line_item)
 
         # Hold seats
         db_seat.held += seat_req.num_seats
-
-    # Based on frontend coupon applied discounted amount
-    total_amount = booking_req.total_price
-    logger.info(
-        f"Total booking amount calculated: {total_amount} for user "
-        f"{booking_req.user_ref_id} after coupon discount"
-    )
 
     # 6. Create booking order
     order = NewEventBookingOrder(
@@ -250,6 +273,7 @@ async def create_event_booking_order(
         event_ref_id=booking_req.event_ref_id,
         slot_ref_id=booking_req.slot_ref_id,
         total_amount=total_amount,
+        total_discount=total_discount,
         booking_status=BookingStatus.PROCESSING,
         payment_status=PaymentStatus.PENDING,
         line_items=line_items,
@@ -261,22 +285,20 @@ async def create_event_booking_order(
     await db.refresh(order)
 
     # 6.1 Handle free booking (skip PayPal)
-    if total_amount == 0:
+    if total_amount <= 0:
         order.booking_status = BookingStatus.APPROVED
         order.payment_status = PaymentStatus.COMPLETED
 
         # Increment sold_coupons if the order has coupon_status=True
         if order.coupon_status:
-            # Find all coupons for this event that are active
-            result = await db.execute(
-                select(Coupon).where(
-                    Coupon.event_id == order.event_ref_id,
-                    Coupon.coupon_status == False,
-                )
-            )
-            coupons: list[Coupon] = list(result.scalars().all())
-            for coupon in coupons:
-                coupon.sold_coupons += 1
+            # Decrement applied coupons if needed
+            for li in line_items:
+                if li.coupon_id:
+                    coupon_obj = await db.get(Coupon, li.coupon_id)
+                    if coupon_obj:
+                        coupon_obj.applied_coupons -= li.num_seats
+                        coupon_obj.sold_coupons += li.num_seats
+                    li.redeemed = True
 
         await db.commit()
         await db.refresh(order)
@@ -287,6 +309,7 @@ async def create_event_booking_order(
             data={
                 "order_id": order.order_id,
                 "total_amount": order.total_amount,
+                "total_discount": total_discount,
                 "redirect_url": f"{settings.USERS_APPLICATION_FRONTEND_URL}/booking-success?order_id={order.order_id}",
                 "status": order.booking_status.value,
                 "payment_status": order.payment_status.value,
@@ -299,9 +322,16 @@ async def create_event_booking_order(
             order.total_amount, order.order_id
         )
         if not approval_url:
-            # Rollback: release held seats & mark FAILED
+            # Rollback held seats & coupon count
             for li in line_items:
                 db_seat_categories[li.seat_category_ref_id].held -= li.num_seats
+                if li.coupon_id:
+                    coupon_obj = await db.get(Coupon, li.coupon_id)
+                    if coupon_obj:
+                        # release applied coupons since payment failed
+                        coupon_obj.applied_coupons -= li.num_seats
+                    li.redeemed = False
+                        
             order.booking_status = BookingStatus.FAILED
             order.payment_status = PaymentStatus.FAILED
             await db.commit()
@@ -323,9 +353,16 @@ async def create_event_booking_order(
         )
 
     except Exception as e:
-        # Rollback: release held seats & mark FAILED
+        # Rollback held seats & coupon count on error
         for li in line_items:
             db_seat_categories[li.seat_category_ref_id].held -= li.num_seats
+            if li.coupon_id:
+                coupon_obj = await db.get(Coupon, li.coupon_id)
+                if coupon_obj:
+                    # release applied coupons since payment failed
+                    coupon_obj.applied_coupons -= li.num_seats
+                li.redeemed = False
+        
         order.booking_status = BookingStatus.FAILED
         order.payment_status = PaymentStatus.FAILED
         await db.commit()
@@ -364,13 +401,13 @@ async def confirm_booking(
 
     if not order:
         return RedirectResponse(
-            url=f"{settings.USERS_APPLICATION_FRONTEND_URL}/booking/error?message=Order not found",
+            url=f"{settings.USERS_APPLICATION_FRONTEND_URL}/booking/error?message=Order+not+found",
             status_code=302,
         )
 
     if order.booking_status not in [BookingStatus.PROCESSING]:
         return RedirectResponse(
-            url=f"{settings.USERS_APPLICATION_FRONTEND_URL}/booking/error?message=Invalid order state",
+            url=f"{settings.USERS_APPLICATION_FRONTEND_URL}/booking/error?message=Invalid+order+state",
             status_code=302,
         )
 
@@ -393,19 +430,14 @@ async def confirm_booking(
                 seat_cat.held -= li.num_seats
                 seat_cat.booked += li.num_seats
                 total_seats += li.num_seats
-
-            # Increment sold_coupons if the order has coupon_status=True
-            if order.coupon_status:
-                # Find all coupons for this event that are active
-                result = await db.execute(
-                    select(Coupon).where(
-                        Coupon.event_id == order.event_ref_id,
-                        Coupon.coupon_status == False,
-                    )
-                )
-                coupons: list[Coupon] = list(result.scalars().all())
-                for coupon in coupons:
-                    coupon.sold_coupons += 1
+                
+                # Only increment coupons used in this order
+                if li.coupon_id and order.coupon_status:
+                    coupon_obj = await db.get(Coupon, li.coupon_id)
+                    if coupon_obj:
+                        coupon_obj.applied_coupons -= li.num_seats
+                        coupon_obj.sold_coupons += li.num_seats
+                    li.redeemed = True
 
             await db.commit()
 
@@ -425,7 +457,9 @@ async def confirm_booking(
                         "label": li.new_seat_category.category_label,
                         "num_seats": li.num_seats,
                         "price_per_seat": float(li.price_per_seat),
-                        "total_price": float(li.total_price),
+                        "subtotal": float(li.subtotal),
+                        "discount": float(li.discount_amount),
+                        "total_amount": float(li.total_amount),
                     }
                     for li in order.line_items
                 ]
@@ -441,7 +475,7 @@ async def confirm_booking(
                     event_time=(
                         order.new_slot.start_time
                         if order.new_slot.start_time
-                        else "TBA"
+                        else "N/A"
                     ),
                     event_duration=(
                         f"{order.new_slot.duration_minutes} mins"
@@ -452,6 +486,7 @@ async def confirm_booking(
                     event_category=order.new_booked_event.new_category.category_name,
                     booking_date=order.created_at.strftime("%B %d, %Y"),
                     total_amount=float(order.total_amount),
+                    total_discount=float(sum(li.discount_amount for li in order.line_items)),
                     seat_categories=seat_categories,
                 )
 
@@ -473,10 +508,15 @@ async def confirm_booking(
             order.booking_status = BookingStatus.FAILED
             order.payment_status = PaymentStatus.FAILED
 
-            # Release HELD seats
             for li in order.line_items:
-                seat_cat: NewEventSeatCategory = li.new_seat_category
-                seat_cat.held -= li.num_seats
+                li.new_seat_category.held -= li.num_seats
+
+                # Rollback coupon usage
+                if li.coupon_id and order.coupon_status:
+                    coupon_obj = await db.get(Coupon, li.coupon_id)
+                    if coupon_obj:
+                        coupon_obj.applied_coupons -= li.num_seats
+                    li.redeemed = False
 
             await db.commit()
 
@@ -493,13 +533,19 @@ async def confirm_booking(
         order.payment_status = PaymentStatus.FAILED
         for li in order.line_items:
             li.new_seat_category.held -= li.num_seats
+            if li.coupon_id and order.coupon_status:
+                coupon_obj = await db.get(Coupon, li.coupon_id)
+                if coupon_obj:
+                    coupon_obj.applied_coupons -= li.num_seats
+                li.redeemed = False
         await db.commit()
 
+        # Safely encode error message
+        from urllib.parse import quote_plus
         return RedirectResponse(
-            url=f"{settings.USERS_APPLICATION_FRONTEND_URL}/booking/error?message={str(e)}",
+            url=f"{settings.USERS_APPLICATION_FRONTEND_URL}/booking/error?message={quote_plus(str(e))}",
             status_code=302,
         )
-
 
 @router.get(
     "/cancel",
@@ -513,18 +559,21 @@ async def cancel_booking(
     """
     Cancel a booking when the user cancels PayPal payment.
     - Frees held seats.
-    - Marks order as CANCELLED.
+    - Marks order as CANCELLED (only if still PROCESSING).
     - Redirects to frontend failure page.
     """
 
     # 1. Fetch order
-    order: NewEventBookingOrder | None = (
-        await db.execute(
-            select(NewEventBookingOrder).where(
-                NewEventBookingOrder.order_id == order_id
+    result = await db.execute(
+        select(NewEventBookingOrder)
+        .where(NewEventBookingOrder.order_id == order_id)
+        .options(
+            selectinload(NewEventBookingOrder.line_items).selectinload(
+                NewEventBooking.new_seat_category
             )
         )
-    ).scalar_one_or_none()
+    )
+    order: Optional[NewEventBookingOrder] = result.scalars().first()
 
     if not order:
         return RedirectResponse(
@@ -537,13 +586,24 @@ async def cancel_booking(
         order.booking_status = BookingStatus.CANCELLED
         order.payment_status = PaymentStatus.CANCELLED
 
-        # Release HELD seats
+        # Release HELD seats safely
         for li in order.line_items:
-            li.new_seat_category.held -= li.num_seats
+            if li.new_seat_category and li.new_seat_category.held >= li.num_seats:
+                li.new_seat_category.held -= li.num_seats
+            else:
+                li.new_seat_category.held = 0
+                
+            # Rollback coupon usage if applied
+            if li.coupon_id and order.coupon_status:
+                coupon_obj = await db.get(Coupon, li.coupon_id)
+                if coupon_obj and (coupon_obj.applied_coupons or 0) >= li.num_seats:
+                    coupon_obj.applied_coupons -= li.num_seats
+                li.redeemed = False
 
         await db.commit()
+        await db.refresh(order)
 
-    # 3. Redirect to frontend cancellation page
+    # 3. Redirect to frontend cancellation/failure page
     return RedirectResponse(
         url=f"{settings.USERS_APPLICATION_FRONTEND_URL}/booking-failure?order_id={order_id}",
         status_code=302,
@@ -577,15 +637,14 @@ async def get_all_bookings(
 
     # Build base query
     query = select(NewEventBookingOrder).options(
-        selectinload(NewEventBookingOrder.line_items).selectinload(
-            NewEventBooking.new_seat_category
-        ),
-        selectinload(NewEventBookingOrder.new_booked_event).selectinload(
-            NewEvent.new_category
-        ),
-        selectinload(NewEventBookingOrder.new_booked_event).selectinload(
-            NewEvent.new_organizer
-        ),
+        selectinload(NewEventBookingOrder.line_items)
+        .selectinload(NewEventBooking.new_seat_category),
+        selectinload(NewEventBookingOrder.line_items)
+        .selectinload(NewEventBooking.coupon),
+        selectinload(NewEventBookingOrder.new_booked_event)
+        .selectinload(NewEvent.new_category),
+        selectinload(NewEventBookingOrder.new_booked_event)
+        .selectinload(NewEvent.new_organizer),
         selectinload(NewEventBookingOrder.new_slot),
         selectinload(NewEventBookingOrder.new_user),
     )
@@ -632,16 +691,35 @@ async def get_all_bookings(
     bookings_data = []
     for order in orders:
         # Build seat categories list
-        seat_categories = [
-            {
+        seat_categories = []
+        for li in order.line_items:
+            seat_category_data = {
                 "seat_category_id": li.seat_category_ref_id,
                 "label": li.new_seat_category.category_label,
                 "num_seats": li.num_seats,
                 "price_per_seat": float(li.price_per_seat),
+                "subtotal": float(li.subtotal),
+                "discount_amount": float(li.discount_amount),
+                "total_amount": float(li.total_amount),
                 "total_price": float(li.total_price),
             }
-            for li in order.line_items
-        ]
+
+            # If coupon applied, include coupon info
+            if li.coupon:
+                seat_category_data["coupon"] = {
+                    "coupon_id": li.coupon.coupon_id,
+                    "coupon_code": li.coupon.coupon_code,
+                    "coupon_name": li.coupon.coupon_name,
+                    "coupon_percentage": li.coupon.coupon_percentage,
+                    "applied_at": (
+                        li.applied_at.isoformat() if li.applied_at else None
+                    ),
+                    "redeemed": li.redeemed,
+                }
+            else:
+                seat_category_data["coupon"] = None
+
+            seat_categories.append(seat_category_data)
 
         # Build user info
         user_info = {
@@ -668,6 +746,8 @@ async def get_all_bookings(
             ),
             "business_logo": get_media_url(
                 booked_event.new_organizer.profile_picture
+                if booked_event.new_organizer
+                else None
             ),
             "location": booked_event.location,
             "address": event_address or "",  # fallback if address is optional
@@ -695,7 +775,9 @@ async def get_all_bookings(
             "booking_status": order.booking_status.value,
             "payment_status": order.payment_status.value,
             "payment_reference": order.payment_reference,
+            "coupon_status": order.coupon_status,
             "total_amount": float(order.total_amount),
+            "total_discount": float(order.total_discount),
             "created_at": order.created_at.isoformat(),
             "updated_at": order.updated_at.isoformat(),
             "event": event_info,
@@ -724,7 +806,6 @@ async def get_all_bookings(
         },
     )
 
-
 @router.get(
     "/user/{user_id}",
     status_code=status.HTTP_200_OK,
@@ -745,7 +826,7 @@ async def get_bookings_by_user(
     Get all booking orders for a specific user with pagination and optional status filtering.
     - Supports pagination with page and limit parameters
     - Optional status filtering (PROCESSING, APPROVED, FAILED, CANCELLED)
-    - Returns booking orders with event details for the specified user
+    - Returns booking orders with event, seat categories, and coupon details
     """
 
     # Validate user_id format
@@ -764,15 +845,14 @@ async def get_bookings_by_user(
         select(NewEventBookingOrder)
         .where(NewEventBookingOrder.user_ref_id == user_id)
         .options(
-            selectinload(NewEventBookingOrder.line_items).selectinload(
-                NewEventBooking.new_seat_category
-            ),
-            selectinload(NewEventBookingOrder.new_booked_event).selectinload(
-                NewEvent.new_category
-            ),
-            selectinload(NewEventBookingOrder.new_booked_event).selectinload(
-                NewEvent.new_organizer
-            ),
+            selectinload(NewEventBookingOrder.line_items)
+            .selectinload(NewEventBooking.new_seat_category),
+            selectinload(NewEventBookingOrder.line_items)
+            .selectinload(NewEventBooking.coupon),
+            selectinload(NewEventBookingOrder.new_booked_event)
+            .selectinload(NewEvent.new_category),
+            selectinload(NewEventBookingOrder.new_booked_event)
+            .selectinload(NewEvent.new_organizer),
             selectinload(NewEventBookingOrder.new_slot),
             selectinload(NewEventBookingOrder.new_user),
         )
@@ -821,26 +901,44 @@ async def get_bookings_by_user(
     # Build response data
     bookings_data = []
     for order in orders:
-        # Build seat categories list
-        seat_categories = [
-            {
+        # Seat categories with coupon details
+        seat_categories = []
+        for li in order.line_items:
+            seat_category_data = {
                 "seat_category_id": li.seat_category_ref_id,
                 "label": li.new_seat_category.category_label,
                 "num_seats": li.num_seats,
                 "price_per_seat": float(li.price_per_seat),
+                "subtotal": float(li.subtotal),
+                "discount_amount": float(li.discount_amount),
+                "total_amount": float(li.total_amount),
                 "total_price": float(li.total_price),
             }
-            for li in order.line_items
-        ]
 
-        # Build event info
-        event_address = _extract_event_address(order.new_booked_event)
+            if li.coupon:
+                seat_category_data["coupon"] = {
+                    "coupon_id": li.coupon.coupon_id,
+                    "coupon_code": li.coupon.coupon_code,
+                    "coupon_name": li.coupon.coupon_name,
+                    "coupon_percentage": li.coupon.coupon_percentage,
+                    "applied_at": (
+                        li.applied_at.isoformat() if li.applied_at else None
+                    ),
+                    "redeemed": li.redeemed,
+                }
+            else:
+                seat_category_data["coupon"] = None
+
+            seat_categories.append(seat_category_data)
+
+        # Event info
         booked_event = order.new_booked_event
+        event_address = _extract_event_address(booked_event)
         event_info = {
             "event_id": booked_event.event_id,
             "title": booked_event.event_title,
             "slug": booked_event.event_slug,
-            "event_type": booked_event.event_type or "General",
+            "event_type": booked_event.event_type or "GENERAL",
             "organizer_name": (
                 booked_event.new_organizer.username
                 if booked_event.new_organizer
@@ -848,9 +946,11 @@ async def get_bookings_by_user(
             ),
             "business_logo": get_media_url(
                 booked_event.new_organizer.profile_picture
+                if booked_event.new_organizer
+                else None
             ),
             "location": booked_event.location,
-            "address": event_address or "",  # fallback if address is optional
+            "address": event_address or "",
             "event_date": (
                 order.new_slot.slot_date.strftime("%Y-%m-%d")
                 if order.new_slot
@@ -875,7 +975,9 @@ async def get_bookings_by_user(
             "booking_status": order.booking_status.value,
             "payment_status": order.payment_status.value,
             "payment_reference": order.payment_reference,
+            "coupon_status": order.coupon_status,
             "total_amount": float(order.total_amount),
+            "total_discount": float(order.total_discount),
             "created_at": order.created_at.isoformat(),
             "updated_at": order.updated_at.isoformat(),
             "event": event_info,
@@ -945,15 +1047,11 @@ async def get_bookings_by_organizer(
         .join(NewEvent, NewEventBookingOrder.event_ref_id == NewEvent.event_id)
         .where(NewEvent.organizer_id == organizer_id)
         .options(
-            selectinload(NewEventBookingOrder.line_items).selectinload(
-                NewEventBooking.new_seat_category
-            ),
-            selectinload(NewEventBookingOrder.new_booked_event).selectinload(
-                NewEvent.new_category
-            ),
-            selectinload(NewEventBookingOrder.new_booked_event).selectinload(
-                NewEvent.new_organizer
-            ),
+            selectinload(NewEventBookingOrder.line_items)
+            .selectinload(NewEventBooking.new_seat_category),
+            selectinload(NewEventBookingOrder.line_items).selectinload(NewEventBooking.coupon),
+            selectinload(NewEventBookingOrder.new_booked_event).selectinload(NewEvent.new_category),
+            selectinload(NewEventBookingOrder.new_booked_event).selectinload(NewEvent.new_organizer),
             selectinload(NewEventBookingOrder.new_slot),
             selectinload(NewEventBookingOrder.new_user),
         )
@@ -1005,16 +1103,28 @@ async def get_bookings_by_organizer(
     bookings_data = []
     for order in orders:
         # Build seat categories list
-        seat_categories = [
-            {
+        seat_categories = []
+        for li in order.line_items:
+            seat_categories.append({
                 "seat_category_id": li.seat_category_ref_id,
-                "label": li.new_seat_category.category_label,
+                "label": li.new_seat_category.category_label if li.new_seat_category else None,
                 "num_seats": li.num_seats,
                 "price_per_seat": float(li.price_per_seat),
+                "subtotal": float(li.subtotal),
+                "discount_amount": float(li.discount_amount or 0),
+                "total_amount": float(li.total_amount),
                 "total_price": float(li.total_price),
-            }
-            for li in order.line_items
-        ]
+                "coupon": (
+                    {
+                        "coupon_id": li.coupon.coupon_id,
+                        "coupon_code": li.coupon.coupon_code,
+                        "coupon_percentage": li.coupon.coupon_percentage,
+                        "applied_at": li.applied_at.isoformat() if li.applied_at else None,
+                        "redeemed": li.redeemed,
+                    }
+                    if li.coupon else None
+                ),
+            })
 
         # Build user info
         user_info = {
@@ -1063,19 +1173,20 @@ async def get_bookings_by_organizer(
             "card_image": get_media_url(booked_event.card_image),
         }
 
-        booking_data = {
+        bookings_data.append({
             "order_id": order.order_id,
             "booking_status": order.booking_status.value,
             "payment_status": order.payment_status.value,
             "payment_reference": order.payment_reference,
             "total_amount": float(order.total_amount),
+            "total_discount": float(order.total_discount or 0),
+            "coupon_status": order.coupon_status,
             "created_at": order.created_at.isoformat(),
             "updated_at": order.updated_at.isoformat(),
             "event": event_info,
             "user": user_info,
             "seat_categories": seat_categories,
-        }
-        bookings_data.append(booking_data)
+        })
 
     # Build pagination info
     total_pages = (total_count + limit - 1) // limit
@@ -1098,7 +1209,6 @@ async def get_bookings_by_organizer(
         },
     )
 
-
 @router.get(
     "/{order_id}",
     status_code=status.HTTP_200_OK,
@@ -1116,15 +1226,14 @@ async def get_booking_order_details(
             select(NewEventBookingOrder)
             .where(NewEventBookingOrder.order_id == order_id)
             .options(
-                selectinload(NewEventBookingOrder.line_items).selectinload(
-                    NewEventBooking.new_seat_category
-                ),
-                selectinload(
-                    NewEventBookingOrder.new_booked_event
-                ).selectinload(NewEvent.new_category),
-                selectinload(
-                    NewEventBookingOrder.new_booked_event
-                ).selectinload(NewEvent.new_organizer),
+                selectinload(NewEventBookingOrder.line_items)
+                .selectinload(NewEventBooking.new_seat_category),
+                selectinload(NewEventBookingOrder.line_items)
+                .selectinload(NewEventBooking.coupon),
+                selectinload(NewEventBookingOrder.new_booked_event)
+                .selectinload(NewEvent.new_category),
+                selectinload(NewEventBookingOrder.new_booked_event)
+                .selectinload(NewEvent.new_organizer),
                 selectinload(NewEventBookingOrder.new_slot),
                 selectinload(NewEventBookingOrder.new_user),
             )
@@ -1138,58 +1247,54 @@ async def get_booking_order_details(
             data={},
         )
 
-    # 2️. Build seat categories list
-    seat_categories = [
-        SeatCategoryItem(
-            seat_category_id=li.seat_category_ref_id,
-            label=li.new_seat_category.category_label,
-            num_seats=li.num_seats,
-            price_per_seat=float(li.price_per_seat),
-            total_price=float(li.total_price),
-        )
-        for li in order.line_items
-    ]
+    # 2️. Build seat categories list with coupon info
+    seat_categories = []
+    for li in order.line_items:
+        seat_categories.append({
+            "seat_category_id": li.seat_category_ref_id,
+            "label": li.new_seat_category.category_label if li.new_seat_category else None,
+            "num_seats": li.num_seats,
+            "price_per_seat": float(li.price_per_seat),
+            "subtotal": float(li.subtotal),
+            "discount_amount": float(li.discount_amount or 0),
+            "total_amount": float(li.total_amount),
+            "total_price": float(li.total_price),
+            "coupon": (
+                {
+                    "coupon_id": li.coupon.coupon_id,
+                    "coupon_code": li.coupon.coupon_code,
+                    "coupon_percentage": li.coupon.coupon_percentage,
+                    "applied_at": li.applied_at.isoformat() if li.applied_at else None,
+                    "redeemed": li.redeemed,
+                }
+                if li.coupon else None
+            ),
+        })
 
     # 3️. Build nested user info
     user_info = {
         "user_id": order.new_user.user_id,
         "email": order.new_user.email,
         "username": order.new_user.username,
+        "first_name": order.new_user.first_name or "",
+        "last_name": order.new_user.last_name or "",
+        "profile_picture": get_media_url(order.new_user.profile_picture),
     }
 
     # 4. Build nested event info
-    event_address = _extract_event_address(order.new_booked_event)
     booked_event = order.new_booked_event
     event_info = {
         "event_id": booked_event.event_id,
         "title": booked_event.event_title,
         "slug": booked_event.event_slug,
         "event_type": booked_event.event_type or "General",
-        "organizer_name": (
-            booked_event.new_organizer.username
-            if booked_event.new_organizer
-            else None
-        ),
-        "business_logo": get_media_url(
-            booked_event.new_organizer.profile_picture
-        ),
+        "organizer_name": booked_event.new_organizer.username if booked_event.new_organizer else None,
+        "business_logo": get_media_url(booked_event.new_organizer.profile_picture) if booked_event.new_organizer else None,
         "location": booked_event.location,
-        "address": event_address or "",  # fallback if address is optional
-        "event_date": (
-            order.new_slot.slot_date.strftime("%Y-%m-%d")
-            if order.new_slot
-            else None
-        ),
-        "event_time": (
-            order.new_slot.start_time
-            if order.new_slot and order.new_slot.start_time
-            else "TBA"
-        ),
-        "event_duration": (
-            f"{order.new_slot.duration_minutes} mins"
-            if order.new_slot and order.new_slot.duration_minutes
-            else "N/A"
-        ),
+        "address": _extract_event_address(booked_event) or "",
+        "event_date": order.new_slot.slot_date.strftime("%Y-%m-%d") if order.new_slot else None,
+        "event_time": order.new_slot.start_time if order.new_slot and order.new_slot.start_time else "TBA",
+        "event_duration": f"{order.new_slot.duration_minutes} mins" if order.new_slot and order.new_slot.duration_minutes else "N/A",
         "booking_date": order.created_at.strftime("%Y-%m-%d"),
         "card_image": get_media_url(booked_event.card_image),
     }
@@ -1200,9 +1305,11 @@ async def get_booking_order_details(
         "booking_status": order.booking_status.value,
         "payment_status": order.payment_status.value,
         "payment_reference": order.payment_reference,
+        "total_amount": float(order.total_amount),
+        "total_discount": float(order.total_discount or 0),
+        "coupon_status": order.coupon_status,
         "created_at": order.created_at.isoformat(),
         "updated_at": order.updated_at.isoformat(),
-        "total_amount": float(order.total_amount),
         "event": event_info,
         "user": user_info,
         "seat_categories": seat_categories,

@@ -330,6 +330,7 @@ class NewEventBookingOrder(EventsBase):
     )
 
     total_amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    total_discount: Mapped[float] = mapped_column(Numeric(10, 2), default=0, nullable=False)
 
     booking_status: Mapped[BookingStatus] = mapped_column(
         SQLAlchemyEnum(
@@ -423,6 +424,24 @@ class NewEventBooking(EventsBase):
     price_per_seat: Mapped[float] = mapped_column(
         Numeric(10, 2), nullable=False
     )
+    
+    # Coupon applied (nullable)
+    coupon_id: Mapped[Optional[str]] = mapped_column(
+        String(8),
+        ForeignKey("e2gcoupons.coupon_id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
+    # Financials
+    subtotal: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)  # price_per_seat * num_seats
+    discount_amount: Mapped[float] = mapped_column(Numeric(10, 2), default=0, nullable=False)
+    total_amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)  # after discount
+
+    # Coupon status
+    applied_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    redeemed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
     total_price: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(
@@ -441,6 +460,12 @@ class NewEventBooking(EventsBase):
     )
     new_seat_category: Mapped["NewEventSeatCategory"] = relationship(
         "NewEventSeatCategory", back_populates="new_bookings", lazy="selectin"
+    )
+    # Each booking line item can have at most one coupon
+    coupon: Mapped[Optional["Coupon"]] = relationship(
+        "Coupon",
+        back_populates="bookings",
+        lazy="selectin"
     )
 
     __table_args__ = (
