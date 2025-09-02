@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
 from new_event_service.schemas.featured_events import FeaturedEventResponse
+from new_event_service.services.event_fetcher import EventTypeStatus, get_event_conditions
 from shared.core.api_response import api_response
 from shared.db.models import NewEvent
 from shared.db.models.featured_events import FeaturedEvents
@@ -194,9 +195,17 @@ async def list_featured_events(db: AsyncSession) -> list[FeaturedEventResponse]:
 
 
 async def list_active_featured_events(db: AsyncSession) -> list[FeaturedEventResponse]:
+    # Get conditions for upcoming events (live + future)
+    event_conditions = get_event_conditions(EventTypeStatus.UPCOMING)
+    
     query = (
         select(FeaturedEvents)
-        .where(FeaturedEvents.feature_status == False)  # only active
+        .join(FeaturedEvents.new_event)
+        .where(
+            FeaturedEvents.feature_status == False,
+            NewEvent.event_status == "ACTIVE",
+            *event_conditions,
+        )
         .options(
             joinedload(FeaturedEvents.new_event).joinedload(NewEvent.new_organizer),
             joinedload(FeaturedEvents.user_ref),
