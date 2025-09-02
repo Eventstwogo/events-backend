@@ -41,6 +41,7 @@ class ValidateCouponRequest(BaseModel):
 
 class ValidateCouponResponse(BaseModel):
     event_id: str
+    coupon_id: str
     coupon_code: str
     discount: float
     # remaining_coupons: int
