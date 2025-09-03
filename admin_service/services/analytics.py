@@ -23,6 +23,7 @@ from shared.db.models.new_events import (
     NewEventBookingOrder,
     PaymentStatus,
 )
+from shared.db.models.rbac import Role
 
 
 async def get_admin_user_analytics(
@@ -64,6 +65,9 @@ async def get_admin_user_analytics(
             func.min(AdminUser.created_at).label("earliest_user"),
             func.max(AdminUser.created_at).label("latest_user"),
         )
+        .select_from(AdminUser)
+        .join(Role)  # join Role table
+        .where(Role.role_name != "ORGANIZER")  # exclude ORGANIZERs
     )
     return results.one()
 
