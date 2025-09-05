@@ -570,11 +570,27 @@
             <div class="price-summary">
                 <h4 style="margin-bottom: 12px; color: #24292f;">Payment Breakdown</h4>
 
-                {% for category in seat_categories %}
-                <div class="price-item">
-                    <span>{{ category.label }} ({{ category.num_seats }} × AUD ${{ category.price_per_seat }}):</span>
-                    <span>AUD ${{ category.total_price }}</span>
-                </div>
+                {% for category in seat_categories_summary %}
+                    <div class="price-item">
+                        <span>
+                            {{ category.label }} ({{ category.num_seats }} × AUD ${{ category.price_per_seat }}):
+                        </span>
+                        <span>
+                            AUD ${{ category.total_amount }}
+                        </span>
+                    </div>
+                    {% if category.discount_amount and category.discount_amount != "N/A" %}
+                        <div class="price-item">
+                            <span>Discount:</span>
+                            <span>- AUD ${{ category.discount_amount }}</span>
+                        </div>
+                    {% endif %}
+                    {% if category.subtotal and category.subtotal != "-" %}
+                        <div class="price-item">
+                            <span>Subtotal:</span>
+                            <span>AUD ${{ category.subtotal }}</span>
+                        </div>
+                    {% endif %}
                 {% endfor %}
 
                 <div class="price-total">

@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, status
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
@@ -10,9 +10,11 @@ from admin_service.schemas.contact_us import (
     ContactUsResponse,
     ContactUsUpdateRequest,
 )
+from admin_service.services.user_service import get_all_admin_users
 from shared.core.api_response import api_response
 from shared.db.models.contact_us import ContactUs, ContactUsStatus
 from shared.db.sessions.database import get_db
+from shared.utils.email_utils import send_admin_contact_us_email
 from shared.utils.exception_handlers import exception_handler
 
 router = APIRouter()
@@ -24,6 +26,7 @@ router = APIRouter()
 @exception_handler
 async def create_contact_us(
     contact_us_data: ContactUsCreateRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ) -> JSONResponse:
     """
@@ -64,6 +67,19 @@ async def create_contact_us(
     db.add(new_contact_us)
     await db.commit()
     await db.refresh(new_contact_us)
+    
+    admin_users = await get_all_admin_users(db)
+    admin_emails = [user.email for user in admin_users]
+    
+    background_tasks.add_task(
+        send_admin_contact_us_email,
+        admin_emails=admin_emails,
+        name=f"{new_contact_us.firstname} {new_contact_us.lastname}",
+        email=new_contact_us.email,
+        subject="New Contact Us Submission",
+        message=new_contact_us.message,
+        phone=new_contact_us.phone_number,
+    )
 
     return api_response(
         status_code=status.HTTP_201_CREATED,

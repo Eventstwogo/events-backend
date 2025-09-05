@@ -12,7 +12,7 @@ from shared.core.api_response import api_response
 from shared.core.logging_config import get_logger
 from shared.db.models import User, UserVerification
 from shared.db.sessions.database import get_db
-from shared.utils.email_utils.user_emails import send_email_verification_resend
+from shared.utils.email_utils import send_email_verification_resend
 from shared.utils.exception_handlers import exception_handler
 from shared.utils.otp_and_tokens import (
     generate_otps,

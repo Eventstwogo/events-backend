@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Organizer Query - Events2Go</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; background: #f6f8fa; color: #24292f; margin:0; }
+    .container { max-width: 600px; margin: 0 auto; background: #fff; border: 1px solid #d1d9e0; border-radius: 6px; }
+    .header { text-align:center; padding: 32px 32px 0; border-bottom: 1px solid #d1d9e0; }
+    .logo { max-width: 120px; margin-bottom: 16px; }
+    .title { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+    .subtitle { color:#656d76; font-size:12px; text-transform:uppercase; letter-spacing:.5px; margin-bottom: 24px; }
+    .content { padding: 24px 32px 32px; }
+    .box { background: #f0f9ff; border:1px solid #bae6fd; border-left: 3px solid #0ea5e9; border-radius:6px; padding:16px; margin: 16px 0; }
+    .label { font-size:12px; color:#656d76; font-weight:600; margin-bottom: 4px; }
+    .value { font-size:14px; color:#24292f; word-wrap: break-word; }
+    .message-box { background: #fff7ed; border:1px solid #fed7aa; border-left:3px solid #fb923c; border-radius:6px; padding:16px; margin-top: 16px; }
+    .footer { text-align:center; padding: 20px 32px; font-size:12px; color:#656d76; border-top: 1px solid #d1d9e0; background:#f6f8fa; }
+    a.btn { display:inline-block; margin-top: 16px; padding: 10px 16px; background:#0969da; color:#fff !important; text-decoration:none; border-radius:6px; font-weight:600; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img src="https://events2go.syd1.cdn.digitaloceanspaces.com/events2go.png" alt="Events2Go" class="logo" />
+      <div class="title">Organizer Query Received</div>
+      <div class="subtitle">Support Center</div>
+    </div>
+    <div class="content">
+      <div class="box">
+        <div class="label">Organizer</div>
+        <div class="value">{{ organizer_name }} &lt;{{ organizer_email }}&gt;</div>
+      </div>
+      <div class="box">
+        <div class="label">Subject</div>
+        <div class="value">{{ query_subject }}</div>
+      </div>
+      <div class="message-box">
+        <div class="label">Message</div>
+        <div class="value">{{ query_message | replace('\n', '<br>') | safe }}</div>
+      </div>
+      <div class="box">
+        <div class="label">Submitted At</div>
+        <div class="value">{{ submitted_at }}</div>
+      </div>
+      <p style="text-align:center;">
+        <a href="{{ review_url }}" class="btn">Open in Admin Panel</a>
+      </p>
+    </div>
+    <div class="footer">
+      Need help? Contact <a href="mailto:{{ support_email }}">support</a>.<br />
+      © {{ year }} Events2Go. All rights reserved.
+    </div>
+  </div>
+</body>
+</html>

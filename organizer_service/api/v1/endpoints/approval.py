@@ -13,7 +13,7 @@ from shared.constants import (
 from shared.core.api_response import api_response
 from shared.db.models import AdminUser, BusinessProfile
 from shared.db.sessions.database import get_db
-from shared.utils.email_utils.admin_emails import (
+from shared.utils.email_utils import (
     send_organizer_approval_notification,
     send_organizer_rejection_notification,
     send_organizer_review_notification,

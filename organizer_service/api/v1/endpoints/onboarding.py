@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import JSONResponse
 
+from admin_service.services.user_service import get_all_admin_users
 from organizer_service.schemas.onboarding import OnboardingRequest
 from organizer_service.services.business_profile import (
     fetch_abn_details,
@@ -27,6 +28,7 @@ from shared.db.models import AdminUser, BusinessProfile
 from shared.db.models.organizer import OrganizerType
 from shared.db.sessions.database import get_db
 from shared.utils.email_utils import send_organizer_onboarding_email
+from shared.utils.email_utils import send_admin_organizer_verification_email
 from shared.utils.exception_handlers import exception_handler
 from shared.utils.id_generators import generate_digits_letters
 
@@ -203,10 +205,13 @@ async def organizer_onboarding(
     db.add(new_profile)
     await db.commit()
     await db.refresh(new_profile)
+    
+    admin_users = await get_all_admin_users(db)
+    admin_emails = [user.email for user in admin_users]
 
     # Get organizer email for sending onboarding confirmation email
     try:
-        organizer_email = decrypt_data(existing_profile.email)
+        organizer_email = existing_profile.email
         business_name = store_name_cleaned
         organizer_name = business_name  # Using business name as organizer name
 
@@ -216,8 +221,20 @@ async def organizer_onboarding(
             email=organizer_email,
             username=organizer_name,
             business_name=business_name,
-            reference_number=ref_number,  # Using reference number
+            reference_number=ref_number,
             status="Active",
+        )
+        
+        background_tasks.add_task(
+            send_admin_organizer_verification_email,
+            admin_emails=admin_emails,
+            business_name=business_name,
+            reference_number=ref_number,
+            organizer_name=organizer_name,
+            organizer_email=organizer_email,
+            phone=None,
+            documents_status="Pending Review",
+            location=location_cleaned,
         )
     except Exception as email_error:
         # Log the error but don't fail the onboarding process

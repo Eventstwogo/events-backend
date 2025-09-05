@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,6 +37,25 @@ async def check_user_email_verified(db: AsyncSession, user_id: str) -> bool:
     )
     verification_data = result.scalar_one_or_none()
     return verification_data is True if verification_data is not None else False
+
+
+async def get_all_admin_users(db: AsyncSession) -> List[AdminUser]:
+    """
+    Get all users who have the ADMIN role.
+
+    Args:
+        db: Database session
+
+    Returns:
+        List[AdminUser]: List of admin users
+    """
+    result = await db.execute(
+        select(AdminUser)
+        .join(Role, Role.role_id == AdminUser.role_id)
+        .where(Role.role_name == "ADMIN")
+    )
+    admin_users = list(result.scalars().all())
+    return admin_users
 
 
 async def get_user_role_name(db: AsyncSession, user_id: str) -> Optional[str]:

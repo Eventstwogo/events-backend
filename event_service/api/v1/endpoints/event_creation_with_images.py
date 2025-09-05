@@ -54,7 +54,7 @@ from shared.core.api_response import api_response
 from shared.core.config import settings
 from shared.db.models import Event, EventStatus
 from shared.db.sessions.database import get_db
-from shared.utils.email_utils.admin_emails import send_event_creation_email
+from shared.utils.email_utils import send_event_creation_email
 from shared.utils.exception_handlers import exception_handler
 from shared.utils.file_uploads import (
     get_media_url,

@@ -1,12 +1,13 @@
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Path, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Path, Query, status
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from starlette.responses import JSONResponse
 
+from admin_service.services.user_service import get_all_admin_users
 from organizer_service.schemas.queries import (
     AddMessageRequest,
     CreateQueryRequest,
@@ -29,6 +30,7 @@ from shared.core.api_response import api_response
 from shared.db.models import AdminUser
 from shared.db.models.organizer import OrganizerQuery
 from shared.db.sessions.database import get_db
+from shared.utils.email_utils import send_admin_organizer_query_email
 from shared.utils.exception_handlers import exception_handler
 
 router = APIRouter()
@@ -40,6 +42,7 @@ router = APIRouter()
 @exception_handler
 async def create_query(
     request: CreateQueryRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ) -> JSONResponse:
     sender = await get_user_by_id(request.user_id, db)
@@ -76,6 +79,18 @@ async def create_query(
     db.add(query)
     await db.commit()
     await db.refresh(query)
+    
+    admin_users = await get_all_admin_users(db)
+    admin_emails = [user.email for user in admin_users]
+
+    background_tasks.add_task(
+        send_admin_organizer_query_email,
+        admin_emails=admin_emails,
+        organizer_name=sender.username,
+        organizer_email=sender.email,
+        subject=f"{sender.username} has raised a query",
+        message=query.title,
+    )
 
     return api_response(
         status.HTTP_201_CREATED,

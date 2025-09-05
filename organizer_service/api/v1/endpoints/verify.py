@@ -18,7 +18,7 @@ from shared.core.api_response import api_response
 from shared.core.logging_config import get_logger
 from shared.db.models import AdminUser, AdminUserVerification
 from shared.db.sessions.database import get_db
-from shared.utils.email_utils.admin_emails import (
+from shared.utils.email_utils import (
     send_organizer_verification_email,
 )
 from shared.utils.exception_handlers import exception_handler

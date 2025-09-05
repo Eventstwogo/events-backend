@@ -38,8 +38,7 @@ from shared.core.config import settings
 from shared.db.models.events import BookingStatus
 from shared.db.sessions.database import get_db
 
-# from shared.utils.email_utils.admin_emails import send_booking_success_email
-from shared.utils.email_utils.admin_emails import send_booking_success_email
+from shared.utils.email_utils import send_booking_success_email
 from shared.utils.exception_handlers import exception_handler
 
 router = APIRouter()

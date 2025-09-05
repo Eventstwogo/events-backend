@@ -44,7 +44,7 @@ from shared.db.models.new_events import (
     PaymentStatus,
 )
 from shared.db.sessions.database import get_db
-from shared.utils.email_utils.admin_emails import send_new_booking_success_email
+from shared.utils.email_utils import send_new_booking_success_email
 from shared.utils.exception_handlers import exception_handler
 from shared.utils.file_uploads import get_media_url
 from shared.utils.id_generators import generate_digits_letters
